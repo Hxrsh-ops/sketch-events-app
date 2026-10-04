@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #F5F4F1;
+    --foreground: #191A1C;
+
+    --card: #FFFFFF;
+    --card-foreground: #191A1C;
+
+    --popover: #FFFFFF;
+    --popover-foreground: #191A1C;
+
+    --primary: #8F2635;
+    --primary-foreground: #FFFFFF;
+
+    --secondary: #EFEEEA;
+    --secondary-foreground: #191A1C;
+
+    --muted: #F9F8F6;
+    --muted-foreground: #65666A;
+
+    --accent: #F7E9EB;
+    --accent-foreground: #8F2635;
+
+    --destructive: #B83A43;
+    --destructive-foreground: #FFFFFF;
+
+    --border: #E8E6E1;
+    --input: #E8E6E1;
+    --ring: #8F2635;
+
+    --radius: 1rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom scrollbars for clean UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D8D5CF;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B6B4AF;
+}
+
+/* Card Surface Utilities inspired by Donezo */
+.donezo-card {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #EAE8E3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.donezo-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.donezo-card-highlight {
+  background-color: #1B4332;
+  color: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #1B4332;
+  box-shadow: 0 4px 14px rgba(27, 67, 50, 0.12);
+}
