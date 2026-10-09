@@ -1,93 +1,63 @@
-import { Plus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-interface TeamMemberActivity {
+interface Collaborator {
   name: string;
   avatarUrl: string;
-  role: string;
-  status: "Completed" | "In Progress" | "Pending";
+  email: string;
 }
 
-const ORGANIZER_ACTIVITIES: TeamMemberActivity[] = [
+const COLLABORATORS: Collaborator[] = [
   {
-    name: "Alexandra Deff",
+    name: "Harshanth",
+    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+    email: "harshanth@sketch.org",
+  },
+  {
+    name: "Dia Sen",
     avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80",
-    role: "Configured Round 2 Evaluation Form",
-    status: "Completed",
+    email: "dia.sen@college.edu",
   },
   {
-    name: "Edwin Adenike",
+    name: "Rohan Varma",
     avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-    role: "Verified Mobile QR Scanner Cameras",
-    status: "In Progress",
+    email: "rohan.varma@college.edu",
   },
   {
-    name: "Isaac Oluwatemilorun",
+    name: "Aarav Sharma",
     avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-    role: "Drafted Pass Dispatch & Venue Floorplan",
-    status: "Pending",
-  },
-  {
-    name: "David Oshodi",
-    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-    role: "Audit Log & Attendance Roster Review",
-    status: "In Progress",
+    email: "aarav.sharma@college.edu",
   },
 ];
 
-const STATUS_STYLES: Record<string, string> = {
-  Completed: "bg-emerald-50 text-emerald-700 border-emerald-200/50",
-  "In Progress": "bg-amber-50 text-amber-700 border-amber-200/50",
-  Pending: "bg-rose-50 text-rose-700 border-rose-200/50",
-};
-
 export function OrganizerActivity() {
   return (
-    <div className="flex flex-col justify-between rounded-[22px] border border-[#EAE8E3] bg-white p-6 shadow-sm">
+    <div className="flex h-full flex-col justify-between rounded-[24px] border border-[#E5E7EA] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2">
-        <h3 className="text-base font-bold text-[#191A1C]">
-          Team Collaboration
+      <div>
+        <h3 className="text-base font-bold text-[#17191C]">
+          Top Collaborators
         </h3>
-        <button
-          type="button"
-          onClick={() => alert("Admin team management will connect to Supabase Auth roles.")}
-          className="inline-flex items-center gap-1 rounded-full border border-[#E8E6E1] bg-white px-2.5 py-1 text-xs font-semibold text-[#191A1C] transition-colors hover:bg-[#F9F8F6]"
-        >
-          <Plus className="h-3 w-3" />
-          <span>Add Member</span>
-        </button>
       </div>
 
       {/* Member List */}
-      <div className="mt-2 divide-y divide-[#F5F4F1]">
-        {ORGANIZER_ACTIVITIES.map((member, idx) => (
+      <div className="mt-4 flex flex-col divide-y divide-[#F4F5F6]">
+        {COLLABORATORS.map((member, idx) => (
           <div
             key={idx}
-            className="flex items-center justify-between py-3 hover:bg-[#FAF9F7] px-2 rounded-xl transition-colors"
+            className="flex items-center gap-3 py-2.5"
           >
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 border border-[#E8E6E1]">
-                <AvatarImage src={member.avatarUrl} alt={member.name} />
-                <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-[#191A1C]">
-                  {member.name}
-                </span>
-                <span className="text-[11px] text-[#929398] line-clamp-1">
-                  {member.role}
-                </span>
-              </div>
+            <Avatar className="h-8 w-8 border border-[#E5E7EA]">
+              <AvatarImage src={member.avatarUrl} alt={member.name} />
+              <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-[#17191C]">
+                {member.name}
+              </span>
+              <span className="text-[11px] text-[#8A9098]">
+                {member.email}
+              </span>
             </div>
-
-            <span
-              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                STATUS_STYLES[member.status]
-              }`}
-            >
-              {member.status}
-            </span>
           </div>
         ))}
       </div>

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Play, Pause, Square, QrCode } from "lucide-react";
-import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export function LiveCheckinClock() {
-  const [seconds, setSeconds] = useState(5048); // 01:24:08
+  const [seconds, setSeconds] = useState(10086); // 02:48:06
   const [isRunning, setIsRunning] = useState(true);
 
   useEffect(() => {
@@ -26,52 +25,47 @@ export function LiveCheckinClock() {
   };
 
   return (
-    <div className="relative flex flex-col justify-between overflow-hidden rounded-[22px] bg-gradient-to-br from-[#0F281E] via-[#163829] to-[#0A1F16] p-6 text-white shadow-lg">
-      {/* Background Subtle Wave Texture */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(40,167,69,0.15),transparent_70%)] pointer-events-none" />
+    <div className="relative flex h-full min-h-[220px] flex-col justify-between overflow-hidden rounded-[24px] bg-[#121417] p-6 text-white shadow-elevated">
+      {/* Real Dark Photographic Monochrome Texture matching Donezo Time Tracker */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-luminosity filter grayscale"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=800&auto=format&fit=crop&q=80')`,
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/60" />
 
-      <div className="relative z-10 flex items-center justify-between">
-        <span className="text-xs font-semibold text-emerald-200 uppercase tracking-wider">
-          Check-in Desk Session
-        </span>
-        <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Active Desk
+      {/* Header Label */}
+      <div className="relative z-10">
+        <span className="text-xs font-normal text-white/80">
+          Time Tracker
         </span>
       </div>
 
-      {/* Digital Digits Display matching Donezo 01:24:08 */}
-      <div className="relative z-10 my-4 text-center">
-        <span className="font-mono text-4xl sm:text-5xl font-black tracking-widest text-white drop-shadow-md">
+      {/* Digital Digits Display matching Donezo 02:48:06 */}
+      <div className="relative z-10 my-2 text-center">
+        <span className="font-sans text-4xl sm:text-5xl font-extrabold tracking-tight text-white drop-shadow-md">
           {formatTime(seconds)}
         </span>
-        <p className="mt-1 text-[11px] text-emerald-300/70">
-          Studio Lab B — Station #1
-        </p>
       </div>
 
-      {/* Action Controls matching Donezo rounded action buttons */}
+      {/* Action Controls matching Donezo Pause and Stop pill buttons */}
       <div className="relative z-10 flex items-center justify-center gap-3">
         <button
           type="button"
           onClick={() => setIsRunning(!isRunning)}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#191A1C] shadow-md transition-transform hover:scale-105 active:scale-95"
-          aria-label={isRunning ? "Pause session" : "Resume session"}
+          className="rounded-full border border-white/50 bg-white/5 px-6 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
         >
-          {isRunning ? (
-            <Pause className="h-4 w-4 fill-current" />
-          ) : (
-            <Play className="h-4 w-4 fill-current ml-0.5" />
-          )}
+          {isRunning ? "Pause" : "Resume"}
         </button>
 
-        <Link
-          href="/attendance"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#B83A43] text-white shadow-md transition-transform hover:scale-105 active:scale-95"
-          title="Open QR Scanner"
+        <button
+          type="button"
+          onClick={() => setSeconds(0)}
+          className="rounded-full border border-white/50 bg-white/5 px-6 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
         >
-          <QrCode className="h-4 w-4" />
-        </Link>
+          Stop
+        </button>
       </div>
     </div>
   );

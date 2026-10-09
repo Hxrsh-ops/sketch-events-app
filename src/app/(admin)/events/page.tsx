@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Users, ArrowUpRight, Filter } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Users, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MOCK_EVENTS } from "@/lib/mock-data";
@@ -29,16 +29,16 @@ export default function EventsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#191A1C]">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#17191C]">
             Events
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-[#65666A]">
+          <p className="mt-1 text-xs sm:text-sm text-[#656B73]">
             Create, configure, and monitor every SKETCH experience through its complete lifecycle.
           </p>
         </div>
 
         <Link href="/events/new">
-          <Button variant="forest" className="rounded-2xl gap-2 font-semibold shadow-md shadow-[#1B4332]/10">
+          <Button variant="charcoal" className="rounded-full gap-2 font-medium shadow-sm">
             <Plus className="h-4 w-4" />
             <span>Create Event</span>
           </Button>
@@ -46,7 +46,7 @@ export default function EventsPage() {
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-[#EAE8E3] bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-[24px] border border-[#E5E7EA] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5">
           {FILTER_TABS.map((tab) => (
@@ -54,10 +54,10 @@ export default function EventsPage() {
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
                 activeTab === tab
-                  ? "bg-[#1B4332] text-white shadow-sm"
-                  : "bg-[#F9F8F6] text-[#65666A] hover:bg-[#EFEEEA] hover:text-[#191A1C]"
+                  ? "bg-[#25292F] text-white shadow-sm"
+                  : "bg-[#F0F1F2] text-[#656B73] hover:bg-[#EAECEF] hover:text-[#17191C]"
               }`}
             >
               {tab}
@@ -67,13 +67,13 @@ export default function EventsPage() {
 
         {/* Search Input */}
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#929398]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098]" />
           <input
             type="text"
             placeholder="Search events by title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-xl border border-[#EAE8E3] bg-[#F9F8F6] pl-9 pr-4 text-xs text-[#191A1C] placeholder:text-[#929398] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1B4332]/20"
+            className="h-9 w-full rounded-full border border-[#E5E7EA] bg-[#F4F5F6] pl-9 pr-4 text-xs text-[#17191C] placeholder:text-[#8A9098] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#25292F]/20"
           />
         </div>
       </div>
@@ -83,31 +83,23 @@ export default function EventsPage() {
         {filteredEvents.map((event) => (
           <div
             key={event.id}
-            className="group flex flex-col justify-between overflow-hidden rounded-[22px] border border-[#EAE8E3] bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+            className="group flex flex-col justify-between overflow-hidden rounded-[24px] border border-[#E5E7EA] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-1 hover:shadow-card"
           >
             {/* Poster / Thumbnail Header */}
-            <div className="relative h-44 w-full overflow-hidden bg-[#EFEEEA]">
+            <div className="relative h-44 w-full overflow-hidden bg-[#EAECEF]">
               <img
                 src={event.posterUrl}
                 alt={event.title}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
               <div className="absolute top-3 left-3 flex gap-2">
-                <Badge variant="secondary" className="bg-white/90 text-[#191A1C] font-semibold text-[10px]">
+                <Badge variant="secondary" className="bg-white/90 text-[#17191C] font-semibold text-[10px]">
                   {event.category}
                 </Badge>
               </div>
               <div className="absolute top-3 right-3">
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    event.registrationState === "open"
-                      ? "bg-emerald-500 text-white"
-                      : event.registrationState === "full"
-                      ? "bg-amber-500 text-white"
-                      : "bg-[#191A1C]/70 text-white"
-                  }`}
-                >
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/70 text-white backdrop-blur-sm">
                   {event.registrationState.toUpperCase()}
                 </span>
               </div>
@@ -120,41 +112,41 @@ export default function EventsPage() {
 
             {/* Event Body Details */}
             <div className="flex flex-1 flex-col p-5">
-              <p className="text-xs text-[#65666A] line-clamp-2 leading-relaxed">
+              <p className="text-xs text-[#656B73] line-clamp-2 leading-relaxed">
                 {event.shortDescription}
               </p>
 
-              <div className="mt-4 space-y-2 border-t border-[#F5F4F1] pt-3 text-xs text-[#65666A]">
+              <div className="mt-4 space-y-2 border-t border-[#F4F5F6] pt-3 text-xs text-[#656B73]">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-3.5 w-3.5 text-[#929398]" />
+                  <Calendar className="h-3.5 w-3.5 text-[#8A9098]" />
                   <span>{formatDate(event.startDate)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-[#929398]" />
+                  <MapPin className="h-3.5 w-3.5 text-[#8A9098]" />
                   <span className="line-clamp-1">{event.venue}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5 text-[#929398]" />
+                  <Users className="h-3.5 w-3.5 text-[#8A9098]" />
                   <span>
-                    <strong className="text-[#191A1C]">{event.registeredCount}</strong> / {event.capacity} Registered
+                    <strong className="text-[#17191C]">{event.registeredCount}</strong> / {event.capacity} Registered
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Footer Actions */}
-            <div className="flex items-center justify-between border-t border-[#F5F4F1] bg-[#FAF9F7] px-5 py-3">
+            <div className="flex items-center justify-between border-t border-[#F4F5F6] bg-[#F4F5F6]/50 px-5 py-3">
               <Link
                 href={`/e/${event.slug}`}
                 target="_blank"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#8F2635] hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[#17191C] hover:underline"
               >
                 <span>Public Page</span>
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
 
               <Link href={`/events/${event.id}`}>
-                <Button variant="outline" size="sm" className="rounded-xl border-[#E8E6E1] text-xs font-semibold">
+                <Button variant="outline" size="sm" className="rounded-full border-[#E5E7EA] text-xs font-semibold">
                   Manage
                 </Button>
               </Link>

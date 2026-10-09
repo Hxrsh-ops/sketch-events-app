@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    --background: #F5F4F1;
-    --foreground: #191A1C;
+    --background: #F4F5F6;
+    --foreground: #17191C;
 
     --card: #FFFFFF;
-    --card-foreground: #191A1C;
+    --card-foreground: #17191C;
 
     --popover: #FFFFFF;
-    --popover-foreground: #191A1C;
+    --popover-foreground: #17191C;
 
-    --primary: #8F2635;
+    --primary: #25292F;
     --primary-foreground: #FFFFFF;
 
-    --secondary: #EFEEEA;
-    --secondary-foreground: #191A1C;
+    --secondary: #F0F1F2;
+    --secondary-foreground: #17191C;
 
-    --muted: #F9F8F6;
-    --muted-foreground: #65666A;
+    --muted: #F0F1F2;
+    --muted-foreground: #656B73;
 
-    --accent: #F7E9EB;
-    --accent-foreground: #8F2635;
+    --accent: #EAECEF;
+    --accent-foreground: #17191C;
 
-    --destructive: #B83A43;
+    --destructive: #17191C;
     --destructive-foreground: #FFFFFF;
 
-    --border: #E8E6E1;
-    --input: #E8E6E1;
-    --ring: #8F2635;
+    --border: #E5E7EA;
+    --input: #E5E7EA;
+    --ring: #25292F;
 
-    --radius: 1rem;
+    --radius: 1.5rem;
   }
 
   * {
@@ -50,8 +50,8 @@
 
 /* Custom scrollbars for clean UI */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -59,19 +59,19 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D8D5CF;
+  background: #D4D7DC;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #B6B4AF;
+  background: #AEB3BA;
 }
 
-/* Card Surface Utilities inspired by Donezo */
+/* Donezo Monochrome Surface Utilities */
 .donezo-card {
   background-color: #FFFFFF;
-  border-radius: 20px;
-  border: 1px solid #EAE8E3;
+  border-radius: 24px;
+  border: 1px solid #E5E7EA;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: all 0.2s ease;
 }
@@ -80,10 +80,10 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-.donezo-card-highlight {
-  background-color: #1B4332;
+.donezo-card-charcoal {
+  background: linear-gradient(145deg, #3A3F46 0%, #23272D 100%);
   color: #FFFFFF;
-  border-radius: 20px;
-  border: 1px solid #1B4332;
-  box-shadow: 0 4px 14px rgba(27, 67, 50, 0.12);
+  border-radius: 24px;
+  border: 1px solid #3A3F46;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }

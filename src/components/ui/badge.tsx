@@ -3,28 +3,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-[#8F2635] text-white",
+          "border-transparent bg-[#25292F] text-white",
         secondary:
-          "border-transparent bg-[#EFEEEA] text-[#191A1C]",
+          "border-transparent bg-[#F0F1F2] text-[#17191C]",
         destructive:
-          "border-transparent bg-[#FCEBED] text-[#B83A43]",
+          "border-transparent bg-[#F0F1F2] text-[#17191C] font-semibold",
         outline:
-          "border border-[#E8E6E1] text-[#65666A]",
+          "border border-[#E5E7EA] text-[#656B73] bg-white",
         success:
-          "border-transparent bg-[#E8F4ED] text-[#237A58]",
+          "border-transparent bg-[#EAECEF] text-[#17191C] font-semibold",
         warning:
-          "border-transparent bg-[#FBF2DF] text-[#A66B18]",
+          "border-transparent bg-[#F0F1F2] text-[#17191C]",
         info:
-          "border-transparent bg-[#EAF0F8] text-[#4B6D9B]",
+          "border-transparent bg-[#F0F1F2] text-[#17191C]",
         brandSoft:
-          "border-transparent bg-[#F7E9EB] text-[#8F2635]",
+          "border-transparent bg-[#EAECEF] text-[#17191C]",
         forestSoft:
-          "border-transparent bg-[#E8F4ED] text-[#1B4332]",
+          "border-transparent bg-[#EAECEF] text-[#17191C]",
       },
     },
     defaultVariants: {
