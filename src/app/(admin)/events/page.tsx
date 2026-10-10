@@ -139,9 +139,9 @@ export default function EventsPage() {
                   {/* Poster / Artwork Header */}
                   <div className="relative h-44 w-full overflow-hidden bg-[#EAECEF] dark:bg-[#2A2F35]">
                     <img
-                      src={event.posterUrl}
+                      src={event.directoryImage || event.posterUrl}
                       alt={event.title}
-                      style={{ objectPosition: event.focalPoint || "center center" }}
+                      style={{ objectPosition: event.directoryImageFocalPoint || event.focalPoint || "center center" }}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />

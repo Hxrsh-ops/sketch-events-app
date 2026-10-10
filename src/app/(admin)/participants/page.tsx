@@ -282,14 +282,14 @@ export default function ParticipantsPage() {
                             <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline truncate">
                               {p.name}
                             </span>
-                            <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] truncate">{p.email}</span>
+                            <span className="font-sans text-[11px] text-[#656B73] dark:text-[#989EA7] truncate max-w-[200px]">{p.email}</span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 font-mono text-[11px] text-[#656B73] dark:text-[#989EA7]">
+                      <td className="px-4 py-3 font-mono text-[10.5px] tracking-tight text-[#8A9098] dark:text-[#7D858F] whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
-                          <span>{p.registrationId}</span>
+                          <span className="select-all">{p.registrationId}</span>
                           <button
                             type="button"
                             onClick={(e) => handleCopyId(p.registrationId, e)}

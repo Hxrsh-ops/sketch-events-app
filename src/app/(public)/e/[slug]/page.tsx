@@ -396,9 +396,9 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
         {/* Poster Header */}
         <div className="relative h-72 sm:h-96 w-full overflow-hidden bg-[#17191C]">
           <img
-            src={event.posterUrl}
+            src={event.heroImage || event.posterUrl}
             alt={event.title}
-            style={{ objectPosition: event.focalPoint || "center" }}
+            style={{ objectPosition: event.heroImageFocalPoint || event.focalPoint || "center" }}
             className="h-full w-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/50 to-transparent" />

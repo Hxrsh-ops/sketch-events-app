@@ -924,21 +924,25 @@ export default function AttendancePage() {
                           {isChecked ? <Check className="h-4 w-4" /> : participant.name.charAt(0)}
                         </div>
 
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3] truncate">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate">
                               {participant.name}
                             </span>
                             {participant.teamName && (
-                              <span className="hidden sm:inline-block rounded bg-[#F0F1F2] dark:bg-[#151719] px-1.5 py-0.5 text-[10px] font-medium text-[#656B73] dark:text-[#989EA7] truncate">
+                              <span className="hidden sm:inline-block text-[11px] font-normal text-[#8A9098] dark:text-[#7D858F] truncate before:content-['•'] before:mr-1.5 before:text-[#D4D7DC] dark:before:text-[#40464D]">
                                 {participant.teamName}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-[11px] text-[#656B73] dark:text-[#989EA7] font-mono">
-                            <span>{participant.registrationId}</span>
-                            <span>•</span>
-                            <span className="truncate">{participant.email}</span>
+                          <div className="flex items-center gap-1.5 text-[11px] leading-tight mt-0.5 min-w-0">
+                            <span className="font-mono text-[10.5px] tracking-tight text-[#8A9098] dark:text-[#7D858F] shrink-0 select-all">
+                              {participant.registrationId}
+                            </span>
+                            <span className="text-[#D4D7DC] dark:text-[#40464D] select-none">•</span>
+                            <span className="font-sans text-[#656B73] dark:text-[#989EA7] truncate">
+                              {participant.email}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1005,15 +1009,15 @@ export default function AttendancePage() {
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="h-2 w-2 rounded-full bg-[#17191C] dark:bg-[#E8EAED]" />
                       <div className="min-w-0">
-                        <div className="font-bold text-[#17191C] dark:text-[#F1F2F3] truncate">
+                        <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate">
                           {log.participantName}
                         </div>
-                        <div className="text-[11px] font-mono text-[#8A9098] dark:text-[#656B73] flex items-center gap-1.5">
-                          <span>{log.registrationId}</span>
-                          <span>•</span>
+                        <div className="text-[11px] leading-tight text-[#8A9098] dark:text-[#7D858F] flex items-center gap-1.5 mt-0.5">
+                          <span className="font-mono text-[10.5px] select-all tracking-tight">{log.registrationId}</span>
+                          <span className="text-[#D4D7DC] dark:text-[#40464D] select-none">•</span>
                           <span className="capitalize">{log.method}</span>
-                          <span>•</span>
-                          <span>{log.timestamp}</span>
+                          <span className="text-[#D4D7DC] dark:text-[#40464D] select-none">•</span>
+                          <span className="font-mono text-[10.5px] tabular-nums">{log.timestamp}</span>
                         </div>
                       </div>
                     </div>

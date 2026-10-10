@@ -214,8 +214,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       <div className="overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm">
         <div className="relative min-h-[200px] sm:min-h-[260px] w-full overflow-hidden bg-[#17191C]">
           <img
-            src={event.posterUrl}
+            src={event.heroImage || event.posterUrl}
             alt={event.title}
+            style={{ objectPosition: event.heroImageFocalPoint || event.focalPoint || "center" }}
             className="h-full w-full object-cover opacity-85"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/40 to-transparent" />
@@ -460,11 +461,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </div>
                               <div>
                                 <p className="font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline">{p.name}</p>
-                                <p className="text-[11px] text-[#8A9098] dark:text-[#656B73]">{p.email}</p>
+                                <p className="font-sans text-[11px] text-[#656B73] dark:text-[#989EA7] truncate max-w-[190px]">{p.email}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 font-mono text-[11px] text-[#656B73] dark:text-[#989EA7]">
+                          <td className="px-4 py-3.5 font-mono text-[10.5px] tracking-tight text-[#8A9098] dark:text-[#7D858F] whitespace-nowrap select-all">
                             {p.registrationId}
                           </td>
                           <td className="px-4 py-3.5 text-[#656B73] dark:text-[#989EA7]">

@@ -110,10 +110,12 @@ export default function NewEventPage() {
   const [isPublishedPreview, setIsPublishedPreview] = useState(false);
   const [createdSlug, setCreatedSlug] = useState("");
 
-  const [artworkMode, setArtworkMode] = useState<"preset" | "upload">("preset");
+  const [activeArtworkTab, setActiveArtworkTab] = useState<"directory" | "hero">("directory");
+  const [directoryArtworkMode, setDirectoryArtworkMode] = useState<"preset" | "upload">("preset");
+  const [heroArtworkMode, setHeroArtworkMode] = useState<"preset" | "upload">("preset");
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Single unified form state with dynamic registration schema
+  // Single unified form state with separate artwork assets and dynamic registration schema
   const [formData, setFormData] = useState({
     title: "",
     category: "Design",
@@ -123,10 +125,18 @@ export default function NewEventPage() {
     venue: "",
     startDate: "",
     endDate: "",
+    // Legacy fallback + Directory Card Artwork (16:9)
     posterUrl: CURATED_POSTERS[0].url,
     focalPoint: "center center",
-    isCustomUpload: false,
-    customUploadFileName: "",
+    directoryImage: CURATED_POSTERS[0].url,
+    directoryImageFocalPoint: "center center",
+    isDirectoryCustomUpload: false,
+    directoryCustomFileName: "",
+    // Public Hero Panoramic Artwork
+    heroImage: CURATED_POSTERS[1].url,
+    heroImageFocalPoint: "center center",
+    isHeroCustomUpload: false,
+    heroCustomFileName: "",
     artworkAlt: "",
     capacity: 150,
     registrationDeadline: "",
@@ -151,7 +161,7 @@ export default function NewEventPage() {
     ] as RoundConfig[],
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: "directory" | "hero") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -171,28 +181,51 @@ export default function NewEventPage() {
     reader.onload = (loadEvt) => {
       const dataUrl = loadEvt.target?.result as string;
       if (dataUrl) {
-        setFormData((prev) => ({
-          ...prev,
-          posterUrl: dataUrl,
-          isCustomUpload: true,
-          customUploadFileName: file.name,
-          artworkAlt: prev.title ? `${prev.title} Cover` : "Event Cover Artwork",
-        }));
-        setArtworkMode("upload");
+        if (target === "directory") {
+          setFormData((prev) => ({
+            ...prev,
+            directoryImage: dataUrl,
+            posterUrl: dataUrl, // legacy compatibility
+            isDirectoryCustomUpload: true,
+            directoryCustomFileName: file.name,
+          }));
+          setDirectoryArtworkMode("upload");
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            heroImage: dataUrl,
+            isHeroCustomUpload: true,
+            heroCustomFileName: file.name,
+          }));
+          setHeroArtworkMode("upload");
+        }
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleRemoveUpload = () => {
-    setFormData((prev) => ({
-      ...prev,
-      posterUrl: CURATED_POSTERS[0].url,
-      isCustomUpload: false,
-      customUploadFileName: "",
-      focalPoint: "center center",
-    }));
-    setArtworkMode("preset");
+  const handleRemoveUpload = (target: "directory" | "hero") => {
+    if (target === "directory") {
+      setFormData((prev) => ({
+        ...prev,
+        directoryImage: CURATED_POSTERS[0].url,
+        posterUrl: CURATED_POSTERS[0].url,
+        isDirectoryCustomUpload: false,
+        directoryCustomFileName: "",
+        directoryImageFocalPoint: "center center",
+        focalPoint: "center center",
+      }));
+      setDirectoryArtworkMode("preset");
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        heroImage: CURATED_POSTERS[1].url,
+        isHeroCustomUpload: false,
+        heroCustomFileName: "",
+        heroImageFocalPoint: "center center",
+      }));
+      setHeroArtworkMode("preset");
+    }
     setUploadError(null);
   };
 
@@ -325,8 +358,12 @@ export default function NewEventPage() {
       category: formData.category as any,
       shortDescription: formData.shortDescription,
       description: formData.description || formData.shortDescription,
-      posterUrl: formData.posterUrl,
-      focalPoint: formData.focalPoint,
+      posterUrl: formData.directoryImage || formData.posterUrl,
+      focalPoint: formData.directoryImageFocalPoint || formData.focalPoint,
+      directoryImage: formData.directoryImage || formData.posterUrl,
+      directoryImageFocalPoint: formData.directoryImageFocalPoint || formData.focalPoint,
+      heroImage: formData.heroImage || formData.directoryImage || formData.posterUrl,
+      heroImageFocalPoint: formData.heroImageFocalPoint || formData.directoryImageFocalPoint || formData.focalPoint,
       startDate: formData.startDate,
       endDate: formData.endDate,
       venue: formData.venue,
@@ -532,175 +569,381 @@ export default function NewEventPage() {
                   {errors.shortDescription && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.shortDescription}</p>}
                 </div>
 
-                {/* Event Cover Artwork Manager */}
-                <div className="space-y-3 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4">
+                {/* Event Cover Artwork Manager (Separate Directory Card & Public Hero Assets) */}
+                <div className="space-y-4 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#F0F1F2] dark:border-[#262A2E] pb-3">
                     <div>
-                      <label className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3] block">
-                        Event Cover Artwork
-                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3] block">
+                          Event Artwork Assets
+                        </label>
+                        <span className="rounded-full bg-[#EAECEF] dark:bg-[#25292F] px-2 py-0.2 text-[9.5px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+                          Independent 16:9 & Hero
+                        </span>
+                      </div>
                       <p className="text-[11px] text-[#656B73] dark:text-[#8A9098] mt-0.5">
-                        Choose an approved curated preset or upload custom artwork from your computer.
+                        Configure independent images and crop anchors for Directory Cards and the Public Registration Hero banner.
                       </p>
                     </div>
 
-                    {/* Mode Toggle */}
-                    <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-xs font-semibold">
+                    {/* Role Tab Selector (Directory vs Hero) */}
+                    <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-xs font-semibold shrink-0">
                       <button
                         type="button"
-                        onClick={() => setArtworkMode("preset")}
-                        className={`px-3 py-1 rounded-full transition-all ${
-                          artworkMode === "preset"
+                        onClick={() => setActiveArtworkTab("directory")}
+                        className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
+                          activeArtworkTab === "directory"
                             ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                            : "text-[#656B73] dark:text-[#8A9098]"
+                            : "text-[#656B73] dark:text-[#8A9098] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
                         }`}
                       >
-                        Curated Presets
+                        <span>Directory Card (16:9)</span>
+                        {formData.isDirectoryCustomUpload && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        )}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setArtworkMode("upload")}
-                        className={`flex items-center gap-1 px-3 py-1 rounded-full transition-all ${
-                          artworkMode === "upload"
+                        onClick={() => setActiveArtworkTab("hero")}
+                        className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
+                          activeArtworkTab === "hero"
                             ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                            : "text-[#656B73] dark:text-[#8A9098]"
+                            : "text-[#656B73] dark:text-[#8A9098] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
                         }`}
                       >
-                        <Upload className="h-3 w-3" />
-                        <span>Upload Custom</span>
+                        <span>Public Hero (Panoramic)</span>
+                        {formData.isHeroCustomUpload && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        )}
                       </button>
                     </div>
                   </div>
 
-                  {artworkMode === "preset" ? (
-                    /* Preset Grid */
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                      {CURATED_POSTERS.map((poster) => (
-                        <div
-                          key={poster.label}
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              posterUrl: poster.url,
-                              isCustomUpload: false,
-                              customUploadFileName: "",
-                            });
-                          }}
-                          className={`group relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all ${
-                            formData.posterUrl === poster.url && !formData.isCustomUpload
-                              ? "border-[#25292F] dark:border-[#E8EAED] shadow-sm ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
-                              : "border-transparent opacity-70 hover:opacity-100"
-                          }`}
-                        >
-                          <img
-                            src={poster.url}
-                            alt={poster.label}
-                            style={{ objectPosition: formData.focalPoint }}
-                            className="h-20 w-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
-                            <span className="text-[10px] font-bold text-white leading-tight">
-                              {poster.label}
-                            </span>
-                          </div>
-                          {formData.posterUrl === poster.url && !formData.isCustomUpload && (
-                            <div className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
-                              <Check className="h-2.5 w-2.5 stroke-[3]" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    /* Custom Image Upload Dropzone */
-                    <div className="space-y-4 pt-1">
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl border-2 border-dashed border-[#D4D7DC] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
-                            <ImageIcon className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
-                              {formData.isCustomUpload
-                                ? formData.customUploadFileName || "Custom Artwork Uploaded"
-                                : "Upload Event Artwork"}
-                            </div>
-                            <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F]">
-                              Supports JPEG, PNG, WebP up to 5 MB. Client preview representation.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold hover:opacity-90 transition-opacity">
-                            <Upload className="h-3.5 w-3.5" />
-                            <span>{formData.isCustomUpload ? "Replace File" : "Choose File"}</span>
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              onChange={handleFileUpload}
-                              className="hidden"
-                            />
-                          </label>
-                          {formData.isCustomUpload && (
-                            <button
-                              type="button"
-                              onClick={handleRemoveUpload}
-                              className="p-1.5 rounded-full text-red-500 hover:bg-red-500/10 transition-colors"
-                              title="Remove custom artwork"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
+                  {/* Active Asset Configuration Panel */}
+                  {activeArtworkTab === "directory" ? (
+                    /* ===================== DIRECTORY ARTWORK TAB ===================== */
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+                          Directory Card Image Source
+                        </span>
+                        <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-[11px] font-semibold">
+                          <button
+                            type="button"
+                            onClick={() => setDirectoryArtworkMode("preset")}
+                            className={`px-2.5 py-0.5 rounded-full transition-all ${
+                              directoryArtworkMode === "preset"
+                                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                                : "text-[#656B73] dark:text-[#8A9098]"
+                            }`}
+                          >
+                            Presets
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDirectoryArtworkMode("upload")}
+                            className={`px-2.5 py-0.5 rounded-full transition-all flex items-center gap-1 ${
+                              directoryArtworkMode === "upload"
+                                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                                : "text-[#656B73] dark:text-[#8A9098]"
+                            }`}
+                          >
+                            <Upload className="h-3 w-3" />
+                            <span>Upload</span>
+                          </button>
                         </div>
                       </div>
 
-                      {uploadError && (
-                        <div className="flex items-center gap-2 text-xs font-medium text-red-600 bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
-                          <AlertCircle className="h-4 w-4 shrink-0" />
-                          <span>{uploadError}</span>
+                      {directoryArtworkMode === "preset" ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          {CURATED_POSTERS.map((poster) => (
+                            <div
+                              key={poster.label}
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  directoryImage: poster.url,
+                                  posterUrl: poster.url,
+                                  isDirectoryCustomUpload: false,
+                                  directoryCustomFileName: "",
+                                });
+                              }}
+                              className={`group relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all ${
+                                formData.directoryImage === poster.url && !formData.isDirectoryCustomUpload
+                                  ? "border-[#25292F] dark:border-[#E8EAED] shadow-sm ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
+                                  : "border-transparent opacity-70 hover:opacity-100"
+                              }`}
+                            >
+                              <img
+                                src={poster.url}
+                                alt={poster.label}
+                                style={{ objectPosition: formData.directoryImageFocalPoint }}
+                                className="h-16 w-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-1.5">
+                                <span className="text-[9.5px] font-bold text-white leading-tight">
+                                  {poster.label}
+                                </span>
+                              </div>
+                              {formData.directoryImage === poster.url && !formData.isDirectoryCustomUpload && (
+                                <div className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
+                                  <Check className="h-2 w-2 stroke-[3]" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed border-[#D4D7DC] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+                              <ImageIcon className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                                {formData.isDirectoryCustomUpload
+                                  ? formData.directoryCustomFileName || "Custom Directory Image"
+                                  : "Upload Directory Card Image"}
+                              </div>
+                              <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F]">
+                                JPEG, PNG, or WebP &lt; 5MB.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold hover:opacity-90 transition-opacity">
+                              <Upload className="h-3 w-3" />
+                              <span>{formData.isDirectoryCustomUpload ? "Replace" : "Choose File"}</span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => handleFileUpload(e, "directory")}
+                                className="hidden"
+                              />
+                            </label>
+                            {formData.isDirectoryCustomUpload && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUpload("directory")}
+                                className="p-1 rounded-full text-red-500 hover:bg-red-500/10 transition-colors"
+                                title="Remove directory upload"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
+
+                      {/* Directory Focal Controls */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                          <Crop className="h-3.5 w-3.5" />
+                          <span>Directory 16:9 Focal Anchor</span>
+                        </div>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {FOCAL_PRESETS.map((fp) => (
+                            <button
+                              key={fp.label}
+                              type="button"
+                              onClick={() =>
+                                setFormData({
+                                  ...formData,
+                                  directoryImageFocalPoint: fp.value,
+                                  focalPoint: fp.value,
+                                })
+                              }
+                              className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-medium transition-colors ${
+                                formData.directoryImageFocalPoint === fp.value
+                                  ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                                  : "border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                              }`}
+                            >
+                              {fp.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ===================== PUBLIC HERO ARTWORK TAB ===================== */
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+                          Public Hero Banner Image Source
+                        </span>
+                        <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-[11px] font-semibold">
+                          <button
+                            type="button"
+                            onClick={() => setHeroArtworkMode("preset")}
+                            className={`px-2.5 py-0.5 rounded-full transition-all ${
+                              heroArtworkMode === "preset"
+                                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                                : "text-[#656B73] dark:text-[#8A9098]"
+                            }`}
+                          >
+                            Presets
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHeroArtworkMode("upload")}
+                            className={`px-2.5 py-0.5 rounded-full transition-all flex items-center gap-1 ${
+                              heroArtworkMode === "upload"
+                                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                                : "text-[#656B73] dark:text-[#8A9098]"
+                            }`}
+                          >
+                            <Upload className="h-3 w-3" />
+                            <span>Upload</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {heroArtworkMode === "preset" ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          {CURATED_POSTERS.map((poster) => (
+                            <div
+                              key={poster.label}
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  heroImage: poster.url,
+                                  isHeroCustomUpload: false,
+                                  heroCustomFileName: "",
+                                });
+                              }}
+                              className={`group relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all ${
+                                formData.heroImage === poster.url && !formData.isHeroCustomUpload
+                                  ? "border-[#25292F] dark:border-[#E8EAED] shadow-sm ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
+                                  : "border-transparent opacity-70 hover:opacity-100"
+                              }`}
+                            >
+                              <img
+                                src={poster.url}
+                                alt={poster.label}
+                                style={{ objectPosition: formData.heroImageFocalPoint }}
+                                className="h-16 w-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-1.5">
+                                <span className="text-[9.5px] font-bold text-white leading-tight">
+                                  {poster.label}
+                                </span>
+                              </div>
+                              {formData.heroImage === poster.url && !formData.isHeroCustomUpload && (
+                                <div className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
+                                  <Check className="h-2 w-2 stroke-[3]" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed border-[#D4D7DC] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+                              <ImageIcon className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                                {formData.isHeroCustomUpload
+                                  ? formData.heroCustomFileName || "Custom Hero Banner"
+                                  : "Upload Public Hero Banner Image"}
+                              </div>
+                              <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F]">
+                                JPEG, PNG, or WebP &lt; 5MB (Panoramic crop).
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold hover:opacity-90 transition-opacity">
+                              <Upload className="h-3 w-3" />
+                              <span>{formData.isHeroCustomUpload ? "Replace" : "Choose File"}</span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => handleFileUpload(e, "hero")}
+                                className="hidden"
+                              />
+                            </label>
+                            {formData.isHeroCustomUpload && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUpload("hero")}
+                                className="p-1 rounded-full text-red-500 hover:bg-red-500/10 transition-colors"
+                                title="Remove hero upload"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hero Focal Controls */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                          <Crop className="h-3.5 w-3.5" />
+                          <span>Hero Panoramic Focal Anchor</span>
+                        </div>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {FOCAL_PRESETS.map((fp) => (
+                            <button
+                              key={fp.label}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, heroImageFocalPoint: fp.value })}
+                              className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-medium transition-colors ${
+                                formData.heroImageFocalPoint === fp.value
+                                  ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                                  : "border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                              }`}
+                            >
+                              {fp.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
 
-                  {/* Crop & Focal Point Controls */}
-                  <div className="border-t border-[#F0F1F2] dark:border-[#262A2E] pt-3 space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
-                        <Crop className="h-3.5 w-3.5" />
-                        <span>Focal Alignment & Crop Anchor</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {FOCAL_PRESETS.map((fp) => (
-                          <button
-                            key={fp.label}
-                            type="button"
-                            onClick={() => setFormData({ ...formData, focalPoint: fp.value })}
-                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
-                              formData.focalPoint === fp.value
-                                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                                : "border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
-                            }`}
-                          >
-                            {fp.label}
-                          </button>
-                        ))}
-                      </div>
+                  {uploadError && (
+                    <div className="flex items-center gap-2 text-xs font-medium text-red-600 bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>{uploadError}</span>
                     </div>
+                  )}
 
-                    {/* Dual Live Aspect Ratio Previews */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                      {/* 1. Directory Card Presentation */}
-                      <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-2 space-y-1.5">
-                        <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider block">
-                          Directory Card Preview (16:9)
-                        </span>
+                  {/* Dual Independent Live Previews */}
+                  <div className="border-t border-[#F0F1F2] dark:border-[#262A2E] pt-3">
+                    <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider block mb-2">
+                      Dual Live Layout Previews (Real Assets Applied)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* 1. Directory Card Presentation (Renders directoryImage) */}
+                      <div
+                        onClick={() => setActiveArtworkTab("directory")}
+                        className={`cursor-pointer rounded-xl border p-2 space-y-1.5 transition-all ${
+                          activeArtworkTab === "directory"
+                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
+                            : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider">
+                            1. Directory Card (16:9)
+                          </span>
+                          {activeArtworkTab === "directory" && (
+                            <span className="text-[9.5px] font-semibold text-[#17191C] dark:text-[#F1F2F3] underline">
+                              Editing
+                            </span>
+                          )}
+                        </div>
                         <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-[#17191C]">
                           <img
-                            src={formData.posterUrl}
+                            src={formData.directoryImage || formData.posterUrl}
                             alt="Card Cover Preview"
-                            style={{ objectPosition: formData.focalPoint }}
+                            style={{ objectPosition: formData.directoryImageFocalPoint || formData.focalPoint }}
                             className="h-full w-full object-cover"
                           />
                           <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 text-[9px] font-bold text-white uppercase backdrop-blur-xs">
@@ -712,20 +955,34 @@ export default function NewEventPage() {
                         </div>
                       </div>
 
-                      {/* 2. Public Hero Banner Presentation */}
-                      <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-2 space-y-1.5">
-                        <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider block">
-                          Public Hero Banner Preview (Panoramic)
-                        </span>
-                        <div className="relative h-[90px] w-full rounded-lg overflow-hidden bg-[#17191C]">
+                      {/* 2. Public Hero Banner Presentation (Renders heroImage) */}
+                      <div
+                        onClick={() => setActiveArtworkTab("hero")}
+                        className={`cursor-pointer rounded-xl border p-2 space-y-1.5 transition-all ${
+                          activeArtworkTab === "hero"
+                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
+                            : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider">
+                            2. Public Hero Banner (Panoramic)
+                          </span>
+                          {activeArtworkTab === "hero" && (
+                            <span className="text-[9.5px] font-semibold text-[#17191C] dark:text-[#F1F2F3] underline">
+                              Editing
+                            </span>
+                          )}
+                        </div>
+                        <div className="relative aspect-video sm:h-[95px] w-full rounded-lg overflow-hidden bg-[#17191C]">
                           <img
-                            src={formData.posterUrl}
+                            src={formData.heroImage || formData.directoryImage || formData.posterUrl}
                             alt="Hero Cover Preview"
-                            style={{ objectPosition: formData.focalPoint }}
+                            style={{ objectPosition: formData.heroImageFocalPoint || formData.focalPoint }}
                             className="h-full w-full object-cover"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2 text-white">
-                            <span className="text-[10px] font-mono tracking-wider uppercase text-white/70 truncate">
+                            <span className="text-[9.5px] font-mono tracking-wider uppercase text-white/70 truncate">
                               Official Header Banner
                             </span>
                           </div>

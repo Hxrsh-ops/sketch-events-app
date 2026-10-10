@@ -104,6 +104,10 @@ export interface EventItem {
   contactPhone?: string;
   communityLink?: string;
   focalPoint?: string;
+  directoryImage?: string;
+  directoryImageFocalPoint?: string;
+  heroImage?: string;
+  heroImageFocalPoint?: string;
   registrationForm?: RegistrationFormSchema;
 }
 
