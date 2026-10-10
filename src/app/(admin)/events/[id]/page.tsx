@@ -460,12 +460,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 {p.name.slice(0, 2).toUpperCase()}
                               </div>
                               <div>
-                                <p className="font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline">{p.name}</p>
-                                <p className="font-sans text-[11px] text-[#656B73] dark:text-[#989EA7] truncate max-w-[190px]">{p.email}</p>
+                                <p className="font-semibold text-[13px] text-[#17191C] dark:text-[#F1F2F3] group-hover:underline tracking-[-0.01em]">{p.name}</p>
+                                <p className="font-sans text-[11px] text-[#656B73] dark:text-[#9EA4AD] truncate max-w-[190px] mt-0.5">{p.email}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 font-mono text-[10.5px] tracking-tight text-[#8A9098] dark:text-[#7D858F] whitespace-nowrap select-all">
+                          <td className="px-4 py-3.5 font-mono text-[10px] uppercase tracking-wider text-[#8A9098] dark:text-[#828892] whitespace-nowrap select-all font-medium">
                             {p.registrationId}
                           </td>
                           <td className="px-4 py-3.5 text-[#656B73] dark:text-[#989EA7]">

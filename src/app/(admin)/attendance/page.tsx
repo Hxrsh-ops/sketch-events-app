@@ -924,23 +924,27 @@ export default function AttendancePage() {
                           {isChecked ? <Check className="h-4 w-4" /> : participant.name.charAt(0)}
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate">
+                        <div className="min-w-0 flex-1 py-0.5">
+                          {/* Primary Line: Attendee Name + Inline Team Affiliation */}
+                          <div className="flex items-baseline gap-2 min-w-0">
+                            <span className="text-[13px] font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate tracking-[-0.01em]">
                               {participant.name}
                             </span>
                             {participant.teamName && (
-                              <span className="hidden sm:inline-block text-[11px] font-normal text-[#8A9098] dark:text-[#7D858F] truncate before:content-['•'] before:mr-1.5 before:text-[#D4D7DC] dark:before:text-[#40464D]">
+                              <span className="hidden sm:inline-block text-[11px] font-normal text-[#8A9098] dark:text-[#8D949E] truncate">
+                                <span className="text-[#C5C9D0] dark:text-[#424850] mr-1.5 select-none font-light">/</span>
                                 {participant.teamName}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[11px] leading-tight mt-0.5 min-w-0">
-                            <span className="font-mono text-[10.5px] tracking-tight text-[#8A9098] dark:text-[#7D858F] shrink-0 select-all">
+
+                          {/* Secondary Line: Machine ID + Subtle Divider + Email */}
+                          <div className="flex items-center gap-2 text-[11px] leading-tight mt-0.5 min-w-0">
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-[#8A9098] dark:text-[#828892] shrink-0 select-all font-medium">
                               {participant.registrationId}
                             </span>
-                            <span className="text-[#D4D7DC] dark:text-[#40464D] select-none">•</span>
-                            <span className="font-sans text-[#656B73] dark:text-[#989EA7] truncate">
+                            <span className="text-[#D4D7DC] dark:text-[#383E46] select-none text-[9px]">•</span>
+                            <span className="font-sans text-[11px] text-[#656B73] dark:text-[#9EA4AD] truncate">
                               {participant.email}
                             </span>
                           </div>
@@ -1008,16 +1012,18 @@ export default function AttendancePage() {
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="h-2 w-2 rounded-full bg-[#17191C] dark:bg-[#E8EAED]" />
-                      <div className="min-w-0">
-                        <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-[13px] text-[#17191C] dark:text-[#F1F2F3] truncate tracking-[-0.01em]">
                           {log.participantName}
                         </div>
-                        <div className="text-[11px] leading-tight text-[#8A9098] dark:text-[#7D858F] flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[10.5px] select-all tracking-tight">{log.registrationId}</span>
-                          <span className="text-[#D4D7DC] dark:text-[#40464D] select-none">•</span>
-                          <span className="capitalize">{log.method}</span>
-                          <span className="text-[#D4D7DC] dark:text-[#40464D] select-none">•</span>
-                          <span className="font-mono text-[10.5px] tabular-nums">{log.timestamp}</span>
+                        <div className="text-[11px] leading-tight text-[#8A9098] dark:text-[#8D949E] flex items-center gap-2 mt-0.5 min-w-0">
+                          <span className="font-mono text-[10px] uppercase tracking-wider text-[#8A9098] dark:text-[#828892] select-all font-medium shrink-0">
+                            {log.registrationId}
+                          </span>
+                          <span className="text-[#D4D7DC] dark:text-[#383E46] select-none text-[9px]">•</span>
+                          <span className="capitalize text-[#656B73] dark:text-[#9EA4AD]">{log.method}</span>
+                          <span className="text-[#D4D7DC] dark:text-[#383E46] select-none text-[9px]">•</span>
+                          <span className="font-mono text-[10.5px] tabular-nums text-[#8A9098] dark:text-[#7D858F]">{log.timestamp}</span>
                         </div>
                       </div>
                     </div>
