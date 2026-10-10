@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -10,40 +10,36 @@ import {
   Mail,
   ArrowRight,
   ShieldCheck,
-  QrCode,
   Download,
   Share2,
   Sparkles,
   AlertCircle,
   Clock,
   Phone,
-  Building2,
-  UserPlus,
-  Trash2,
-  Shield,
   Layers,
   ArrowLeft,
   Check,
   Lock,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CustomSelect } from "@/components/ui/custom-select";
-import { CustomCheckbox } from "@/components/ui/custom-checkbox";
 import { MOCK_EVENTS, MOCK_ROUNDS } from "@/lib/mock-data";
 import { formatDate } from "@/lib/utils";
+import {
+  DynamicFormRenderer,
+  isFieldVisible,
+} from "@/components/forms/dynamic-form-renderer";
+import {
+  DIET_CODE_TEMPLATE,
+  STANDARD_INDIVIDUAL_TEMPLATE,
+  HACKATHON_TEAM_TEMPLATE,
+} from "@/lib/form-templates";
+import { RegistrationFormSchema, FormField } from "@/types";
 
 interface PublicEventPageProps {
   params: Promise<{ slug: string }>;
-}
-
-interface TeamMemberInput {
-  name: string;
-  email: string;
-  department: string;
 }
 
 export default function PublicEventPage({ params }: PublicEventPageProps) {
@@ -53,41 +49,27 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   // Match event by slug or fallback
   const event =
     MOCK_EVENTS.find(
-      (e) => e.slug === slug || e.slug === slug.replace("sketch-", "") || e.id === slug
+      (e) =>
+        e.slug === slug ||
+        e.slug === slug.replace("sketch-", "") ||
+        e.id === slug
     ) || MOCK_EVENTS[0];
 
   const eventRounds = MOCK_ROUNDS.filter((r) => r.eventId === event.id);
+
+  // Active form schema for this event
+  const formSchema: RegistrationFormSchema = useMemo(() => {
+    if (event.registrationForm && event.registrationForm.sections?.length > 0) {
+      return event.registrationForm;
+    }
+    return event.hasTeams ? HACKATHON_TEAM_TEMPLATE : STANDARD_INDIVIDUAL_TEMPLATE;
+  }, [event]);
 
   // Registration journey state: "form" | "review" | "confirmed"
   const [journeyStep, setJourneyStep] = useState<"form" | "review" | "confirmed">("form");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Individual form state
-  const [individualData, setIndividualData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    department: "Computer Science",
-    year: "3rd Year",
-    dietary: "none",
-    portfolioUrl: "",
-    agreeTerms: true,
-  });
-
-  // Team form state (when event has teams)
-  const [teamData, setTeamData] = useState({
-    teamName: "",
-    captainName: "",
-    captainEmail: "",
-    captainPhone: "",
-    captainDepartment: "Computer Science",
-    captainYear: "3rd Year",
-    members: [
-      { name: "", email: "", department: "Visual Arts" },
-    ] as TeamMemberInput[],
-    agreeTerms: true,
-  });
+  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
 
   // Generated Registration Result
   const [registrationResult, setRegistrationResult] = useState<{
@@ -99,67 +81,182 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
     teamName?: string;
   } | null>(null);
 
-  // Email format validation
-  const isValidEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  // Add team member slot
-  const handleAddMember = () => {
-    if (teamData.members.length < 3) {
-      setTeamData({
-        ...teamData,
-        members: [...teamData.members, { name: "", email: "", department: "Design" }],
+  const handleFieldChange = (fieldId: string, value: unknown) => {
+    setFormValues((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+    if (errors[fieldId]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
       });
     }
   };
 
-  // Remove team member slot
-  const handleRemoveMember = (index: number) => {
-    if (teamData.members.length > 1) {
-      setTeamData({
-        ...teamData,
-        members: teamData.members.filter((_, i) => i !== index),
-      });
+  // Helper to extract primary attendee name, email, and team name from dynamic form values
+  const extractAttendeeMetadata = () => {
+    // 1. Team Name
+    let teamName: string | undefined = undefined;
+    if (formValues["team_name"]) {
+      teamName = String(formValues["team_name"]);
+    } else {
+      for (const sec of formSchema.sections) {
+        for (const f of sec.fields) {
+          if (
+            (f.id.toLowerCase().includes("team_name") ||
+              f.label.toLowerCase().includes("team name")) &&
+            formValues[f.id]
+          ) {
+            teamName = String(formValues[f.id]);
+            break;
+          }
+        }
+        if (teamName) break;
+      }
     }
+
+    // 2. Attendee / Leader Name
+    let attendeeName = "";
+    const nameKeys = ["leader_name", "captain_name", "fullName", "full_name", "name"];
+    for (const k of nameKeys) {
+      if (formValues[k] && String(formValues[k]).trim()) {
+        attendeeName = String(formValues[k]).trim();
+        break;
+      }
+    }
+    if (!attendeeName) {
+      for (const sec of formSchema.sections) {
+        for (const f of sec.fields) {
+          if (
+            f.type === "text" &&
+            f.label.toLowerCase().includes("name") &&
+            !f.label.toLowerCase().includes("team") &&
+            formValues[f.id]
+          ) {
+            attendeeName = String(formValues[f.id]).trim();
+            break;
+          }
+        }
+        if (attendeeName) break;
+      }
+    }
+    if (!attendeeName) {
+      attendeeName = "Participant";
+    }
+
+    // 3. Attendee / Leader Email
+    let email = "";
+    const emailKeys = ["leader_email", "captain_email", "email", "srm_email"];
+    for (const k of emailKeys) {
+      if (formValues[k] && String(formValues[k]).trim()) {
+        email = String(formValues[k]).trim();
+        break;
+      }
+    }
+    if (!email) {
+      for (const sec of formSchema.sections) {
+        for (const f of sec.fields) {
+          if (f.type === "email" && formValues[f.id]) {
+            email = String(formValues[f.id]).trim();
+            break;
+          }
+        }
+        if (email) break;
+      }
+    }
+    if (!email) {
+      email = "participant@sketch.events";
+    }
+
+    return { attendeeName, email, teamName };
   };
 
-  // Validate Step 1 form fields
+  // Validate dynamic form fields according to schema and conditional visibility
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
-    if (event.hasTeams) {
-      if (!teamData.teamName.trim()) newErrors.teamName = "Team name is required.";
-      if (!teamData.captainName.trim()) newErrors.captainName = "Team captain name is required.";
-      if (!teamData.captainEmail.trim()) {
-        newErrors.captainEmail = "Captain email address is required.";
-      } else if (!isValidEmail(teamData.captainEmail)) {
-        newErrors.captainEmail = "Please enter a valid email address.";
-      }
+    formSchema.sections.forEach((section) => {
+      section.fields.forEach((field) => {
+        // Evaluate conditional visibility: hidden fields are never validated
+        if (!isFieldVisible(field, formValues)) {
+          return;
+        }
 
-      teamData.members.forEach((m, idx) => {
-        if (!m.name.trim()) newErrors[`member_${idx}_name`] = `Member #${idx + 2} name is required.`;
-        if (!m.email.trim()) {
-          newErrors[`member_${idx}_email`] = `Member #${idx + 2} email is required.`;
-        } else if (!isValidEmail(m.email)) {
-          newErrors[`member_${idx}_email`] = `Invalid email for Member #${idx + 2}.`;
+        // Info type has no user inputs
+        if (field.type === "info") {
+          return;
+        }
+
+        const val = formValues[field.id];
+        const isBlank =
+          val === undefined ||
+          val === null ||
+          val === "" ||
+          (Array.isArray(val) && val.length === 0);
+
+        // Required validation
+        if (field.required && isBlank) {
+          newErrors[field.id] = `${field.label} is required.`;
+          return;
+        }
+
+        if (!isBlank) {
+          const strVal = String(val).trim();
+
+          // Email validation
+          if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strVal)) {
+            newErrors[field.id] = "Please enter a valid email address.";
+            return;
+          }
+
+          // Phone validation
+          if (field.type === "phone" && !/^[0-9+\s\-().]{7,20}$/.test(strVal)) {
+            newErrors[field.id] = "Please enter a valid phone number.";
+            return;
+          }
+
+          // URL validation
+          if (
+            field.type === "url" &&
+            !/^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(strVal)
+          ) {
+            newErrors[field.id] = "Please enter a valid URL (e.g. https://...).";
+            return;
+          }
+
+          // Number validation
+          if (field.type === "number") {
+            const num = Number(strVal);
+            if (isNaN(num)) {
+              newErrors[field.id] = "Please enter a valid numeric value.";
+              return;
+            }
+            if (field.validation?.min !== undefined && num < field.validation.min) {
+              newErrors[field.id] = `Minimum value is ${field.validation.min}.`;
+              return;
+            }
+            if (field.validation?.max !== undefined && num > field.validation.max) {
+              newErrors[field.id] = `Maximum value is ${field.validation.max}.`;
+              return;
+            }
+          }
         }
       });
-    } else {
-      if (!individualData.fullName.trim()) newErrors.fullName = "Full name is required.";
-      if (!individualData.email.trim()) {
-        newErrors.email = "Email address is required.";
-      } else if (!isValidEmail(individualData.email)) {
-        newErrors.email = "Please enter a valid university or personal email.";
-      }
-      if (!individualData.department.trim()) newErrors.department = "Department / Major is required.";
-    }
+    });
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
       setJourneyStep("review");
       window.scrollTo({ top: 450, behavior: "smooth" });
+    } else {
+      const firstErrorId = Object.keys(newErrors)[0];
+      const elem = document.getElementById(firstErrorId);
+      if (elem) {
+        elem.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
   };
 
@@ -171,14 +268,15 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
     setTimeout(() => {
       const generatedRegId = `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`;
       const generatedCredHash = `qr_cred_${Math.random().toString(36).substring(2, 10)}`;
+      const { attendeeName, email, teamName } = extractAttendeeMetadata();
 
       setRegistrationResult({
         registrationId: generatedRegId,
         qrCredentialId: generatedCredHash,
         registeredAt: new Date().toISOString(),
-        attendeeName: event.hasTeams ? teamData.captainName : individualData.fullName,
-        email: event.hasTeams ? teamData.captainEmail : individualData.email,
-        teamName: event.hasTeams ? teamData.teamName : undefined,
+        attendeeName,
+        email,
+        teamName: event.hasTeams || teamName ? teamName : undefined,
       });
 
       setIsSubmitting(false);
@@ -214,7 +312,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   
   <line x1="50" y1="590" x2="550" y2="590" stroke="#25292F" stroke-width="2"/>
   
-  <text x="50" y="630" font-family="sans-serif" font-size="11" fill="#8A9098">PARTICIPANT / CAPTAIN</text>
+  <text x="50" y="630" font-family="sans-serif" font-size="11" fill="#8A9098">PARTICIPANT / REPRESENTATIVE</text>
   <text x="50" y="655" font-family="sans-serif" font-size="18" font-weight="bold" fill="#FFFFFF">${registrationResult.attendeeName}</text>
   
   ${registrationResult.teamName ? `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">TEAM AFFILIATION</text><text x="50" y="720" font-family="sans-serif" font-size="16" font-weight="bold" fill="#FFFFFF">${registrationResult.teamName}</text>` : `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">REGISTRATION STATUS</text><text x="50" y="720" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF">Confirmed Individual Attendee</text>`}
@@ -236,24 +334,6 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   const isRegistrationClosed = event.registrationState === "closed" || event.lifecycle === "completed";
   const isRegistrationFull = event.registrationState === "full" || event.registeredCount >= event.capacity;
   const isRegistrationUpcoming = event.registrationState === "upcoming" || event.lifecycle === "draft";
-
-  const departmentOptions = [
-    { value: "Computer Science", label: "Computer Science & Engineering" },
-    { value: "Visual Arts", label: "Visual Arts & Communication" },
-    { value: "Product Design", label: "Industrial & Product Design" },
-    { value: "Human-Computer Interaction", label: "Human-Computer Interaction (HCI)" },
-    { value: "Information Technology", label: "Information Technology" },
-    { value: "Media Studies", label: "Design & Media Studies" },
-    { value: "Other", label: "Other Academic Department" },
-  ];
-
-  const yearOptions = [
-    { value: "1st Year", label: "1st Year (Freshman)" },
-    { value: "2nd Year", label: "2nd Year (Sophomore)" },
-    { value: "3rd Year", label: "3rd Year (Junior)" },
-    { value: "4th Year", label: "4th Year (Senior)" },
-    { value: "Postgraduate / Alumni", label: "Postgraduate / Master's / Alumni" },
-  ];
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto pb-16">
@@ -315,7 +395,9 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
             <div>
               <div className="text-[10px] text-[#8A9098] font-bold uppercase">Participation Format</div>
               <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">
-                {event.hasTeams ? "Team (2-4 Members)" : "Individual Attendance"}
+                {event.hasTeams
+                  ? `Team (${event.minTeamSize || 2}-${event.maxTeamSize || 4} Members)`
+                  : "Individual Attendance"}
               </div>
             </div>
           </div>
@@ -467,6 +549,49 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
               </div>
             </div>
 
+            {/* Official Community Link (Inspired by Diet CODE reference) */}
+            {event.communityLink && (
+              <div className="max-w-md mx-auto rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 p-4 text-center space-y-2">
+                <div className="flex items-center justify-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs">
+                  <MessageCircle className="h-4 w-4" />
+                  <span>Join the Official Participant Community</span>
+                </div>
+                <p className="text-[11px] text-[#656B73] dark:text-[#8A9098]">
+                  Connect with fellow participants, team organizers, and mentors before the event day.
+                </p>
+                <a
+                  href={event.communityLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-bold transition-transform hover:scale-[1.02]"
+                >
+                  <span>Join Discussion Group</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            )}
+
+            {/* Organizer Contact Info */}
+            {(event.contactEmail || event.contactPhone) && (
+              <div className="max-w-md mx-auto text-center text-xs text-[#8A9098] space-y-1 pt-2">
+                <p className="font-medium text-[#656B73] dark:text-[#AEB3BA]">Questions or Check-in Assistance?</p>
+                <div className="flex items-center justify-center flex-wrap gap-4 text-[11px]">
+                  {event.contactEmail && (
+                    <a href={`mailto:${event.contactEmail}`} className="hover:underline flex items-center gap-1">
+                      <Mail className="h-3 w-3 text-[#17191C] dark:text-[#E8EAED]" />
+                      <span>{event.contactEmail}</span>
+                    </a>
+                  )}
+                  {event.contactPhone && (
+                    <a href={`tel:${event.contactPhone}`} className="hover:underline flex items-center gap-1">
+                      <Phone className="h-3 w-3 text-[#17191C] dark:text-[#E8EAED]" />
+                      <span>{event.contactPhone}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-3 pt-2">
               <Button
@@ -482,16 +607,9 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
                 className="flex-1 rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold h-11 dark:bg-[#1B1E21] dark:text-[#F1F2F3] dark:hover:bg-[#22262A]"
                 onClick={() => {
                   setJourneyStep("form");
-                  setIndividualData({
-                    fullName: "",
-                    email: "",
-                    phone: "",
-                    department: "Computer Science",
-                    year: "3rd Year",
-                    dietary: "none",
-                    portfolioUrl: "",
-                    agreeTerms: true,
-                  });
+                  setFormValues({});
+                  setErrors({});
+                  setRegistrationResult(null);
                 }}
               >
                 <span>Register Another</span>
@@ -499,72 +617,79 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
             </div>
           </div>
         ) : journeyStep === "review" ? (
-          /* State E: Review & Confirm Step */
-          <div className="space-y-6 max-w-lg mx-auto">
+          /* State E: Dynamic Review & Confirm Step */
+          <div className="space-y-6 max-w-xl mx-auto">
             <div>
               <h2 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">Review Registration Details</h2>
               <p className="text-xs text-[#656B73] dark:text-[#8A9098] mt-0.5">
-                Confirm your submission information before generating your event pass.
+                Confirm your submission information before generating your verified event entry pass.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-5 space-y-3 text-xs">
-              <div className="flex justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                <span className="text-[#8A9098]">Experience:</span>
-                <strong className="text-[#17191C] dark:text-[#F1F2F3]">{event.title}</strong>
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#8A9098] font-medium">Selected Experience:</span>
+                  <strong className="text-[#17191C] dark:text-[#F1F2F3]">{event.title}</strong>
+                </div>
               </div>
 
-              {event.hasTeams ? (
-                <>
-                  <div className="flex justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                    <span className="text-[#8A9098]">Team Name:</span>
-                    <strong className="text-[#17191C] dark:text-[#F1F2F3]">{teamData.teamName}</strong>
+              {formSchema.sections.map((section) => {
+                const visibleFields = section.fields.filter(
+                  (f) => f.type !== "info" && isFieldVisible(f, formValues)
+                );
+                if (visibleFields.length === 0) return null;
+
+                return (
+                  <div
+                    key={section.id}
+                    className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-5 space-y-3 text-xs"
+                  >
+                    <div className="font-bold text-[#17191C] dark:text-[#F1F2F3] border-b border-[#F0F1F2] dark:border-[#262A2E] pb-2 text-[13px]">
+                      {section.title}
+                    </div>
+                    <div className="space-y-2">
+                      {visibleFields.map((field) => {
+                        const val = formValues[field.id];
+                        let displayVal = "—";
+                        if (val !== undefined && val !== null && val !== "") {
+                          if (Array.isArray(val)) {
+                            displayVal = val.join(", ");
+                          } else if (typeof val === "boolean") {
+                            displayVal = val ? "Yes" : "No";
+                          } else {
+                            displayVal = String(val);
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={field.id}
+                            className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-[#F0F1F2]/60 dark:border-[#262A2E]/60 gap-1"
+                          >
+                            <span className="text-[#8A9098] shrink-0 font-medium sm:max-w-[45%]">
+                              {field.label}:
+                            </span>
+                            <span className="text-[#17191C] dark:text-[#F1F2F3] font-semibold sm:text-right break-words">
+                              {displayVal}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                    <span className="text-[#8A9098]">Captain:</span>
-                    <span className="text-[#17191C] dark:text-[#F1F2F3] font-semibold">
-                      {teamData.captainName} ({teamData.captainEmail})
-                    </span>
-                  </div>
-                  <div className="py-1">
-                    <span className="text-[#8A9098] block mb-1">Roster Members:</span>
-                    {teamData.members.map((m, i) => (
-                      <div key={i} className="text-[#17191C] dark:text-[#F1F2F3] pl-2 font-medium">
-                        • {m.name} ({m.email}) — {m.department}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                    <span className="text-[#8A9098]">Attendee:</span>
-                    <strong className="text-[#17191C] dark:text-[#F1F2F3]">{individualData.fullName}</strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                    <span className="text-[#8A9098]">Email:</span>
-                    <span className="text-[#17191C] dark:text-[#F1F2F3]">{individualData.email}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                    <span className="text-[#8A9098]">Department:</span>
-                    <span className="text-[#17191C] dark:text-[#F1F2F3]">{individualData.department}</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-[#8A9098]">Academic Year:</span>
-                    <span className="text-[#17191C] dark:text-[#F1F2F3]">{individualData.year}</span>
-                  </div>
-                </>
-              )}
+                );
+              })}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 className="rounded-full text-xs h-11 px-5 border-[#E5E7EA] dark:border-[#30353A] dark:bg-[#1B1E21] dark:text-[#F1F2F3] dark:hover:bg-[#22262A]"
                 onClick={() => setJourneyStep("form")}
               >
                 <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-                Edit Info
+                Edit Information
               </Button>
               <Button
                 variant="charcoal"
@@ -577,7 +702,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
             </div>
           </div>
         ) : (
-          /* State F: Main Registration Form */
+          /* State F: Main Dynamic Registration Form */
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2">
@@ -587,224 +712,21 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
                 </h2>
               </div>
               <p className="mt-1 text-xs text-[#656B73] dark:text-[#8A9098]">
-                Direct registration for campus creators and technologists. No persistent student login required.
+                Direct registration for campus creators and technologists. Complete the form below to claim your verified pass.
               </p>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleProceedToReview} className="space-y-5">
-              {event.hasTeams ? (
-                /* Team-Based Registration Fields */
-                <div className="space-y-5">
-                  <div>
-                    <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
-                      Team Name *
-                    </label>
-                    <Input
-                      placeholder="e.g., Pixel Forge / Syntax Sisters"
-                      value={teamData.teamName}
-                      onChange={(e) => setTeamData({ ...teamData, teamName: e.target.value })}
-                      className={errors.teamName ? "border-red-500" : ""}
-                    />
-                    {errors.teamName && (
-                      <p className="mt-1 text-[11px] font-medium text-red-600">{errors.teamName}</p>
-                    )}
-                  </div>
-
-                  {/* Captain Details Box */}
-                  <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
-                      <h3 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Team Captain Information</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Captain Name *</label>
-                        <Input
-                          placeholder="e.g., Aarav Sharma"
-                          value={teamData.captainName}
-                          onChange={(e) => setTeamData({ ...teamData, captainName: e.target.value })}
-                          className={errors.captainName ? "border-red-500" : ""}
-                        />
-                        {errors.captainName && (
-                          <p className="mt-1 text-[11px] font-medium text-red-600">{errors.captainName}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Captain Email *</label>
-                        <Input
-                          type="email"
-                          placeholder="e.g., aarav@college.edu"
-                          value={teamData.captainEmail}
-                          onChange={(e) => setTeamData({ ...teamData, captainEmail: e.target.value })}
-                          className={errors.captainEmail ? "border-red-500" : ""}
-                        />
-                        {errors.captainEmail && (
-                          <p className="mt-1 text-[11px] font-medium text-red-600">{errors.captainEmail}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <CustomSelect
-                        label="Department"
-                        options={departmentOptions}
-                        value={teamData.captainDepartment}
-                        onChange={(val) => setTeamData({ ...teamData, captainDepartment: val })}
-                      />
-                      <CustomSelect
-                        label="Academic Year"
-                        options={yearOptions}
-                        value={teamData.captainYear}
-                        onChange={(val) => setTeamData({ ...teamData, captainYear: val })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Team Members List */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#656B73] dark:text-[#8A9098]">
-                        Team Roster Members ({teamData.members.length + 1} of 4)
-                      </h3>
-                      {teamData.members.length < 3 && (
-                        <button
-                          type="button"
-                          onClick={handleAddMember}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] hover:underline"
-                        >
-                          <UserPlus className="h-3.5 w-3.5" />
-                          <span>Add Member</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {teamData.members.map((member, idx) => (
-                      <div key={idx} className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] p-4 space-y-3 bg-white dark:bg-[#1B1E21]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Member #{idx + 2}</span>
-                          {teamData.members.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveMember(idx)}
-                              className="text-red-500 hover:text-red-700 p-1 rounded"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <Input
-                              placeholder="Member Full Name *"
-                              value={member.name}
-                              onChange={(e) => {
-                                const next = [...teamData.members];
-                                next[idx].name = e.target.value;
-                                setTeamData({ ...teamData, members: next });
-                              }}
-                              className={errors[`member_${idx}_name`] ? "border-red-500" : ""}
-                            />
-                            {errors[`member_${idx}_name`] && (
-                              <p className="mt-1 text-[11px] font-medium text-red-600">
-                                {errors[`member_${idx}_name`]}
-                              </p>
-                            )}
-                          </div>
-
-                          <div>
-                            <Input
-                              type="email"
-                              placeholder="Member Email *"
-                              value={member.email}
-                              onChange={(e) => {
-                                const next = [...teamData.members];
-                                next[idx].email = e.target.value;
-                                setTeamData({ ...teamData, members: next });
-                              }}
-                              className={errors[`member_${idx}_email`] ? "border-red-500" : ""}
-                            />
-                            {errors[`member_${idx}_email`] && (
-                              <p className="mt-1 text-[11px] font-medium text-red-600">
-                                {errors[`member_${idx}_email`]}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                /* Individual Registration Fields */
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
-                        Full Name *
-                      </label>
-                      <Input
-                        placeholder="e.g., Alex Morgan"
-                        value={individualData.fullName}
-                        onChange={(e) => setIndividualData({ ...individualData, fullName: e.target.value })}
-                        className={errors.fullName ? "border-red-500" : ""}
-                      />
-                      {errors.fullName && (
-                        <p className="mt-1 text-[11px] font-medium text-red-600">{errors.fullName}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
-                        University Email Address *
-                      </label>
-                      <Input
-                        type="email"
-                        placeholder="e.g., alex.morgan@college.edu"
-                        value={individualData.email}
-                        onChange={(e) => setIndividualData({ ...individualData, email: e.target.value })}
-                        className={errors.email ? "border-red-500" : ""}
-                      />
-                      {errors.email && (
-                        <p className="mt-1 text-[11px] font-medium text-red-600">{errors.email}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <CustomSelect
-                      label="Academic Department / Major *"
-                      options={departmentOptions}
-                      value={individualData.department}
-                      onChange={(val) => setIndividualData({ ...individualData, department: val })}
-                    />
-                    <CustomSelect
-                      label="Academic Year"
-                      options={yearOptions}
-                      value={individualData.year}
-                      onChange={(val) => setIndividualData({ ...individualData, year: val })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
-                      Phone Number (Optional)
-                    </label>
-                    <Input
-                      type="tel"
-                      placeholder="e.g., +91 98765 43210"
-                      value={individualData.phone}
-                      onChange={(e) => setIndividualData({ ...individualData, phone: e.target.value })}
-                    />
-                  </div>
-                </div>
-              )}
+            {/* Dynamic Form Engine */}
+            <form onSubmit={handleProceedToReview} className="space-y-6">
+              <DynamicFormRenderer
+                schema={formSchema}
+                values={formValues}
+                onChange={handleFieldChange}
+                errors={errors}
+              />
 
               {/* Terms & Submit */}
-              <div className="pt-3 border-t border-[#F0F1F2] dark:border-[#262A2E]">
+              <div className="pt-4 border-t border-[#F0F1F2] dark:border-[#262A2E]">
                 <Button
                   type="submit"
                   variant="charcoal"
@@ -818,7 +740,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
 
               <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-[#8A9098]">
                 <ShieldCheck className="h-3.5 w-3.5 text-[#25292F] dark:text-[#E8EAED]" />
-                <span>Free instant registration. No permanent student account required.</span>
+                <span>Instant verified registration. Free entry pass generated upon submission.</span>
               </div>
             </form>
           </div>

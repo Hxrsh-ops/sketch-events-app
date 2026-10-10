@@ -10,6 +10,11 @@ import {
   CommunicationJob,
   CertificateRecord,
 } from "@/types";
+import {
+  DIET_CODE_TEMPLATE,
+  STANDARD_INDIVIDUAL_TEMPLATE,
+  HACKATHON_TEAM_TEMPLATE,
+} from "./form-templates";
 
 export const MOCK_ADMIN_USER: AdminUser = {
   id: "admin-01",
@@ -101,6 +106,33 @@ export const MOCK_UPCOMING_OPERATIONS: UpcomingOperation[] = [
 
 export const MOCK_EVENTS: EventItem[] = [
   {
+    id: "evt-diet-code",
+    slug: "diet-code-2026",
+    title: "Diet CODE — Registration",
+    category: "Workshop",
+    shortDescription: "A 3-hour beginner-friendly technology challenge turning ideas into digital solutions with no-code/low-code.",
+    description: "Diet CODE is a 3-hour beginner-friendly technology event where participants learn how to turn ideas into digital solutions and build functional websites using no-code/low-code platforms. With an interactive learning session followed by a time-bound website-building challenge, the event encourages creativity, teamwork, problem-solving, and innovation. No prior coding experience is required.",
+    posterUrl: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80",
+    startDate: "2026-09-26T10:00:00Z",
+    endDate: "2026-09-26T13:00:00Z",
+    venue: "Tech Park Lab 3, Campus Main",
+    venueMode: "in-person",
+    capacity: 120,
+    registeredCount: 48,
+    checkedInCount: 0,
+    lifecycle: "published",
+    registrationState: "open",
+    hasTeams: true,
+    hasRounds: false,
+    featured: true,
+    minTeamSize: 1,
+    maxTeamSize: 3,
+    contactEmail: "sketch.srm@gmail.com",
+    contactPhone: "9444404013",
+    communityLink: "https://chat.whatsapp.com/Bx0YDxNSG595VhfaqWycgT?mode=gi_t",
+    registrationForm: DIET_CODE_TEMPLATE,
+  },
+  {
     id: "evt-01",
     slug: "design-sprint-2026",
     title: "Sketch Design Sprint 2026",
@@ -120,6 +152,9 @@ export const MOCK_EVENTS: EventItem[] = [
     hasTeams: true,
     hasRounds: true,
     featured: true,
+    minTeamSize: 2,
+    maxTeamSize: 4,
+    registrationForm: HACKATHON_TEAM_TEMPLATE,
   },
   {
     id: "evt-02",
@@ -141,6 +176,9 @@ export const MOCK_EVENTS: EventItem[] = [
     hasTeams: true,
     hasRounds: true,
     featured: true,
+    minTeamSize: 2,
+    maxTeamSize: 4,
+    registrationForm: HACKATHON_TEAM_TEMPLATE,
   },
   {
     id: "evt-03",
@@ -162,6 +200,7 @@ export const MOCK_EVENTS: EventItem[] = [
     hasTeams: false,
     hasRounds: false,
     featured: false,
+    registrationForm: STANDARD_INDIVIDUAL_TEMPLATE,
   },
   {
     id: "evt-04",
@@ -183,6 +222,7 @@ export const MOCK_EVENTS: EventItem[] = [
     hasTeams: false,
     hasRounds: false,
     featured: false,
+    registrationForm: STANDARD_INDIVIDUAL_TEMPLATE,
   },
   {
     id: "evt-05",

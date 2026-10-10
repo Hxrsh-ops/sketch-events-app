@@ -27,6 +27,15 @@ import { CustomSelect, SelectOption } from "@/components/ui/custom-select";
 import { CustomCheckbox } from "@/components/ui/custom-checkbox";
 import { CustomSwitch } from "@/components/ui/custom-switch";
 import { CustomDateTimePicker } from "@/components/ui/custom-datetime-picker";
+import { RegistrationFormBuilder } from "@/components/forms/registration-form-builder";
+import {
+  DIET_CODE_TEMPLATE,
+  STANDARD_INDIVIDUAL_TEMPLATE,
+  HACKATHON_TEAM_TEMPLATE,
+  cloneFormSchema,
+} from "@/lib/form-templates";
+import { MOCK_EVENTS } from "@/lib/mock-data";
+import { EventItem, RegistrationFormSchema } from "@/types";
 
 const CATEGORY_OPTIONS: SelectOption[] = [
   { value: "Design", label: "Design", description: "Design sprints, UI/UX hackathons, and creative design systems" },
@@ -75,7 +84,7 @@ interface RoundConfig {
 
 const STEPS = [
   { id: 1, name: "Basic Information", summary: "Event title, category & venue" },
-  { id: 2, name: "Registration Rules", summary: "Capacity & team settings" },
+  { id: 2, name: "Registration Form", summary: "Dynamic builder & capacity" },
   { id: 3, name: "Rounds & Stages", summary: "Competition pipeline" },
   { id: 4, name: "Review & Publish", summary: "Final confirmation" },
 ];
@@ -85,8 +94,9 @@ export default function NewEventPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPublishedPreview, setIsPublishedPreview] = useState(false);
+  const [createdSlug, setCreatedSlug] = useState("");
 
-  // Single unified form state
+  // Single unified form state with dynamic registration schema
   const [formData, setFormData] = useState({
     title: "",
     category: "Design",
@@ -102,11 +112,7 @@ export default function NewEventPage() {
     participationMode: "individual",
     minTeamSize: 2,
     maxTeamSize: 4,
-    collectDepartment: true,
-    collectYear: true,
-    collectPhone: false,
-    collectPortfolio: false,
-    collectDietary: false,
+    registrationForm: cloneFormSchema(STANDARD_INDIVIDUAL_TEMPLATE),
     hasRounds: false,
     rounds: [
       {
@@ -238,6 +244,40 @@ export default function NewEventPage() {
       setCurrentStep(1);
       return;
     }
+
+    const generatedSlug =
+      formData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") || `event-${Date.now()}`;
+    const newId = `evt-${Date.now().toString(36)}`;
+
+    const newEventItem: EventItem = {
+      id: newId,
+      slug: generatedSlug,
+      title: formData.title,
+      category: formData.category as any,
+      shortDescription: formData.shortDescription,
+      description: formData.description || formData.shortDescription,
+      posterUrl: formData.posterUrl,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      venue: formData.venue,
+      venueMode: formData.venueMode as any,
+      capacity: formData.capacity,
+      registeredCount: 0,
+      checkedInCount: 0,
+      lifecycle: isDraft ? "draft" : "published",
+      registrationState: "open",
+      hasTeams: formData.participationMode === "team",
+      hasRounds: formData.hasRounds,
+      minTeamSize: formData.minTeamSize,
+      maxTeamSize: formData.maxTeamSize,
+      registrationForm: formData.registrationForm,
+    };
+
+    MOCK_EVENTS.unshift(newEventItem);
+    setCreatedSlug(generatedSlug);
 
     if (isDraft) {
       alert(`Event "${formData.title}" saved as Draft (Preview Mode).`);
@@ -542,47 +582,27 @@ export default function NewEventPage() {
                   </motion.div>
                 )}
 
-                {/* Registration Fields Customizer */}
+                {/* Registration Form Builder */}
                 <div className="space-y-3 border-t border-[#F4F5F6] dark:border-[#262A2E] pt-4">
                   <div>
-                    <h3 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Participant Registration Fields</h3>
-                    <p className="text-[11px] text-[#656B73] dark:text-[#A6ADB5] mt-0.5">
-                      Full Name and Email Address are compulsory for ticket pass generation. Select optional additional fields:
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+                      <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                        Custom Registration Form Builder
+                      </h3>
+                    </div>
+                    <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">
+                      Design custom questions, dropdowns, conditional logic, and member rules. Test interactive behavior in the live preview.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    <CustomCheckbox
-                      checked={formData.collectDepartment}
-                      onChange={(c) => setFormData({ ...formData, collectDepartment: c })}
-                      label="Department / Major"
-                      description="Collects attendee academic discipline"
-                    />
-                    <CustomCheckbox
-                      checked={formData.collectYear}
-                      onChange={(c) => setFormData({ ...formData, collectYear: c })}
-                      label="Academic Year"
-                      description="1st, 2nd, 3rd, 4th Year or Alumni"
-                    />
-                    <CustomCheckbox
-                      checked={formData.collectPhone}
-                      onChange={(c) => setFormData({ ...formData, collectPhone: c })}
-                      label="WhatsApp / Phone Contact"
-                      description="Optional SMS/WhatsApp emergency alerts"
-                    />
-                    <CustomCheckbox
-                      checked={formData.collectPortfolio}
-                      onChange={(c) => setFormData({ ...formData, collectPortfolio: c })}
-                      label="Portfolio / GitHub URL"
-                      description="Useful for hackathons and design reviews"
-                    />
-                    <CustomCheckbox
-                      checked={formData.collectDietary}
-                      onChange={(c) => setFormData({ ...formData, collectDietary: c })}
-                      label="Dietary / Accessibility Notes"
-                      description="Collects catering and accessibility needs"
-                    />
-                  </div>
+                  <RegistrationFormBuilder
+                    schema={formData.registrationForm}
+                    onChange={(nextSchema) =>
+                      setFormData({ ...formData, registrationForm: nextSchema })
+                    }
+                    participationMode={formData.participationMode}
+                  />
                 </div>
               </div>
             </motion.div>
@@ -763,6 +783,37 @@ export default function NewEventPage() {
                   </div>
                 </div>
 
+                {/* Section 2.5: Custom Registration Form */}
+                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
+                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Configured Registration Form</span>
+                    <button
+                      type="button"
+                      onClick={() => handleJumpToStep(2)}
+                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                    >
+                      Edit Form
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 text-[#656B73] dark:text-[#A6ADB5]">
+                    <div>
+                      Form Architecture: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.registrationForm.sections.length} Sections, {formData.registrationForm.sections.reduce((acc, s) => acc + s.fields.length, 0)} Total Questions</strong>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {formData.registrationForm.sections.flatMap((s) => s.fields).slice(0, 8).map((f) => (
+                        <span key={f.id} className="rounded-md bg-white dark:bg-[#25292F] border border-[#E5E7EA] dark:border-[#30353A] px-2 py-0.5 text-[10px] text-[#17191C] dark:text-[#F1F2F3]">
+                          {f.label} {f.required && "*"}
+                        </span>
+                      ))}
+                      {formData.registrationForm.sections.flatMap((s) => s.fields).length > 8 && (
+                        <span className="text-[10px] text-[#8A9098] self-center">
+                          +{formData.registrationForm.sections.flatMap((s) => s.fields).length - 8} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Section 3: Competition Pipeline */}
                 <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
                   <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
@@ -848,14 +899,14 @@ export default function NewEventPage() {
                 Event Published (Preview Mode)
               </h3>
               <p className="text-xs text-[#656B73] dark:text-[#A6ADB5]">
-                &quot;{formData.title}&quot; has been configured and is ready for participant registrations.
+                &quot;{formData.title}&quot; has been configured with its custom registration form and is ready for participant entries.
               </p>
             </div>
 
             <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-3 text-xs text-[#656B73] dark:text-[#A6ADB5] text-left space-y-1">
               <div>Capacity: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.capacity} Seats</strong></div>
               <div>Category: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.category}</strong></div>
-              <div>Rounds: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.hasRounds ? `${formData.rounds.length} Stages` : "Single Stage"}</strong></div>
+              <div>Form Questions: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.registrationForm.sections.reduce((acc, s) => acc + s.fields.length, 0)} Fields</strong></div>
             </div>
 
             <div className="flex gap-2.5">
@@ -866,12 +917,12 @@ export default function NewEventPage() {
               >
                 Return to Directory
               </Button>
-              <Link href="/events" className="flex-1">
+              <Link href={`/e/${createdSlug}`} className="flex-1">
                 <Button
                   variant="charcoal"
                   className="w-full rounded-full text-xs font-semibold shadow-sm"
                 >
-                  Manage Event
+                  View Public Form
                 </Button>
               </Link>
             </div>

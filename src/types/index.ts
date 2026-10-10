@@ -12,6 +12,72 @@ export type EventLifecycle = "draft" | "published" | "live" | "completed" | "arc
 export type RegistrationState = "upcoming" | "open" | "closed" | "full";
 export type VenueMode = "in-person" | "online" | "hybrid";
 
+export type FormFieldType =
+  | "text"
+  | "textarea"
+  | "email"
+  | "phone"
+  | "number"
+  | "select"
+  | "radio"
+  | "checkbox"
+  | "url"
+  | "date"
+  | "info";
+
+export interface FormFieldOption {
+  label: string;
+  value: string;
+}
+
+export interface ConditionalRule {
+  targetFieldId: string;
+  operator: "equals" | "not_equals" | "contains";
+  value: string;
+}
+
+export interface FormFieldValidation {
+  min?: number;
+  max?: number;
+  pattern?: string;
+  patternErrorMessage?: string;
+}
+
+export interface FormField {
+  id: string;
+  type: FormFieldType;
+  label: string;
+  description?: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: FormFieldOption[];
+  validation?: FormFieldValidation;
+  conditional?: ConditionalRule;
+  appliesTo?: "leader" | "member" | "both";
+}
+
+export interface FormSection {
+  id: string;
+  title: string;
+  description?: string;
+  fields: FormField[];
+}
+
+export interface TeamConfig {
+  enabled: boolean;
+  minSize: number;
+  maxSize: number;
+  teamNameRequired?: boolean;
+  teamSizeFieldId?: string;
+  memberFields?: FormField[];
+}
+
+export interface RegistrationFormSchema {
+  version: number;
+  sections: FormSection[];
+  teamConfig?: TeamConfig;
+}
+
 export interface EventItem {
   id: string;
   slug: string;
@@ -32,6 +98,12 @@ export interface EventItem {
   hasTeams: boolean;
   hasRounds: boolean;
   featured?: boolean;
+  minTeamSize?: number;
+  maxTeamSize?: number;
+  contactEmail?: string;
+  contactPhone?: string;
+  communityLink?: string;
+  registrationForm?: RegistrationFormSchema;
 }
 
 export interface Participant {
