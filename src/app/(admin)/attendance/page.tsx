@@ -32,8 +32,8 @@ import { Badge } from "@/components/ui/badge";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
-import { MOCK_EVENTS, MOCK_PARTICIPANTS } from "@/lib/mock-data";
-import { Participant } from "@/types";
+import { getStoredEvents, getAllParticipants, updateParticipantAttendance } from "@/lib/registration-store";
+import { Participant, EventItem } from "@/types";
 
 interface ScanOutcome {
   status: "idle" | "accepted" | "already_checked_in" | "not_found";
@@ -54,11 +54,21 @@ interface CheckInLogEntry {
 }
 
 export default function AttendancePage() {
+  const [events, setEvents] = useState<EventItem[]>(() => getStoredEvents());
   const [selectedEventId, setSelectedEventId] = useState("evt-01");
-  const [participants, setParticipants] = useState<Participant[]>(MOCK_PARTICIPANTS);
+  const [participants, setParticipants] = useState<Participant[]>(() => getAllParticipants());
   const [manualQuery, setManualQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [inspectorParticipant, setInspectorParticipant] = useState<Participant | null>(null);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setEvents(getStoredEvents());
+      setParticipants(getAllParticipants());
+    };
+    window.addEventListener("sketch_store_updated", handleUpdate);
+    return () => window.removeEventListener("sketch_store_updated", handleUpdate);
+  }, []);
   const [checkInLog, setCheckInLog] = useState<CheckInLogEntry[]>([
     {
       id: "log-init-1",
@@ -89,7 +99,7 @@ export default function AttendancePage() {
     message: "Ready to scan. Align participant QR pass or search by registration ID.",
   });
 
-  const selectedEvent = MOCK_EVENTS.find((e) => e.id === selectedEventId) || MOCK_EVENTS[0];
+  const selectedEvent = events.find((e) => e.id === selectedEventId) || events[0];
 
   // Stop camera tracks helper
   const stopCameraStream = useCallback(() => {
@@ -294,16 +304,7 @@ export default function AttendancePage() {
 
     // Success check-in
     const nowIso = new Date().toISOString();
-    const updatedParticipants = participants.map((p) =>
-      p.id === found.id
-        ? {
-            ...p,
-            attendanceStatus: "checked_in" as const,
-            checkedInAt: nowIso,
-          }
-        : p
-    );
-    setParticipants(updatedParticipants);
+    updateParticipantAttendance(found.id, "checked_in");
 
     const updatedFound = {
       ...found,
@@ -345,16 +346,7 @@ export default function AttendancePage() {
     const nextStatus = isCheckedIn ? ("not_checked_in" as const) : ("checked_in" as const);
     const nowIso = nextStatus === "checked_in" ? new Date().toISOString() : undefined;
 
-    const updated = participants.map((p) =>
-      p.id === participant.id
-        ? {
-            ...p,
-            attendanceStatus: nextStatus,
-            checkedInAt: nowIso,
-          }
-        : p
-    );
-    setParticipants(updated);
+    updateParticipantAttendance(participant.id, nextStatus);
 
     if (inspectorParticipant && inspectorParticipant.id === participant.id) {
       setInspectorParticipant({
@@ -393,15 +385,9 @@ export default function AttendancePage() {
     }
   };
 
-  // Undo check-in from audit log
+    // Undo check-in from audit log
   const handleUndoCheckIn = (participantId: string) => {
-    setParticipants((prev) =>
-      prev.map((p) =>
-        p.id === participantId
-          ? { ...p, attendanceStatus: "not_checked_in", checkedInAt: undefined }
-          : p
-      )
-    );
+    updateParticipantAttendance(participantId, "not_checked_in");
     setCheckInLog((prev) => prev.filter((item) => item.participantId !== participantId));
     if (scanOutcome.participant?.id === participantId) {
       setScanOutcome({
@@ -432,7 +418,7 @@ export default function AttendancePage() {
     return true;
   });
 
-  const eventOptions = MOCK_EVENTS.map((e) => ({
+  const eventOptions = events.map((e) => ({
     value: e.id,
     label: `${e.title} (${e.category})`,
   }));

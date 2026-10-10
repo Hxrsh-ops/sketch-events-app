@@ -19,6 +19,11 @@ import {
   Eye,
   AlertCircle,
   FileCheck2,
+  Upload,
+  Image as ImageIcon,
+  Crop,
+  RotateCcw,
+  ClipboardList,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -35,6 +40,7 @@ import {
   cloneFormSchema,
 } from "@/lib/form-templates";
 import { MOCK_EVENTS } from "@/lib/mock-data";
+import { saveEvent } from "@/lib/registration-store";
 import { EventItem, RegistrationFormSchema } from "@/types";
 
 const CATEGORY_OPTIONS: SelectOption[] = [
@@ -89,12 +95,23 @@ const STEPS = [
   { id: 4, name: "Review & Publish", summary: "Final confirmation" },
 ];
 
+const FOCAL_PRESETS = [
+  { label: "Center", value: "center center" },
+  { label: "Top", value: "center top" },
+  { label: "Bottom", value: "center bottom" },
+  { label: "Left", value: "left center" },
+  { label: "Right", value: "right center" },
+];
+
 export default function NewEventPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPublishedPreview, setIsPublishedPreview] = useState(false);
   const [createdSlug, setCreatedSlug] = useState("");
+
+  const [artworkMode, setArtworkMode] = useState<"preset" | "upload">("preset");
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Single unified form state with dynamic registration schema
   const [formData, setFormData] = useState({
@@ -107,6 +124,10 @@ export default function NewEventPage() {
     startDate: "",
     endDate: "",
     posterUrl: CURATED_POSTERS[0].url,
+    focalPoint: "center center",
+    isCustomUpload: false,
+    customUploadFileName: "",
+    artworkAlt: "",
     capacity: 150,
     registrationDeadline: "",
     participationMode: "individual",
@@ -129,6 +150,51 @@ export default function NewEventPage() {
       },
     ] as RoundConfig[],
   });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!validTypes.includes(file.type)) {
+      setUploadError("Unsupported format. Please upload JPEG, PNG, or WebP.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Image exceeds 5 MB limit. Please select a smaller file.");
+      return;
+    }
+
+    setUploadError(null);
+    const reader = new FileReader();
+    reader.onload = (loadEvt) => {
+      const dataUrl = loadEvt.target?.result as string;
+      if (dataUrl) {
+        setFormData((prev) => ({
+          ...prev,
+          posterUrl: dataUrl,
+          isCustomUpload: true,
+          customUploadFileName: file.name,
+          artworkAlt: prev.title ? `${prev.title} Cover` : "Event Cover Artwork",
+        }));
+        setArtworkMode("upload");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveUpload = () => {
+    setFormData((prev) => ({
+      ...prev,
+      posterUrl: CURATED_POSTERS[0].url,
+      isCustomUpload: false,
+      customUploadFileName: "",
+      focalPoint: "center center",
+    }));
+    setArtworkMode("preset");
+    setUploadError(null);
+  };
 
   // Validation logic per step
   const validateStep = (step: number): boolean => {
@@ -260,6 +326,7 @@ export default function NewEventPage() {
       shortDescription: formData.shortDescription,
       description: formData.description || formData.shortDescription,
       posterUrl: formData.posterUrl,
+      focalPoint: formData.focalPoint,
       startDate: formData.startDate,
       endDate: formData.endDate,
       venue: formData.venue,
@@ -276,7 +343,7 @@ export default function NewEventPage() {
       registrationForm: formData.registrationForm,
     };
 
-    MOCK_EVENTS.unshift(newEventItem);
+    saveEvent(newEventItem);
     setCreatedSlug(generatedSlug);
 
     if (isDraft) {
@@ -465,35 +532,206 @@ export default function NewEventPage() {
                   {errors.shortDescription && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.shortDescription}</p>}
                 </div>
 
-                {/* Poster Artwork Selector */}
-                <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
-                    Event Cover Artwork
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {CURATED_POSTERS.map((poster) => (
-                      <div
-                        key={poster.label}
-                        onClick={() => setFormData({ ...formData, posterUrl: poster.url })}
-                        className={`group relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all ${
-                          formData.posterUrl === poster.url
-                            ? "border-[#25292F] dark:border-[#E8EAED] shadow-sm ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
-                            : "border-transparent opacity-70 hover:opacity-100"
+                {/* Event Cover Artwork Manager */}
+                <div className="space-y-3 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#F0F1F2] dark:border-[#262A2E] pb-3">
+                    <div>
+                      <label className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3] block">
+                        Event Cover Artwork
+                      </label>
+                      <p className="text-[11px] text-[#656B73] dark:text-[#8A9098] mt-0.5">
+                        Choose an approved curated preset or upload custom artwork from your computer.
+                      </p>
+                    </div>
+
+                    {/* Mode Toggle */}
+                    <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setArtworkMode("preset")}
+                        className={`px-3 py-1 rounded-full transition-all ${
+                          artworkMode === "preset"
+                            ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                            : "text-[#656B73] dark:text-[#8A9098]"
                         }`}
                       >
-                        <img src={poster.url} alt={poster.label} className="h-20 w-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
-                          <span className="text-[10px] font-bold text-white leading-tight">
-                            {poster.label}
-                          </span>
-                        </div>
-                        {formData.posterUrl === poster.url && (
-                          <div className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
-                            <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        Curated Presets
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setArtworkMode("upload")}
+                        className={`flex items-center gap-1 px-3 py-1 rounded-full transition-all ${
+                          artworkMode === "upload"
+                            ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                            : "text-[#656B73] dark:text-[#8A9098]"
+                        }`}
+                      >
+                        <Upload className="h-3 w-3" />
+                        <span>Upload Custom</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {artworkMode === "preset" ? (
+                    /* Preset Grid */
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                      {CURATED_POSTERS.map((poster) => (
+                        <div
+                          key={poster.label}
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              posterUrl: poster.url,
+                              isCustomUpload: false,
+                              customUploadFileName: "",
+                            });
+                          }}
+                          className={`group relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all ${
+                            formData.posterUrl === poster.url && !formData.isCustomUpload
+                              ? "border-[#25292F] dark:border-[#E8EAED] shadow-sm ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
+                              : "border-transparent opacity-70 hover:opacity-100"
+                          }`}
+                        >
+                          <img
+                            src={poster.url}
+                            alt={poster.label}
+                            style={{ objectPosition: formData.focalPoint }}
+                            className="h-20 w-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
+                            <span className="text-[10px] font-bold text-white leading-tight">
+                              {poster.label}
+                            </span>
                           </div>
-                        )}
+                          {formData.posterUrl === poster.url && !formData.isCustomUpload && (
+                            <div className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
+                              <Check className="h-2.5 w-2.5 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Custom Image Upload Dropzone */
+                    <div className="space-y-4 pt-1">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl border-2 border-dashed border-[#D4D7DC] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+                            <ImageIcon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                              {formData.isCustomUpload
+                                ? formData.customUploadFileName || "Custom Artwork Uploaded"
+                                : "Upload Event Artwork"}
+                            </div>
+                            <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F]">
+                              Supports JPEG, PNG, WebP up to 5 MB. Client preview representation.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold hover:opacity-90 transition-opacity">
+                            <Upload className="h-3.5 w-3.5" />
+                            <span>{formData.isCustomUpload ? "Replace File" : "Choose File"}</span>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                            />
+                          </label>
+                          {formData.isCustomUpload && (
+                            <button
+                              type="button"
+                              onClick={handleRemoveUpload}
+                              className="p-1.5 rounded-full text-red-500 hover:bg-red-500/10 transition-colors"
+                              title="Remove custom artwork"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    ))}
+
+                      {uploadError && (
+                        <div className="flex items-center gap-2 text-xs font-medium text-red-600 bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
+                          <AlertCircle className="h-4 w-4 shrink-0" />
+                          <span>{uploadError}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Crop & Focal Point Controls */}
+                  <div className="border-t border-[#F0F1F2] dark:border-[#262A2E] pt-3 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                        <Crop className="h-3.5 w-3.5" />
+                        <span>Focal Alignment & Crop Anchor</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {FOCAL_PRESETS.map((fp) => (
+                          <button
+                            key={fp.label}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, focalPoint: fp.value })}
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
+                              formData.focalPoint === fp.value
+                                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                                : "border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                            }`}
+                          >
+                            {fp.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Dual Live Aspect Ratio Previews */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* 1. Directory Card Presentation */}
+                      <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-2 space-y-1.5">
+                        <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider block">
+                          Directory Card Preview (16:9)
+                        </span>
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-[#17191C]">
+                          <img
+                            src={formData.posterUrl}
+                            alt="Card Cover Preview"
+                            style={{ objectPosition: formData.focalPoint }}
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 text-[9px] font-bold text-white uppercase backdrop-blur-xs">
+                            {formData.category}
+                          </div>
+                          <div className="absolute bottom-2 left-2 right-2 text-white">
+                            <p className="text-xs font-bold truncate">{formData.title || "Untitled Experience"}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. Public Hero Banner Presentation */}
+                      <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-2 space-y-1.5">
+                        <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider block">
+                          Public Hero Banner Preview (Panoramic)
+                        </span>
+                        <div className="relative h-[90px] w-full rounded-lg overflow-hidden bg-[#17191C]">
+                          <img
+                            src={formData.posterUrl}
+                            alt="Hero Cover Preview"
+                            style={{ objectPosition: formData.focalPoint }}
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2 text-white">
+                            <span className="text-[10px] font-mono tracking-wider uppercase text-white/70 truncate">
+                              Official Header Banner
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -586,7 +824,7 @@ export default function NewEventPage() {
                 <div className="space-y-3 border-t border-[#F4F5F6] dark:border-[#262A2E] pt-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+                      <ClipboardList className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
                       <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
                         Custom Registration Form Builder
                       </h3>

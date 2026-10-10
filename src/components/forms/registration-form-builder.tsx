@@ -20,7 +20,9 @@ import {
   Globe,
   Calendar,
   Info,
-  Sparkles,
+  ClipboardList,
+  Files,
+  Users,
   HelpCircle,
   Layers,
   Smartphone,
@@ -142,8 +144,27 @@ export function RegistrationFormBuilder({
   });
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
+  // Initial template detection
+  const detectInitialTemplate = (): "diet_code" | "individual" | "team" | "clean" => {
+    if (
+      schema.teamConfig?.teamSizeFieldId === "team_size" ||
+      schema.sections.some((s) => s.title.toLowerCase().includes("diet code"))
+    ) {
+      return "diet_code";
+    }
+    if (schema.teamConfig?.enabled || participationMode === "team") {
+      return "team";
+    }
+    return "individual";
+  };
+
+  const [activeTemplate, setActiveTemplate] = useState<"diet_code" | "individual" | "team" | "clean" | null>(detectInitialTemplate);
+  const [isCustomized, setIsCustomized] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState<"diet_code" | "individual" | "team" | "clean" | null>(null);
+
   // Helper to update schema
   const updateSchema = (next: RegistrationFormSchema) => {
+    setIsCustomized(true);
     onChange(next);
   };
 
@@ -358,16 +379,27 @@ export function RegistrationFormBuilder({
     handleUpdateField(sectionId, fieldId, { options: copy });
   };
 
-  // Load Presets
-  const handleLoadTemplate = (templateType: "diet_code" | "individual" | "hackathon" | "clean") => {
-    if (templateType === "diet_code") {
-      updateSchema(cloneFormSchema(DIET_CODE_TEMPLATE));
-    } else if (templateType === "individual") {
-      updateSchema(cloneFormSchema(STANDARD_INDIVIDUAL_TEMPLATE));
-    } else if (templateType === "hackathon") {
-      updateSchema(cloneFormSchema(HACKATHON_TEAM_TEMPLATE));
+  // Load Presets with unsaved change safety
+  const requestLoadTemplate = (t: "diet_code" | "individual" | "team" | "clean") => {
+    if (isCustomized) {
+      setPendingTemplate(t);
     } else {
-      updateSchema({
+      executeLoadTemplate(t);
+    }
+  };
+
+  const executeLoadTemplate = (templateType: "diet_code" | "individual" | "team" | "clean") => {
+    if (templateType === "diet_code") {
+      onChange(cloneFormSchema(DIET_CODE_TEMPLATE));
+      setActiveTemplate("diet_code");
+    } else if (templateType === "individual") {
+      onChange(cloneFormSchema(STANDARD_INDIVIDUAL_TEMPLATE));
+      setActiveTemplate("individual");
+    } else if (templateType === "team") {
+      onChange(cloneFormSchema(HACKATHON_TEAM_TEMPLATE));
+      setActiveTemplate("team");
+    } else {
+      onChange({
         version: 1,
         sections: [
           {
@@ -393,7 +425,10 @@ export function RegistrationFormBuilder({
           },
         ],
       });
+      setActiveTemplate("clean");
     }
+    setIsCustomized(false);
+    setPendingTemplate(null);
     setWarningMessage(null);
   };
 
@@ -429,6 +464,44 @@ export function RegistrationFormBuilder({
 
   return (
     <div className="space-y-4">
+      {/* Pending Template Overwrite Confirmation Dialog */}
+      {pendingTemplate && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl bg-[#25292F] text-white p-3.5 shadow-md border border-[#30353A]">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+            <span className="text-xs">
+              Current form contains custom edits. Loading the{" "}
+              <strong className="underline">
+                {pendingTemplate === "diet_code"
+                  ? "Diet CODE Reference"
+                  : pendingTemplate === "individual"
+                  ? "Standard Individual"
+                  : pendingTemplate === "team"
+                  ? "Multi-Member Team"
+                  : "Clean Layout"}
+              </strong>{" "}
+              template will replace all existing questions.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setPendingTemplate(null)}
+              className="px-3 py-1 text-xs rounded-full border border-white/20 text-white hover:bg-white/10 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => executeLoadTemplate(pendingTemplate)}
+              className="px-3 py-1 text-xs font-bold rounded-full bg-white text-[#17191C] hover:bg-white/90 transition-colors shadow-xs"
+            >
+              Confirm & Overwrite
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Warning Notice Banner */}
       {warningMessage && (
         <div className="flex items-center justify-between rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-600 dark:text-amber-400">
@@ -452,32 +525,77 @@ export function RegistrationFormBuilder({
           <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
             Templates:
           </span>
+
+          {/* Diet CODE Reference Button */}
           <button
             type="button"
-            onClick={() => handleLoadTemplate("diet_code")}
-            className="inline-flex items-center gap-1 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] px-3 py-1 text-xs font-semibold shadow-xs"
+            onClick={() => requestLoadTemplate("diet_code")}
+            aria-pressed={activeTemplate === "diet_code"}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+              activeTemplate === "diet_code"
+                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+            }`}
           >
-            <Sparkles className="h-3 w-3" />
-            <span>Diet CODE Reference (PDF)</span>
+            <Files className="h-3.5 w-3.5" />
+            <span>Diet CODE Reference</span>
+            {activeTemplate === "diet_code" && isCustomized && (
+              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30">
+                Customized
+              </span>
+            )}
           </button>
+
+          {/* Standard Individual Button */}
           <button
             type="button"
-            onClick={() => handleLoadTemplate("individual")}
-            className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] px-3 py-1 text-xs font-medium hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+            onClick={() => requestLoadTemplate("individual")}
+            aria-pressed={activeTemplate === "individual"}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+              activeTemplate === "individual"
+                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+            }`}
           >
+            <FileText className="h-3.5 w-3.5" />
             <span>Standard Individual</span>
+            {activeTemplate === "individual" && isCustomized && (
+              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30">
+                Customized
+              </span>
+            )}
           </button>
+
+          {/* Multi-Member Team Button */}
           <button
             type="button"
-            onClick={() => handleLoadTemplate("hackathon")}
-            className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] px-3 py-1 text-xs font-medium hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+            onClick={() => requestLoadTemplate("team")}
+            aria-pressed={activeTemplate === "team"}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+              activeTemplate === "team"
+                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+            }`}
           >
-            <span>Hackathon Team</span>
+            <Users className="h-3.5 w-3.5" />
+            <span>Multi-Member Team</span>
+            {activeTemplate === "team" && isCustomized && (
+              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30">
+                Customized
+              </span>
+            )}
           </button>
+
+          {/* Reset Clean Button */}
           <button
             type="button"
-            onClick={() => handleLoadTemplate("clean")}
-            className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#D4D7DC] dark:border-[#30353A] text-[#8A9098] dark:text-[#7D858F] px-2.5 py-1 text-xs hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+            onClick={() => requestLoadTemplate("clean")}
+            aria-pressed={activeTemplate === "clean"}
+            className={`inline-flex items-center gap-1 rounded-full border border-dashed border-[#D4D7DC] dark:border-[#30353A] px-2.5 py-1 text-xs transition-colors ${
+              activeTemplate === "clean"
+                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                : "text-[#8A9098] dark:text-[#7D858F] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+            }`}
           >
             <RotateCcw className="h-3 w-3" />
             <span>Reset</span>

@@ -103,6 +103,7 @@ export interface EventItem {
   contactEmail?: string;
   contactPhone?: string;
   communityLink?: string;
+  focalPoint?: string;
   registrationForm?: RegistrationFormSchema;
 }
 
@@ -123,6 +124,16 @@ export interface Participant {
   attendanceStatus: "not_checked_in" | "checked_in";
   checkedInAt?: string;
   qrCredentialId: string;
+  customAnswers?: Record<string, unknown>;
+}
+
+export interface TeamMemberSubmission {
+  name: string;
+  email: string;
+  role?: string;
+  department?: string;
+  phone?: string;
+  customAnswers?: Record<string, unknown>;
 }
 
 export interface Team {
@@ -136,6 +147,30 @@ export interface Team {
   maxMembers: number;
   status: "complete" | "incomplete";
   registeredAt: string;
+  customAnswers?: Record<string, unknown>;
+  members?: TeamMemberSubmission[];
+}
+
+export interface RegistrationSubmission {
+  id: string;
+  registrationId: string;
+  eventId: string;
+  eventTitle: string;
+  submittedAt: string;
+  mode: "individual" | "team";
+  status: "registered" | "waitlisted" | "cancelled";
+  attendeeName: string;
+  email: string;
+  phone?: string;
+  department?: string;
+  year?: string;
+  teamName?: string;
+  teamMembers?: TeamMemberSubmission[];
+  answers: Record<string, unknown>;
+  schemaVersion: number;
+  qrCredentialId: string;
+  attendanceStatus: "not_checked_in" | "checked_in";
+  checkedInAt?: string;
 }
 
 export interface Round {

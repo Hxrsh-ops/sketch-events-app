@@ -1,27 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, Calendar, MapPin, Users, ArrowUpRight, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
-import { MOCK_EVENTS } from "@/lib/mock-data";
+import { getStoredEvents } from "@/lib/registration-store";
 import { formatDate } from "@/lib/utils";
-
-const FILTER_TABS = [
-  { id: "all", label: "All Events", count: MOCK_EVENTS.length },
-  { id: "published", label: "Published", count: MOCK_EVENTS.filter((e) => e.lifecycle === "published").length },
-  { id: "completed", label: "Completed", count: MOCK_EVENTS.filter((e) => e.lifecycle === "completed").length },
-  { id: "draft", label: "Drafts", count: MOCK_EVENTS.filter((e) => e.lifecycle === "draft").length },
-];
+import { EventItem } from "@/types";
 
 export default function EventsPage() {
+  const [events, setEvents] = useState<EventItem[]>(() => getStoredEvents());
   const [activeTab, setActiveTab] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredEvents = MOCK_EVENTS.filter((evt) => {
+  useEffect(() => {
+    const handleUpdate = () => setEvents(getStoredEvents());
+    window.addEventListener("sketch_store_updated", handleUpdate);
+    return () => window.removeEventListener("sketch_store_updated", handleUpdate);
+  }, []);
+
+  const filterTabs = [
+    { id: "all", label: "All Events", count: events.length },
+    { id: "published", label: "Published", count: events.filter((e) => e.lifecycle === "published").length },
+    { id: "completed", label: "Completed", count: events.filter((e) => e.lifecycle === "completed").length },
+    { id: "draft", label: "Drafts", count: events.filter((e) => e.lifecycle === "draft").length },
+  ];
+
+  const filteredEvents = events.filter((evt) => {
     const matchesTab =
       activeTab === "all" ||
       evt.lifecycle.toLowerCase() === activeTab.toLowerCase();
@@ -61,7 +69,7 @@ export default function EventsPage() {
       {/* Filter Tabs & Search Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm">
         <AnimatedTabs
-          tabs={FILTER_TABS}
+          tabs={filterTabs}
           activeTab={activeTab}
           onChange={setActiveTab}
           layoutId="eventsFilterPill"
@@ -133,6 +141,7 @@ export default function EventsPage() {
                     <img
                       src={event.posterUrl}
                       alt={event.title}
+                      style={{ objectPosition: event.focalPoint || "center center" }}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -179,9 +188,9 @@ export default function EventsPage() {
                       <div className="flex justify-between text-[11px]">
                         <span className="text-[#656B73] dark:text-[#A6ADB5] flex items-center gap-1">
                           <Users className="h-3 w-3 text-[#8A9098] dark:text-[#7D858F]" />
-                          <strong className="text-[#17191C] dark:text-[#F1F2F3] font-semibold">{event.registeredCount}</strong> / {event.capacity}
+                          <strong className="text-[#17191C] dark:text-[#F1F2F3] font-semibold font-mono tabular-nums">{event.registeredCount}</strong> / <span className="font-mono tabular-nums">{event.capacity}</span>
                         </span>
-                        <span className="text-[#8A9098] dark:text-[#7D858F] font-medium">{percentFilled}% Filled</span>
+                        <span className="text-[#8A9098] dark:text-[#7D858F] font-medium font-mono tabular-nums">{percentFilled}% Filled</span>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F2] dark:bg-[#2A2F35]">
                         <div

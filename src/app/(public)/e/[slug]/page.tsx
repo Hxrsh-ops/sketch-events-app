@@ -36,7 +36,16 @@ import {
   STANDARD_INDIVIDUAL_TEMPLATE,
   HACKATHON_TEAM_TEMPLATE,
 } from "@/lib/form-templates";
-import { RegistrationFormSchema, FormField } from "@/types";
+import {
+  getEventBySlugOrId,
+  saveSubmission,
+} from "@/lib/registration-store";
+import {
+  RegistrationFormSchema,
+  FormField,
+  RegistrationSubmission,
+  TeamMemberSubmission,
+} from "@/types";
 
 interface PublicEventPageProps {
   params: Promise<{ slug: string }>;
@@ -46,14 +55,8 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   const resolvedParams = use(params);
   const slug = resolvedParams.slug;
 
-  // Match event by slug or fallback
-  const event =
-    MOCK_EVENTS.find(
-      (e) =>
-        e.slug === slug ||
-        e.slug === slug.replace("sketch-", "") ||
-        e.id === slug
-    ) || MOCK_EVENTS[0];
+  // Match event by slug from client store (with fallback)
+  const event = getEventBySlugOrId(slug) || MOCK_EVENTS[0];
 
   const eventRounds = MOCK_ROUNDS.filter((r) => r.eventId === event.id);
 
@@ -270,10 +273,61 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
       const generatedCredHash = `qr_cred_${Math.random().toString(36).substring(2, 10)}`;
       const { attendeeName, email, teamName } = extractAttendeeMetadata();
 
+      // Extract structured team members from form values if present
+      const teamMembers: TeamMemberSubmission[] = [];
+      for (let i = 1; i <= 6; i++) {
+        const mName =
+          (formValues[`member_${i}_name`] as string) ||
+          (formValues[`team_member_${i}_name`] as string) ||
+          (formValues[`member${i}_name`] as string);
+        const mEmail =
+          (formValues[`member_${i}_email`] as string) ||
+          (formValues[`team_member_${i}_email`] as string) ||
+          (formValues[`member${i}_email`] as string);
+        const mDept =
+          (formValues[`member_${i}_dept`] as string) ||
+          (formValues[`member_${i}_department`] as string);
+        const mPhone = formValues[`member_${i}_phone`] as string;
+
+        if (mName && mName.trim()) {
+          teamMembers.push({
+            name: mName.trim(),
+            email: mEmail ? mEmail.trim() : `member${i}@${email.split("@")[1] || "sketch.events"}`,
+            role: `Team Member #${i}`,
+            department: mDept,
+            phone: mPhone,
+          });
+        }
+      }
+
+      // Save submission record into shared preview repository
+      const submissionRecord: RegistrationSubmission = {
+        id: `sub-${Date.now().toString(36)}`,
+        registrationId: generatedRegId,
+        eventId: event.id,
+        eventTitle: event.title,
+        submittedAt: new Date().toISOString(),
+        mode: event.hasTeams || teamName ? "team" : "individual",
+        status: "registered",
+        attendeeName,
+        email,
+        phone: (formValues["phone"] as string) || (formValues["leader_phone"] as string) || undefined,
+        department: (formValues["department"] as string) || (formValues["leader_department"] as string) || undefined,
+        year: (formValues["year"] as string) || (formValues["academic_year"] as string) || undefined,
+        teamName: event.hasTeams || teamName ? teamName : undefined,
+        teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
+        answers: { ...formValues },
+        schemaVersion: formSchema.version || 1,
+        qrCredentialId: generatedCredHash,
+        attendanceStatus: "not_checked_in",
+      };
+
+      saveSubmission(submissionRecord);
+
       setRegistrationResult({
         registrationId: generatedRegId,
         qrCredentialId: generatedCredHash,
-        registeredAt: new Date().toISOString(),
+        registeredAt: submissionRecord.submittedAt,
         attendeeName,
         email,
         teamName: event.hasTeams || teamName ? teamName : undefined,
@@ -344,6 +398,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
           <img
             src={event.posterUrl}
             alt={event.title}
+            style={{ objectPosition: event.focalPoint || "center" }}
             className="h-full w-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/50 to-transparent" />

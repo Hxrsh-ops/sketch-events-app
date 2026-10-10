@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   QrCode,
@@ -18,23 +18,39 @@ import {
   Undo2,
   Users,
   ShieldCheck,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
-import { MOCK_PARTICIPANTS, MOCK_EVENTS } from "@/lib/mock-data";
+import { getAllParticipants, updateParticipantAttendance, getStoredEvents } from "@/lib/registration-store";
 import { Participant } from "@/types";
 import { formatDate } from "@/lib/utils";
 
 export default function ParticipantsPage() {
-  const [participants, setParticipants] = useState<Participant[]>(MOCK_PARTICIPANTS);
+  const [participants, setParticipants] = useState<Participant[]>(() => getAllParticipants());
   const [activeTab, setActiveTab] = useState("all");
   const [selectedEventId, setSelectedEventId] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [events, setEvents] = useState(() => getStoredEvents());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const all = getAllParticipants();
+      setParticipants(all);
+      setEvents(getStoredEvents());
+      if (selectedParticipant) {
+        const fresh = all.find((p) => p.id === selectedParticipant.id);
+        if (fresh) setSelectedParticipant(fresh);
+      }
+    };
+    window.addEventListener("sketch_store_updated", handleUpdate);
+    return () => window.removeEventListener("sketch_store_updated", handleUpdate);
+  }, [selectedParticipant]);
 
   // Copy Registration ID to clipboard
   const handleCopyId = (id: string, e: React.MouseEvent) => {
@@ -46,26 +62,13 @@ export default function ParticipantsPage() {
     }
   };
 
-  // Toggle Check In in local state
+  // Toggle Check In in shared store
   const toggleCheckIn = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setParticipants((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          const isCurrentlyCheckedIn = p.attendanceStatus === "checked_in";
-          const updated: Participant = {
-            ...p,
-            attendanceStatus: isCurrentlyCheckedIn ? "not_checked_in" : "checked_in",
-            checkedInAt: isCurrentlyCheckedIn ? undefined : new Date().toISOString(),
-          };
-          if (selectedParticipant?.id === id) {
-            setSelectedParticipant(updated);
-          }
-          return updated;
-        }
-        return p;
-      })
-    );
+    const target = participants.find((p) => p.id === id);
+    if (!target) return;
+    const nextStatus = target.attendanceStatus === "checked_in" ? "not_checked_in" : "checked_in";
+    updateParticipantAttendance(id, nextStatus);
   };
 
   // CSV Export for filtered attendees
@@ -141,7 +144,7 @@ export default function ParticipantsPage() {
 
   const eventOptions = [
     { value: "all", label: "All Events Combined" },
-    ...MOCK_EVENTS.map((e) => ({ value: e.id, label: e.title })),
+    ...events.map((e) => ({ value: e.id, label: e.title })),
   ];
 
   const filterTabs = [
@@ -456,6 +459,49 @@ export default function ParticipantsPage() {
                 </div>
               )}
             </div>
+
+            {/* Custom Registration Form Responses */}
+            {selectedParticipant.customAnswers && Object.keys(selectedParticipant.customAnswers).length > 0 && (
+              <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 space-y-3 text-xs">
+                <div className="flex items-center justify-between border-b border-[#F0F1F2] dark:border-[#262A2E] pb-2">
+                  <span className="font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />
+                    Custom Registration Responses
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {Object.keys(selectedParticipant.customAnswers).length} fields
+                  </Badge>
+                </div>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 divide-y divide-[#F0F1F2]/60 dark:divide-[#262A2E]/60">
+                  {Object.entries(selectedParticipant.customAnswers).map(([key, value]) => {
+                    let displayVal = "—";
+                    if (value !== undefined && value !== null && value !== "") {
+                      if (Array.isArray(value)) displayVal = value.join(", ");
+                      else if (typeof value === "boolean") displayVal = value ? "Yes" : "No";
+                      else displayVal = String(value);
+                    }
+                    const formattedKey = key
+                      .replace(/^f_[a-z]+_/i, "")
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                    return (
+                      <div
+                        key={key}
+                        className="flex flex-col pt-1.5 first:pt-0 gap-0.5"
+                      >
+                        <span className="text-[11px] font-mono text-[#8A9098] dark:text-[#7D858F]">
+                          {formattedKey}
+                        </span>
+                        <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] break-words">
+                          {displayVal}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Toggle Status Action */}
             <div className="flex items-center gap-2">

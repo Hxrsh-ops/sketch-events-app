@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Users,
@@ -15,6 +15,7 @@ import {
   Eye,
   Check,
   Clock,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,21 +23,34 @@ import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MOCK_TEAMS, MOCK_PARTICIPANTS, MOCK_EVENTS } from "@/lib/mock-data";
+import { getAllTeams, getAllParticipants, getStoredEvents } from "@/lib/registration-store";
 import { Team, Participant } from "@/types";
 
 export default function TeamsPage() {
+  const [teams, setTeams] = useState<Team[]>(() => getAllTeams());
+  const [participants, setParticipants] = useState<Participant[]>(() => getAllParticipants());
+  const [events, setEvents] = useState(() => getStoredEvents());
   const [activeTab, setActiveTab] = useState("all");
   const [selectedEventId, setSelectedEventId] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [selectedMember, setSelectedMember] = useState<Participant | null>(null);
 
+  useEffect(() => {
+    const handleUpdate = () => {
+      setTeams(getAllTeams());
+      setParticipants(getAllParticipants());
+      setEvents(getStoredEvents());
+    };
+    window.addEventListener("sketch_store_updated", handleUpdate);
+    return () => window.removeEventListener("sketch_store_updated", handleUpdate);
+  }, []);
+
   const getTeamMembers = (teamId: string) => {
-    return MOCK_PARTICIPANTS.filter((p) => p.teamId === teamId);
+    return participants.filter((p) => p.teamId === teamId);
   };
 
-  const filteredTeams = MOCK_TEAMS.filter((t) => {
+  const filteredTeams = teams.filter((t) => {
     const matchesEvent = selectedEventId === "all" || t.eventId === selectedEventId;
     const isComplete = t.memberCount === t.maxMembers;
     const matchesTab =
@@ -96,7 +110,7 @@ export default function TeamsPage() {
 
   const eventOptions = [
     { value: "all", label: "All Team Events" },
-    ...MOCK_EVENTS.filter((e) => e.hasTeams).map((e) => ({ value: e.id, label: e.title })),
+    ...events.filter((e) => e.hasTeams).map((e) => ({ value: e.id, label: e.title })),
   ];
 
   const filterTabs = [
@@ -345,6 +359,49 @@ export default function TeamsPage() {
                 ))}
               </div>
             </div>
+
+            {/* Custom Team Form Responses */}
+            {selectedTeam.customAnswers && Object.keys(selectedTeam.customAnswers).length > 0 && (
+              <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 space-y-3 text-xs">
+                <div className="flex items-center justify-between border-b border-[#F0F1F2] dark:border-[#262A2E] pb-2">
+                  <span className="font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />
+                    Team Registration Responses
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {Object.keys(selectedTeam.customAnswers).length} fields
+                  </Badge>
+                </div>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 divide-y divide-[#F0F1F2]/60 dark:divide-[#262A2E]/60">
+                  {Object.entries(selectedTeam.customAnswers).map(([key, value]) => {
+                    let displayVal = "—";
+                    if (value !== undefined && value !== null && value !== "") {
+                      if (Array.isArray(value)) displayVal = value.join(", ");
+                      else if (typeof value === "boolean") displayVal = value ? "Yes" : "No";
+                      else displayVal = String(value);
+                    }
+                    const formattedKey = key
+                      .replace(/^f_[a-z]+_/i, "")
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                    return (
+                      <div
+                        key={key}
+                        className="flex flex-col pt-1.5 first:pt-0 gap-0.5"
+                      >
+                        <span className="text-[11px] font-mono text-[#8A9098] dark:text-[#7D858F]">
+                          {formattedKey}
+                        </span>
+                        <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] break-words">
+                          {displayVal}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </SlideOver>

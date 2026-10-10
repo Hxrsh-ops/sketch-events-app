@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Download,
   FileSpreadsheet,
@@ -23,10 +23,32 @@ import {
   MOCK_CERTIFICATES,
   MOCK_RECENT_ACTIVITY,
 } from "@/lib/mock-data";
+import {
+  getStoredEvents,
+  getAllParticipants,
+  getAllTeams,
+} from "@/lib/registration-store";
 
 export default function ExportsPage() {
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
   const [lastExportMessage, setLastExportMessage] = useState<string | null>(null);
+
+  // Load live data from preview store
+  const [events, setEvents] = useState(MOCK_EVENTS);
+  const [participants, setParticipants] = useState(MOCK_PARTICIPANTS);
+  const [teams, setTeams] = useState(MOCK_TEAMS);
+
+  useEffect(() => {
+    const syncData = () => {
+      setEvents(getStoredEvents());
+      setParticipants(getAllParticipants());
+      setTeams(getAllTeams());
+    };
+    syncData();
+
+    window.addEventListener("sketch_store_updated", syncData);
+    return () => window.removeEventListener("sketch_store_updated", syncData);
+  }, []);
 
   // Helper to trigger browser file download
   const triggerDownload = (content: string, filename: string, mimeType: string) => {
@@ -44,7 +66,7 @@ export default function ExportsPage() {
   // Helper to escape CSV cell
   const escapeCsv = (val: unknown): string => {
     if (val === null || val === undefined) return '""';
-    const str = String(val);
+    const str = typeof val === "object" ? JSON.stringify(val) : String(val);
     if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
       return `"${str.replace(/"/g, '""')}"`;
     }
@@ -55,8 +77,8 @@ export default function ExportsPage() {
   const exportAttendanceRoster = () => {
     const attendees =
       selectedEventId === "all"
-        ? MOCK_PARTICIPANTS
-        : MOCK_PARTICIPANTS.filter((p) => p.eventId === selectedEventId);
+        ? participants
+        : participants.filter((p) => p.eventId === selectedEventId);
 
     const headers = [
       "Registration ID",
@@ -96,12 +118,12 @@ export default function ExportsPage() {
     setLastExportMessage(`Successfully exported ${attendees.length} attendance records to "${filename}".`);
   };
 
-  // 2. Export Participants Directory (CSV & JSON)
+  // 2. Export Participants Directory (CSV & JSON) with Custom Form Responses
   const exportParticipants = (format: "csv" | "json") => {
     const attendees =
       selectedEventId === "all"
-        ? MOCK_PARTICIPANTS
-        : MOCK_PARTICIPANTS.filter((p) => p.eventId === selectedEventId);
+        ? participants
+        : participants.filter((p) => p.eventId === selectedEventId);
 
     if (format === "json") {
       const jsonContent = JSON.stringify(
@@ -113,7 +135,24 @@ export default function ExportsPage() {
             eventScope: selectedEventId,
             recordCount: attendees.length,
           },
-          data: attendees,
+          data: attendees.map((p) => ({
+            id: p.id,
+            registrationId: p.registrationId,
+            name: p.name,
+            email: p.email,
+            phone: p.phone || null,
+            department: p.department || null,
+            year: p.year || null,
+            eventId: p.eventId,
+            eventTitle: p.eventTitle,
+            teamId: p.teamId || null,
+            teamName: p.teamName || "Individual",
+            registeredAt: p.registeredAt,
+            attendanceStatus: p.attendanceStatus,
+            checkedInAt: p.checkedInAt || null,
+            qrCredentialId: p.qrCredentialId,
+            customResponses: p.customAnswers || {},
+          })),
         },
         null,
         2
@@ -122,7 +161,16 @@ export default function ExportsPage() {
       triggerDownload(jsonContent, filename, "application/json");
       setLastExportMessage(`Successfully exported ${attendees.length} participant records to "${filename}".`);
     } else {
-      const headers = [
+      // Collect all unique custom response field keys across selected attendees
+      const customFieldKeysSet = new Set<string>();
+      attendees.forEach((p) => {
+        if (p.customAnswers) {
+          Object.keys(p.customAnswers).forEach((k) => customFieldKeysSet.add(k));
+        }
+      });
+      const customFieldKeys = Array.from(customFieldKeysSet);
+
+      const baseHeaders = [
         "ID",
         "Registration ID",
         "Name",
@@ -137,22 +185,46 @@ export default function ExportsPage() {
         "Registered At",
         "Attendance Status",
       ];
-      const rows = attendees.map((p) => [
-        escapeCsv(p.id),
-        escapeCsv(p.registrationId),
-        escapeCsv(p.name),
-        escapeCsv(p.email),
-        escapeCsv(p.phone || ""),
-        escapeCsv(p.department || ""),
-        escapeCsv(p.year || ""),
-        escapeCsv(p.eventId),
-        escapeCsv(p.eventTitle),
-        escapeCsv(p.teamId || ""),
-        escapeCsv(p.teamName || "Individual"),
-        escapeCsv(p.registeredAt),
-        escapeCsv(p.attendanceStatus),
-      ]);
-      const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+
+      // Add custom response columns with clean header labels
+      const customHeaders = customFieldKeys.map((key) => {
+        const cleanLabel = key
+          .replace(/^f_[a-z]+_/, "")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        return `[Response] ${cleanLabel}`;
+      });
+
+      const allHeaders = [...baseHeaders, ...customHeaders];
+
+      const rows = attendees.map((p) => {
+        const baseValues = [
+          escapeCsv(p.id),
+          escapeCsv(p.registrationId),
+          escapeCsv(p.name),
+          escapeCsv(p.email),
+          escapeCsv(p.phone || ""),
+          escapeCsv(p.department || ""),
+          escapeCsv(p.year || ""),
+          escapeCsv(p.eventId),
+          escapeCsv(p.eventTitle),
+          escapeCsv(p.teamId || ""),
+          escapeCsv(p.teamName || "Individual"),
+          escapeCsv(p.registeredAt),
+          escapeCsv(p.attendanceStatus),
+        ];
+
+        const customValues = customFieldKeys.map((key) => {
+          const val = p.customAnswers ? p.customAnswers[key] : undefined;
+          if (Array.isArray(val)) return escapeCsv(val.join("; "));
+          if (typeof val === "boolean") return escapeCsv(val ? "Yes" : "No");
+          return escapeCsv(val !== undefined && val !== null ? val : "");
+        });
+
+        return [...baseValues, ...customValues];
+      });
+
+      const csvContent = [allHeaders.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
       const filename = `sketch_participants_${selectedEventId}_${Date.now()}.csv`;
       triggerDownload(csvContent, filename, "text/csv;charset=utf-8;");
       setLastExportMessage(`Successfully exported ${attendees.length} participant records to "${filename}".`);
@@ -161,10 +233,10 @@ export default function ExportsPage() {
 
   // 3. Export Teams & Rosters CSV
   const exportTeams = () => {
-    const teams =
+    const targetTeams =
       selectedEventId === "all"
-        ? MOCK_TEAMS
-        : MOCK_TEAMS.filter((t) => t.eventId === selectedEventId);
+        ? teams
+        : teams.filter((t) => t.eventId === selectedEventId);
 
     const headers = [
       "Team ID",
@@ -255,7 +327,7 @@ export default function ExportsPage() {
 
   const eventOptions = [
     { value: "all", label: "All Events Combined" },
-    ...MOCK_EVENTS.map((e) => ({ value: e.id, label: e.title })),
+    ...events.map((e) => ({ value: e.id, label: e.title })),
   ];
 
   return (
@@ -380,7 +452,7 @@ export default function ExportsPage() {
 
           <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
             <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
-              {MOCK_PARTICIPANTS.length} total preview records
+              <span className="font-mono tabular-nums font-semibold">{participants.length}</span> total preview records
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -426,7 +498,7 @@ export default function ExportsPage() {
 
           <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
             <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
-              {MOCK_TEAMS.length} team records
+              <span className="font-mono tabular-nums font-semibold">{teams.length}</span> team records
             </span>
             <Button
               variant="charcoal"
