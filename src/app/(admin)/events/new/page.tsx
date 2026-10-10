@@ -2,273 +2,882 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, ChevronRight, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  Plus,
+  Trash2,
+  Calendar,
+  MapPin,
+  Users,
+  Shield,
+  Layers,
+  Sparkles,
+  ArrowRight,
+  Eye,
+  AlertCircle,
+  FileCheck2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect, SelectOption } from "@/components/ui/custom-select";
+import { CustomCheckbox } from "@/components/ui/custom-checkbox";
+import { CustomSwitch } from "@/components/ui/custom-switch";
+import { CustomDateTimePicker } from "@/components/ui/custom-datetime-picker";
 
-const STEPS = [
-  { id: 1, name: "Basic Information" },
-  { id: 2, name: "Registration Rules" },
-  { id: 3, name: "Rounds & Stages" },
-  { id: 4, name: "Review & Publish" },
+const CATEGORY_OPTIONS: SelectOption[] = [
+  { value: "Design", label: "Design", description: "Design sprints, UI/UX hackathons, and creative design systems" },
+  { value: "Workshop", label: "Workshop", description: "Hands-on masterclasses and technical skill-building sessions" },
+  { value: "Hackathon", label: "Hackathon", description: "Multi-stage rapid prototyping and developer competitions" },
+  { value: "Conference", label: "Conference", description: "Keynote talks, panel discussions, and symposiums" },
+  { value: "Exhibition", label: "Exhibition", description: "Kinetic typography, student archives, and installation galleries" },
 ];
 
-export function EventCreationWizard() {
+const VENUE_MODE_OPTIONS: SelectOption[] = [
+  { value: "in-person", label: "In-Person (On-Campus)", description: "Physical attendance at studio or auditorium" },
+  { value: "online", label: "Virtual / Online", description: "Remote attendance via livestream or meeting room" },
+  { value: "hybrid", label: "Hybrid", description: "Both physical venue and online broadcast stream" },
+];
+
+const PARTICIPATION_OPTIONS: SelectOption[] = [
+  { value: "individual", label: "Individual Participants", description: "Single-attendee ticket registration" },
+  { value: "team", label: "Team-Based Registration", description: "Groups with a designated team captain" },
+];
+
+const CURATED_POSTERS = [
+  {
+    label: "Minimal Architectural",
+    url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80",
+  },
+  {
+    label: "Digital Monochrome",
+    url: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80",
+  },
+  {
+    label: "Studio Workshop",
+    url: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop&q=80",
+  },
+  {
+    label: "Kinetic Typography",
+    url: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=80",
+  },
+];
+
+interface RoundConfig {
+  id: string;
+  name: string;
+  venue: string;
+  advancementCriteria: string;
+}
+
+const STEPS = [
+  { id: 1, name: "Basic Information", summary: "Event title, category & venue" },
+  { id: 2, name: "Registration Rules", summary: "Capacity & team settings" },
+  { id: 3, name: "Rounds & Stages", summary: "Competition pipeline" },
+  { id: 4, name: "Review & Publish", summary: "Final confirmation" },
+];
+
+export default function NewEventPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPublishedPreview, setIsPublishedPreview] = useState(false);
+
+  // Single unified form state
   const [formData, setFormData] = useState({
     title: "",
     category: "Design",
     shortDescription: "",
-    venue: "",
+    description: "",
     venueMode: "in-person",
-    capacity: 100,
+    venue: "",
     startDate: "",
     endDate: "",
+    posterUrl: CURATED_POSTERS[0].url,
+    capacity: 150,
+    registrationDeadline: "",
     participationMode: "individual",
+    minTeamSize: 2,
+    maxTeamSize: 4,
+    collectDepartment: true,
+    collectYear: true,
+    collectPhone: false,
+    collectPortfolio: false,
+    collectDietary: false,
     hasRounds: false,
+    rounds: [
+      {
+        id: "r-1",
+        name: "Stage 1: Idea Pitch & Wireframe Review",
+        venue: "Studio Lab A",
+        advancementCriteria: "Top 25 teams advance to Stage 2",
+      },
+      {
+        id: "r-2",
+        name: "Stage 2: High-Fidelity Prototype Demo",
+        venue: "Auditorium Main Stage",
+        advancementCriteria: "Final 5 teams pitch to jury",
+      },
+    ] as RoundConfig[],
   });
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
-  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
+  // Validation logic per step
+  const validateStep = (step: number): boolean => {
+    const errs: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!formData.title.trim()) {
+        errs.title = "Event title is required.";
+      } else if (formData.title.trim().length < 4) {
+        errs.title = "Event title must be at least 4 characters.";
+      }
+
+      if (!formData.venue.trim()) {
+        errs.venue = "Venue location or meeting link is required.";
+      }
+
+      if (!formData.shortDescription.trim()) {
+        errs.shortDescription = "A short summary is required for event cards.";
+      }
+
+      if (!formData.startDate) {
+        errs.startDate = "Event start date & time is required.";
+      }
+
+      if (!formData.endDate) {
+        errs.endDate = "Event end date & time is required.";
+      } else if (formData.startDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
+        errs.endDate = "End date & time must be after the start date.";
+      }
+    }
+
+    if (step === 2) {
+      if (!formData.capacity || formData.capacity < 1) {
+        errs.capacity = "Capacity must be at least 1 participant.";
+      }
+
+      if (formData.participationMode === "team") {
+        if (formData.minTeamSize < 2) {
+          errs.minTeamSize = "Minimum team size must be at least 2.";
+        }
+        if (formData.maxTeamSize < formData.minTeamSize) {
+          errs.maxTeamSize = "Maximum team size cannot be less than minimum size.";
+        }
+      }
+    }
+
+    if (step === 3) {
+      if (formData.hasRounds) {
+        if (formData.rounds.length === 0) {
+          errs.rounds = "Please configure at least one stage or disable multi-round structure.";
+        } else {
+          formData.rounds.forEach((r, idx) => {
+            if (!r.name.trim()) {
+              errs[`round_${idx}`] = `Stage #${idx + 1} requires a valid name.`;
+            }
+          });
+        }
+      }
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setErrors({});
+      setCurrentStep((prev) => Math.min(prev + 1, 4));
+    }
+  };
+
+  const handlePrev = () => {
+    setErrors({});
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleJumpToStep = (stepNumber: number) => {
+    setErrors({});
+    setCurrentStep(stepNumber);
+  };
+
+  // Round management
+  const addRound = () => {
+    const nextIdx = formData.rounds.length + 1;
+    setFormData({
+      ...formData,
+      rounds: [
+        ...formData.rounds,
+        {
+          id: `r-${Date.now()}`,
+          name: `Stage ${nextIdx}: Evaluation Round`,
+          venue: formData.venue || "Design Lab Studio",
+          advancementCriteria: "Advancement by Jury Score",
+        },
+      ],
+    });
+  };
+
+  const updateRound = (index: number, field: keyof RoundConfig, val: string) => {
+    const updated = [...formData.rounds];
+    updated[index] = { ...updated[index], [field]: val };
+    setFormData({ ...formData, rounds: updated });
+  };
+
+  const removeRound = (index: number) => {
+    if (formData.rounds.length <= 1) return;
+    const updated = formData.rounds.filter((_, i) => i !== index);
+    setFormData({ ...formData, rounds: updated });
+  };
+
+  const handlePublish = (isDraft: boolean) => {
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
+      setCurrentStep(1);
+      return;
+    }
+
+    if (isDraft) {
+      alert(`Event "${formData.title}" saved as Draft (Preview Mode).`);
+      router.push("/events");
+    } else {
+      setIsPublishedPreview(true);
+    }
+  };
 
   return (
-    <div className="flex flex-col space-y-8 max-w-4xl mx-auto">
-      {/* Back button and Header */}
+    <div className="flex flex-col space-y-6 pb-12 max-w-4xl mx-auto text-[#17191C] dark:text-[#F1F2F3]">
+      {/* Top Breadcrumb & Step Info */}
       <div className="flex items-center justify-between">
         <Link
           href="/events"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#656B73] hover:text-[#17191C] transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to Events</span>
+          <span>Back to Event Directory</span>
         </Link>
-        <span className="text-xs text-[#8A9098]">Step {currentStep} of 4</span>
+        <span className="text-xs font-semibold text-[#8A9098] dark:text-[#7D858F]">
+          Step {currentStep} of 4: {STEPS[currentStep - 1].name}
+        </span>
       </div>
 
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[#17191C]">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
           Create New Event
         </h1>
-        <p className="mt-1 text-xs sm:text-sm text-[#656B73]">
-          Follow the guided steps to set up public information, registration capacity, and event rounds.
+        <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#A6ADB5]">
+          Configure event details, registration thresholds, and multi-stage competition pipelines
         </p>
       </div>
 
-      {/* Step Indicator */}
-      <div className="flex items-center justify-between rounded-[24px] border border-[#E5E7EA] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-        {STEPS.map((step, idx) => (
-          <div key={step.id} className="flex items-center gap-3">
-            <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                currentStep === step.id
-                  ? "bg-[#25292F] text-white shadow-sm"
-                  : currentStep > step.id
-                  ? "bg-[#EAECEF] text-[#17191C]"
-                  : "bg-[#F4F5F6] text-[#8A9098]"
+      {/* Connected Monochrome Stepper */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3 shadow-sm">
+        {STEPS.map((step) => {
+          const isCurrent = currentStep === step.id;
+          const isCompleted = currentStep > step.id;
+
+          return (
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => {
+                if (step.id < currentStep) handleJumpToStep(step.id);
+              }}
+              disabled={step.id > currentStep}
+              className={`flex items-center gap-2.5 rounded-xl p-2 text-left transition-all outline-none ${
+                isCurrent
+                  ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                  : isCompleted
+                  ? "bg-[#F9FAFB] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#2A2F35] cursor-pointer"
+                  : "bg-transparent text-[#8A9098] dark:text-[#7D858F] cursor-not-allowed opacity-60"
               }`}
             >
-              {currentStep > step.id ? <Check className="h-4 w-4" /> : step.id}
-            </div>
-            <span
-              className={`hidden sm:inline text-xs font-medium ${
-                currentStep === step.id ? "font-bold text-[#17191C]" : "text-[#8A9098]"
-              }`}
-            >
-              {step.name}
-            </span>
-            {idx < STEPS.length - 1 && (
-              <ChevronRight className="hidden sm:inline h-4 w-4 text-[#D2D6DC] ml-2" />
-            )}
-          </div>
-        ))}
+              <div
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  isCurrent
+                    ? "bg-white dark:bg-[#111315] text-[#25292F] dark:text-[#E8EAED]"
+                    : isCompleted
+                    ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
+                    : "bg-[#E5E7EA] dark:bg-[#30353A] text-[#8A9098] dark:text-[#7D858F]"
+                }`}
+              >
+                {isCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : step.id}
+              </div>
+              <div className="hidden sm:flex flex-col min-w-0">
+                <span className={`text-xs font-bold truncate ${isCurrent ? "text-white dark:text-[#111315]" : isCompleted ? "text-[#17191C] dark:text-[#F1F2F3]" : "text-[#8A9098] dark:text-[#7D858F]"}`}>
+                  {step.name}
+                </span>
+                <span className={`text-[10px] truncate ${isCurrent ? "text-white/70 dark:text-[#111315]/70" : "text-[#8A9098] dark:text-[#7D858F]"}`}>
+                  {step.summary}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Step Content Card */}
-      <div className="rounded-[24px] border border-[#E5E7EA] bg-white p-6 sm:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-        {currentStep === 1 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-[#17191C]">1. Basic Information</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-[#17191C]">Event Title *</label>
-                <Input
-                  placeholder="e.g., Sketch Design Sprint 2026"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="mt-1.5"
-                />
+      {/* Main Wizard Form Card */}
+      <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 sm:p-8 shadow-sm">
+        <AnimatePresence mode="wait">
+          {/* STEP 1: Basic Information */}
+          {currentStep === 1 && (
+            <motion.div
+              key="step-1"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
+                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">1. Basic Information & Logistics</h2>
+                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Define core event metadata and public presentation.</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                {/* Event Title */}
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C]">Category *</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="mt-1.5 flex h-10 w-full rounded-full border border-[#E5E7EA] bg-white px-4 py-2 text-xs text-[#17191C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F]"
-                  >
-                    <option value="Design">Design</option>
-                    <option value="Workshop">Workshop</option>
-                    <option value="Hackathon">Hackathon</option>
-                    <option value="Conference">Conference</option>
-                    <option value="Exhibition">Exhibition</option>
-                  </select>
+                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                    Event Title *
+                  </label>
+                  <Input
+                    placeholder="e.g., Sketch Design Sprint 2026"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className={errors.title ? "border-red-500" : ""}
+                  />
+                  {errors.title && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.title}</p>}
                 </div>
 
+                {/* Category & Venue Mode */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <CustomSelect
+                    label="Category *"
+                    options={CATEGORY_OPTIONS}
+                    value={formData.category}
+                    onChange={(val) => setFormData({ ...formData, category: val })}
+                  />
+
+                  <CustomSelect
+                    label="Delivery Mode *"
+                    options={VENUE_MODE_OPTIONS}
+                    value={formData.venueMode}
+                    onChange={(val) => setFormData({ ...formData, venueMode: val })}
+                  />
+                </div>
+
+                {/* Venue Location */}
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C]">Venue / Room *</label>
+                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                    Venue / Room / Online Link *
+                  </label>
                   <Input
-                    placeholder="e.g. Studio Lab B"
+                    placeholder="e.g., Design Lab Studio A & B, Campus Media Center"
                     value={formData.venue}
                     onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                    className="mt-1.5"
+                    className={errors.venue ? "border-red-500" : ""}
+                  />
+                  {errors.venue && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.venue}</p>}
+                </div>
+
+                {/* Date & Time Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <CustomDateTimePicker
+                    label="Start Date & Time"
+                    required
+                    value={formData.startDate}
+                    onChange={(val) => {
+                      setFormData({ ...formData, startDate: val });
+                      if (errors.startDate) setErrors({ ...errors, startDate: "" });
+                    }}
+                    error={errors.startDate}
+                    placeholder="Select start date & time..."
+                  />
+
+                  <CustomDateTimePicker
+                    label="End Date & Time"
+                    required
+                    value={formData.endDate}
+                    onChange={(val) => {
+                      setFormData({ ...formData, endDate: val });
+                      if (errors.endDate) setErrors({ ...errors, endDate: "" });
+                    }}
+                    error={errors.endDate}
+                    minDate={formData.startDate}
+                    placeholder="Select end date & time..."
                   />
                 </div>
+
+                {/* Short Description */}
+                <div>
+                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                    Short Summary (Event Cards) *
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="A concise 1-2 sentence synopsis shown in discovery cards and outbox dispatches..."
+                    value={formData.shortDescription}
+                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                    className="w-full rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] focus:border-[#25292F] dark:focus:border-[#E8EAED] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+                  />
+                  {errors.shortDescription && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.shortDescription}</p>}
+                </div>
+
+                {/* Poster Artwork Selector */}
+                <div>
+                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+                    Event Cover Artwork
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {CURATED_POSTERS.map((poster) => (
+                      <div
+                        key={poster.label}
+                        onClick={() => setFormData({ ...formData, posterUrl: poster.url })}
+                        className={`group relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all ${
+                          formData.posterUrl === poster.url
+                            ? "border-[#25292F] dark:border-[#E8EAED] shadow-sm ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
+                            : "border-transparent opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={poster.url} alt={poster.label} className="h-20 w-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
+                          <span className="text-[10px] font-bold text-white leading-tight">
+                            {poster.label}
+                          </span>
+                        </div>
+                        {formData.posterUrl === poster.url && (
+                          <div className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
+                            <Check className="h-2.5 w-2.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 2: Registration Rules & Capacity */}
+          {currentStep === 2 && (
+            <motion.div
+              key="step-2"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
+                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">2. Registration Rules & Capacity</h2>
+                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Control attendee quotas, participation structure, and form fields.</p>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-[#17191C]">Short Description *</label>
-                <textarea
-                  rows={3}
-                  placeholder="A concise summary shown on event cards and discovery previews..."
-                  value={formData.shortDescription}
-                  onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                  className="mt-1.5 flex w-full rounded-2xl border border-[#E5E7EA] bg-white p-3 text-xs text-[#17191C] placeholder:text-[#8A9098] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F]"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[#17191C]">Event Poster / Banner</label>
-                <div className="mt-1.5 flex justify-center rounded-2xl border-2 border-dashed border-[#E5E7EA] p-6 hover:border-[#25292F] transition-colors cursor-pointer bg-[#F4F5F6]/50">
-                  <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-[#8A9098]" />
-                    <p className="mt-2 text-xs text-[#656B73]">
-                      <strong className="text-[#17191C]">Click to upload</strong> or drag and drop
+              <div className="space-y-5">
+                {/* Capacity & Participation Mode */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                      Max Registration Capacity (Seats) *
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.capacity}
+                      onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
+                      className={errors.capacity ? "border-red-500" : ""}
+                    />
+                    <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F] mt-1">
+                      Public registration automatically closes when capacity is reached.
                     </p>
-                    <p className="text-[11px] text-[#8A9098]">PNG, JPG or WebP (max 5MB)</p>
+                    {errors.capacity && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.capacity}</p>}
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-[#17191C]">2. Registration Rules & Capacity</h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-[#17191C]">Max Capacity (Seats)</label>
-                  <Input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-                    className="mt-1.5"
-                  />
-                  <p className="text-[11px] text-[#8A9098] mt-1">Registrations automatically close when full.</p>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[#17191C]">Participation Mode</label>
-                  <select
+                  <CustomSelect
+                    label="Participation Mode *"
+                    options={PARTICIPATION_OPTIONS}
                     value={formData.participationMode}
-                    onChange={(e) => setFormData({ ...formData, participationMode: e.target.value })}
-                    className="mt-1.5 flex h-10 w-full rounded-full border border-[#E5E7EA] bg-white px-4 py-2 text-xs text-[#17191C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F]"
-                  >
-                    <option value="individual">Individual Participants</option>
-                    <option value="team">Team Registration (2-4 Members)</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, participationMode: val })}
+                  />
                 </div>
-              </div>
 
-              <div className="p-4 rounded-2xl bg-[#F4F5F6] border border-[#E5E7EA] text-xs text-[#656B73] space-y-1">
-                <div className="font-semibold text-[#17191C]">Registration Form Fields:</div>
-                <div>Full Name, Email Address, Department, and Academic Year are collected by default.</div>
-              </div>
-            </div>
-          </div>
-        )}
+                {/* Conditional Team Size Settings */}
+                {formData.participationMode === "team" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+                      <h3 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Team Roster Configuration</h3>
+                    </div>
 
-        {currentStep === 3 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-[#17191C]">3. Rounds & Competition Stages</h2>
-            <p className="text-xs text-[#656B73]">
-              Does this event include multi-stage elimination or progressive rounds?
-            </p>
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 p-4 rounded-2xl border border-[#E5E7EA] bg-[#F4F5F6]/40 cursor-pointer hover:bg-white transition-colors">
-                <input
-                  type="checkbox"
-                  checked={formData.hasRounds}
-                  onChange={(e) => setFormData({ ...formData, hasRounds: e.target.checked })}
-                  className="h-4 w-4 rounded border-[#E5E7EA] text-[#25292F] focus:ring-[#25292F]"
-                />
-                <div>
-                  <div className="text-xs font-bold text-[#17191C]">Enable Multi-Round Structure</div>
-                  <div className="text-[11px] text-[#656B73]">
-                    Configure progression thresholds, jury scoring, and round advancements.
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-medium text-[#17191C] dark:text-[#F1F2F3] block mb-1">Min Team Members</label>
+                        <Input
+                          type="number"
+                          min={2}
+                          value={formData.minTeamSize}
+                          onChange={(e) => setFormData({ ...formData, minTeamSize: Number(e.target.value) })}
+                        />
+                        {errors.minTeamSize && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.minTeamSize}</p>}
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium text-[#17191C] dark:text-[#F1F2F3] block mb-1">Max Team Members</label>
+                        <Input
+                          type="number"
+                          min={formData.minTeamSize}
+                          value={formData.maxTeamSize}
+                          onChange={(e) => setFormData({ ...formData, maxTeamSize: Number(e.target.value) })}
+                        />
+                        {errors.maxTeamSize && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.maxTeamSize}</p>}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Registration Fields Customizer */}
+                <div className="space-y-3 border-t border-[#F4F5F6] dark:border-[#262A2E] pt-4">
+                  <div>
+                    <h3 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Participant Registration Fields</h3>
+                    <p className="text-[11px] text-[#656B73] dark:text-[#A6ADB5] mt-0.5">
+                      Full Name and Email Address are compulsory for ticket pass generation. Select optional additional fields:
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <CustomCheckbox
+                      checked={formData.collectDepartment}
+                      onChange={(c) => setFormData({ ...formData, collectDepartment: c })}
+                      label="Department / Major"
+                      description="Collects attendee academic discipline"
+                    />
+                    <CustomCheckbox
+                      checked={formData.collectYear}
+                      onChange={(c) => setFormData({ ...formData, collectYear: c })}
+                      label="Academic Year"
+                      description="1st, 2nd, 3rd, 4th Year or Alumni"
+                    />
+                    <CustomCheckbox
+                      checked={formData.collectPhone}
+                      onChange={(c) => setFormData({ ...formData, collectPhone: c })}
+                      label="WhatsApp / Phone Contact"
+                      description="Optional SMS/WhatsApp emergency alerts"
+                    />
+                    <CustomCheckbox
+                      checked={formData.collectPortfolio}
+                      onChange={(c) => setFormData({ ...formData, collectPortfolio: c })}
+                      label="Portfolio / GitHub URL"
+                      description="Useful for hackathons and design reviews"
+                    />
+                    <CustomCheckbox
+                      checked={formData.collectDietary}
+                      onChange={(c) => setFormData({ ...formData, collectDietary: c })}
+                      label="Dietary / Accessibility Notes"
+                      description="Collects catering and accessibility needs"
+                    />
                   </div>
                 </div>
-              </label>
-            </div>
-          </div>
-        )}
+              </div>
+            </motion.div>
+          )}
 
-        {currentStep === 4 && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-[#17191C]">4. Review & Publish</h2>
-            <div className="rounded-2xl bg-[#F4F5F6]/40 border border-[#E5E7EA] p-5 space-y-3 text-xs">
-              <div className="flex justify-between border-b border-[#E5E7EA] pb-2">
-                <span className="text-[#656B73]">Event Title:</span>
-                <span className="font-bold text-[#17191C]">{formData.title || "Untitled Draft"}</span>
+          {/* STEP 3: Rounds & Competition Stages */}
+          {currentStep === 3 && (
+            <motion.div
+              key="step-3"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
+                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">3. Competition Rounds & Progression</h2>
+                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Configure multi-stage elimination or single-stage unified sessions.</p>
               </div>
-              <div className="flex justify-between border-b border-[#E5E7EA] pb-2">
-                <span className="text-[#65666A]">Category:</span>
-                <span className="font-bold text-[#17191C]">{formData.category}</span>
-              </div>
-              <div className="flex justify-between border-b border-[#E5E7EA] pb-2">
-                <span className="text-[#656B73]">Capacity:</span>
-                <span className="font-bold text-[#17191C]">{formData.capacity} Participants</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#656B73]">Mode:</span>
-                <span className="font-bold text-[#17191C]">{formData.participationMode}</span>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Wizard Controls */}
-        <div className="mt-8 flex items-center justify-between border-t border-[#F4F5F6] pt-6">
+              {/* Multi-Round Switch */}
+              <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4">
+                <CustomSwitch
+                  checked={formData.hasRounds}
+                  onChange={(c) => setFormData({ ...formData, hasRounds: c })}
+                  label="Enable Multi-Stage Progression Structure"
+                  description="Required for Hackathons and Sprints with jury shortlisting between rounds."
+                />
+              </div>
+
+              {/* Conditional Round Builder */}
+              {formData.hasRounds ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                      Configured Stages ({formData.rounds.length})
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addRound}
+                      className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold gap-1.5 h-8"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Next Stage</span>
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {formData.rounds.map((round, idx) => (
+                      <div
+                        key={round.id}
+                        className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#151719] p-4 shadow-xs space-y-3"
+                      >
+                        <div className="flex items-center justify-between border-b border-[#F4F5F6] dark:border-[#262A2E] pb-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-bold">
+                            {idx + 1}
+                          </span>
+                          {formData.rounds.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeRound(idx)}
+                              className="text-xs text-red-500 hover:text-red-400 font-semibold inline-flex items-center gap-1"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Remove</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                              Stage Name *
+                            </label>
+                            <Input
+                              placeholder="e.g. Stage 1: Idea Pitch"
+                              value={round.name}
+                              onChange={(e) => updateRound(idx, "name", e.target.value)}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                              Stage Venue / Room
+                            </label>
+                            <Input
+                              placeholder="e.g. Auditorium Stage"
+                              value={round.venue}
+                              onChange={(e) => updateRound(idx, "venue", e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                            Advancement Criteria / Quota
+                          </label>
+                          <Input
+                            placeholder="e.g., Top 20 teams qualify by Jury Score"
+                            value={round.advancementCriteria}
+                            onChange={(e) => updateRound(idx, "advancementCriteria", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6]/50 dark:bg-[#151719]/50 p-6 text-center space-y-2">
+                  <FileCheck2 className="mx-auto h-8 w-8 text-[#8A9098] dark:text-[#7D858F]" />
+                  <h3 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Single-Stage Unified Session</h3>
+                  <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] max-w-md mx-auto">
+                    All registered attendees participate in a single continuous session. Recommended for workshops, keynotes, and exhibitions.
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* STEP 4: Review & Publish */}
+          {currentStep === 4 && (
+            <motion.div
+              key="step-4"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
+                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">4. Review Event Specification</h2>
+                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Confirm all configuration before saving or launching.</p>
+              </div>
+
+              {/* Review Sections */}
+              <div className="space-y-4 text-xs">
+                {/* Section 1: Basic Info */}
+                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
+                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Basic Information</span>
+                    <button
+                      type="button"
+                      onClick={() => handleJumpToStep(1)}
+                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                    >
+                      Edit Step 1
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[#656B73] dark:text-[#A6ADB5]">
+                    <div>Title: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.title}</strong></div>
+                    <div>Category: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.category}</strong></div>
+                    <div>Mode: <strong className="text-[#17191C] dark:text-[#F1F2F3] capitalize">{formData.venueMode}</strong></div>
+                    <div>Venue: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.venue}</strong></div>
+                    <div>Schedule: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.startDate || "TBD"}</strong></div>
+                  </div>
+                </div>
+
+                {/* Section 2: Registration Rules */}
+                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
+                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Registration Rules & Capacity</span>
+                    <button
+                      type="button"
+                      onClick={() => handleJumpToStep(2)}
+                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                    >
+                      Edit Step 2
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[#656B73] dark:text-[#A6ADB5]">
+                    <div>Capacity: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.capacity} Seats</strong></div>
+                    <div>Participation: <strong className="text-[#17191C] dark:text-[#F1F2F3] capitalize">{formData.participationMode}</strong></div>
+                    {formData.participationMode === "team" && (
+                      <div>Team Size: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.minTeamSize} – {formData.maxTeamSize} Members</strong></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 3: Competition Pipeline */}
+                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
+                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Competition Pipeline</span>
+                    <button
+                      type="button"
+                      onClick={() => handleJumpToStep(3)}
+                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                    >
+                      Edit Step 3
+                    </button>
+                  </div>
+                  <div>
+                    {formData.hasRounds ? (
+                      <p className="text-[#17191C] dark:text-[#F1F2F3] font-semibold">
+                        Multi-Stage Structure ({formData.rounds.length} Configured Stages)
+                      </p>
+                    ) : (
+                      <p className="text-[#656B73] dark:text-[#A6ADB5]">Single-Stage Unified Session</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Wizard Footer Controls */}
+        <div className="mt-8 flex items-center justify-between border-t border-[#F4F5F6] dark:border-[#262A2E] pt-5">
           <Button
+            type="button"
             variant="outline"
-            onClick={prevStep}
+            onClick={handlePrev}
             disabled={currentStep === 1}
-            className="rounded-full border-[#E5E7EA]"
+            className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold px-5"
           >
             Previous
           </Button>
 
           {currentStep < 4 ? (
-            <Button variant="charcoal" onClick={nextStep} className="rounded-full">
-              Next Step
+            <Button
+              type="button"
+              variant="charcoal"
+              onClick={handleNext}
+              className="rounded-full text-xs font-semibold px-6 gap-1.5 shadow-sm"
+            >
+              <span>Next Step</span>
+              <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           ) : (
-            <Button
-              variant="charcoal"
-              onClick={() => alert("Draft saved. In Phase 2/3, this will persist to Supabase.")}
-              className="rounded-full font-bold shadow-sm"
-            >
-              Save Draft & Preview
-            </Button>
+            <div className="flex items-center gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handlePublish(true)}
+                className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold px-4"
+              >
+                Save as Draft
+              </Button>
+              <Button
+                type="button"
+                variant="charcoal"
+                onClick={() => handlePublish(false)}
+                className="rounded-full text-xs font-semibold px-5 shadow-sm gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Publish Event (Preview)</span>
+              </Button>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Published Preview Modal */}
+      {isPublishedPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-2xl space-y-4 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
+              <Check className="h-8 w-8 stroke-[3]" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                Event Published (Preview Mode)
+              </h3>
+              <p className="text-xs text-[#656B73] dark:text-[#A6ADB5]">
+                &quot;{formData.title}&quot; has been configured and is ready for participant registrations.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-3 text-xs text-[#656B73] dark:text-[#A6ADB5] text-left space-y-1">
+              <div>Capacity: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.capacity} Seats</strong></div>
+              <div>Category: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.category}</strong></div>
+              <div>Rounds: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.hasRounds ? `${formData.rounds.length} Stages` : "Single Stage"}</strong></div>
+            </div>
+
+            <div className="flex gap-2.5">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-full text-xs font-semibold"
+                onClick={() => router.push("/events")}
+              >
+                Return to Directory
+              </Button>
+              <Link href="/events" className="flex-1">
+                <Button
+                  variant="charcoal"
+                  className="w-full rounded-full text-xs font-semibold shadow-sm"
+                >
+                  Manage Event
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
-
-export default function NewEventPage() {
-  return <EventCreationWizard />;
 }

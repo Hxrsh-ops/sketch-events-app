@@ -17,9 +17,11 @@ import {
   ShieldCheck,
   Settings,
   HelpCircle,
-  LogOut,
+  Plus,
+  ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface NavItem {
   label: string;
@@ -28,26 +30,29 @@ interface NavItem {
   badge?: string;
 }
 
-const MENU_ITEMS: NavItem[] = [
+const OPERATIONS_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutGrid },
-  { label: "Events", href: "/events", icon: CalendarDays },
+  { label: "Events", href: "/events", icon: CalendarDays, badge: "24" },
   { label: "Participants", href: "/participants", icon: Users },
   { label: "Teams", href: "/teams", icon: UserCheck },
-  { label: "Rounds", href: "/rounds", icon: GitBranch },
-  { label: "Attendance", href: "/attendance", icon: QrCode },
+  { label: "Rounds & Stages", href: "/rounds", icon: GitBranch },
+  { label: "Live Attendance", href: "/attendance", icon: QrCode },
+];
+
+const COMMUNICATIONS_ITEMS: NavItem[] = [
   { label: "Certificates", href: "/certificates", icon: FileBadge },
   { label: "Communications", href: "/communications", icon: Mail },
 ];
 
-const INSIGHTS_ITEMS: NavItem[] = [
+const INTELLIGENCE_ITEMS: NavItem[] = [
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Exports", href: "/exports", icon: Download },
-  { label: "Audit Log", href: "/audit", icon: ShieldCheck },
+  { label: "Data Exports", href: "/exports", icon: Download },
+  { label: "Audit & Records", href: "/audit", icon: ShieldCheck },
 ];
 
-const GENERAL_ITEMS: NavItem[] = [
+const SYSTEM_ITEMS: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
-  { label: "Help", href: "https://github.com", icon: HelpCircle },
+  { label: "Documentation", href: "https://github.com", icon: HelpCircle },
 ];
 
 interface SidebarProps {
@@ -68,46 +73,60 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "flex flex-col h-full bg-[#F4F5F6] border-r border-[#E5E7EA] py-7 px-5 select-none w-64 shrink-0 justify-between",
+        "flex flex-col h-screen sticky top-0 bg-[#F4F5F6] dark:bg-[#151719] border-r border-[#E5E7EA] dark:border-[#30353A] py-6 px-4 select-none w-64 shrink-0 justify-between overflow-y-auto transition-colors duration-200",
         className
       )}
     >
-      {/* Top Brand Identity */}
-      <div className="flex flex-col space-y-7">
+      {/* Top Brand Header */}
+      <div className="flex flex-col space-y-6">
         <Link
           href="/"
           onClick={onNavigate}
           className="flex items-center gap-3 px-2 group transition-opacity hover:opacity-90"
         >
-          <div className="relative h-9 w-9 rounded-full overflow-hidden bg-black flex items-center justify-center shrink-0 shadow-sm">
+          <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-black dark:bg-white flex items-center justify-center shrink-0 shadow-sm border border-black/10 dark:border-white/10">
             <Image
               src="/sketch-logo.png"
               alt="SKETCH Logo"
-              width={36}
-              height={36}
-              className="object-contain"
+              width={40}
+              height={40}
+              className="object-contain p-0.5 dark:invert"
               priority
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-lg text-[#17191C] tracking-tight leading-none">
+            <span className="font-extrabold text-base text-[#17191C] dark:text-[#F1F2F3] tracking-tight leading-tight">
               SKETCH
             </span>
-            <span className="text-[10px] font-medium text-[#8A9098] tracking-wide mt-0.5">
+            <span className="text-[10px] font-semibold text-[#8A9098] dark:text-[#7D858F] tracking-wide uppercase">
               Event Operations
             </span>
           </div>
         </Link>
 
-        {/* Navigation Sections */}
-        <div className="flex flex-col space-y-6 overflow-y-auto max-h-[calc(100vh-140px)] pr-1">
-          {/* Main Menu */}
+        {/* Quick Action in Sidebar */}
+        <div className="px-1">
+          <Link href="/events/new" onClick={onNavigate}>
+            <Button
+              variant="charcoal"
+              size="sm"
+              className="w-full h-9 rounded-xl font-medium gap-1.5 shadow-sm text-xs justify-center"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Create Event</span>
+            </Button>
+          </Link>
+        </div>
+
+        {/* Navigation Groups */}
+        <div className="flex flex-col space-y-5 pr-1">
+          {/* Operations */}
           <div>
-            <div className="px-3 pb-2.5 text-[11px] font-semibold text-[#8A9098]">
-              Menu
+            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
+              Operations
             </div>
-            <nav className="flex flex-col space-y-1">
-              {MENU_ITEMS.map((item) => {
+            <nav className="flex flex-col space-y-0.5">
+              {OPERATIONS_ITEMS.map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
                 return (
@@ -116,29 +135,35 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "relative flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all group",
+                      "relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all group",
                       active
-                        ? "text-[#17191C] font-bold bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
-                        : "text-[#656B73] hover:text-[#17191C] hover:bg-white/50"
+                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
+                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
                     )}
                   >
-                    {/* Left Accent Bar on Active Item matching Donezo reference */}
                     {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[#17191C]" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
                     )}
-                    <div className="flex items-center gap-3 pl-1">
+                    <div className="flex items-center gap-2.5 pl-0.5">
                       <Icon
                         className={cn(
                           "w-4 h-4 transition-colors",
                           active
-                            ? "text-[#17191C]"
-                            : "text-[#8A9098] group-hover:text-[#17191C]"
+                            ? "text-[#17191C] dark:text-[#F1F2F3]"
+                            : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
                         )}
                       />
                       <span>{item.label}</span>
                     </div>
                     {item.badge && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-[#E5E7EA] text-[#656B73]">
+                      <span
+                        className={cn(
+                          "text-[10px] px-1.5 py-0.2 rounded-full font-bold",
+                          active
+                            ? "bg-[#F0F1F2] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3]"
+                            : "bg-[#EAECEF] dark:bg-[#2A2F35] text-[#8A9098] dark:text-[#7D858F]"
+                        )}
+                      >
                         {item.badge}
                       </span>
                     )}
@@ -148,13 +173,13 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
             </nav>
           </div>
 
-          {/* Insights */}
+          {/* Communications */}
           <div>
-            <div className="px-3 pb-2.5 text-[11px] font-semibold text-[#8A9098]">
-              Insights & Records
+            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
+              Delivery & Credentials
             </div>
-            <nav className="flex flex-col space-y-1">
-              {INSIGHTS_ITEMS.map((item) => {
+            <nav className="flex flex-col space-y-0.5">
+              {COMMUNICATIONS_ITEMS.map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
                 return (
@@ -163,39 +188,37 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all group",
+                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all group",
                       active
-                        ? "text-[#17191C] font-bold bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
-                        : "text-[#656B73] hover:text-[#17191C] hover:bg-white/50"
+                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
+                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
                     )}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[#17191C]" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
                     )}
-                    <div className="flex items-center gap-3 pl-1">
-                      <Icon
-                        className={cn(
-                          "w-4 h-4",
-                          active
-                            ? "text-[#17191C]"
-                            : "text-[#8A9098] group-hover:text-[#17191C]"
-                        )}
-                      />
-                      <span>{item.label}</span>
-                    </div>
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 pl-0.5",
+                        active
+                          ? "text-[#17191C] dark:text-[#F1F2F3]"
+                          : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
+                      )}
+                    />
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
             </nav>
           </div>
 
-          {/* General */}
+          {/* Intelligence */}
           <div>
-            <div className="px-3 pb-2.5 text-[11px] font-semibold text-[#8A9098]">
-              General
+            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
+              Intelligence & Logs
             </div>
-            <nav className="flex flex-col space-y-1">
-              {GENERAL_ITEMS.map((item) => {
+            <nav className="flex flex-col space-y-0.5">
+              {INTELLIGENCE_ITEMS.map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
                 return (
@@ -204,39 +227,94 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all group",
+                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all group",
                       active
-                        ? "text-[#17191C] font-bold bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
-                        : "text-[#656B73] hover:text-[#17191C] hover:bg-white/50"
+                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
+                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
                     )}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-[#17191C]" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
                     )}
-                    <div className="flex items-center gap-3 pl-1">
-                      <Icon
-                        className={cn(
-                          "w-4 h-4",
-                          active
-                            ? "text-[#17191C]"
-                            : "text-[#8A9098] group-hover:text-[#17191C]"
-                        )}
-                      />
-                      <span>{item.label}</span>
-                    </div>
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 pl-0.5",
+                        active
+                          ? "text-[#17191C] dark:text-[#F1F2F3]"
+                          : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
+                      )}
+                    />
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
-              <button
-                type="button"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-[#656B73] hover:text-[#17191C] hover:bg-white/50 transition-all w-full text-left pl-4"
-                onClick={() => alert("Session logout will be handled through Supabase Auth.")}
-              >
-                <LogOut className="w-4 h-4 text-[#8A9098]" />
-                <span>Sign Out</span>
-              </button>
             </nav>
           </div>
+
+          {/* System */}
+          <div>
+            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
+              System
+            </div>
+            <nav className="flex flex-col space-y-0.5">
+              {SYSTEM_ITEMS.map((item) => {
+                const active = isItemActive(item.href);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all group",
+                      active
+                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
+                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
+                    )}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
+                    )}
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 pl-0.5",
+                        active
+                          ? "text-[#17191C] dark:text-[#F1F2F3]"
+                          : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
+                      )}
+                    />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Operational Status Pill */}
+      <div className="pt-4 border-t border-[#E5E7EA] dark:border-[#30353A]">
+        <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
+              Live Desk
+            </span>
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#17191C] dark:bg-[#E8EAED] animate-pulse" />
+              Active
+            </span>
+          </div>
+          <p className="text-[11px] text-[#656B73] dark:text-[#A6ADB5] leading-snug">
+            Design Sprint Studio B check-in station ready.
+          </p>
+          <Link
+            href="/attendance"
+            onClick={onNavigate}
+            className="flex items-center justify-between text-[11px] font-bold text-[#17191C] dark:text-[#F1F2F3] hover:underline pt-1"
+          >
+            <span>Launch Scanner</span>
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </div>
     </aside>

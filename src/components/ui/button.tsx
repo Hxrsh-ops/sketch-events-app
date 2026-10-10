@@ -9,23 +9,23 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#25292F] text-white shadow-sm hover:bg-[#17191C] active:bg-[#0D0E10]",
+          "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-sm hover:bg-[#17191C] dark:hover:bg-white active:bg-[#0D0E10]",
         charcoal:
-          "bg-[#25292F] text-white shadow-sm hover:bg-[#17191C] active:bg-[#0D0E10]",
+          "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-sm hover:bg-[#17191C] dark:hover:bg-white active:bg-[#0D0E10]",
         outline:
-          "border border-[#E5E7EA] bg-white text-[#17191C] hover:bg-[#F4F5F6] hover:border-[#D2D6DC]",
+          "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] hover:border-[#D2D6DC] dark:hover:border-[#40464E]",
         secondary:
-          "bg-[#F0F1F2] text-[#17191C] hover:bg-[#E4E6E9]",
+          "bg-[#F0F1F2] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#E4E6E9] dark:hover:bg-[#30353A]",
         ghost:
-          "text-[#656B73] hover:bg-[#EAECEF] hover:text-[#17191C]",
+          "text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#EAECEF] dark:hover:bg-[#2A2F35] hover:text-[#17191C] dark:hover:text-[#F1F2F3]",
         link:
-          "text-[#17191C] underline-offset-4 hover:underline",
+          "text-[#17191C] dark:text-[#F1F2F3] underline-offset-4 hover:underline",
         pillOutlineWhite:
           "border border-white/40 bg-white/5 text-white hover:bg-white/15 backdrop-blur-sm",
         forest:
-          "bg-[#25292F] text-white shadow-sm hover:bg-[#17191C]", // alias for backwards compatibility
+          "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-sm hover:bg-[#17191C]", // alias for backwards compatibility
         soft:
-          "bg-[#F0F1F2] text-[#17191C] hover:bg-[#E4E6E9]",
+          "bg-[#F0F1F2] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#E4E6E9] dark:hover:bg-[#30353A]",
       },
       size: {
         default: "h-9 px-4 py-2",

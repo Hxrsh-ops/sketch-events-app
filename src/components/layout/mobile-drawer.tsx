@@ -16,22 +16,22 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
     <div className="fixed inset-0 z-50 flex lg:hidden">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer Panel */}
-      <div className="relative flex w-72 max-w-xs flex-1 flex-col bg-white shadow-2xl transition-transform animate-in slide-in-from-left duration-300">
+      <div className="relative flex w-72 max-w-xs flex-1 flex-col bg-white dark:bg-[#151719] shadow-2xl transition-transform animate-in slide-in-from-left duration-300">
         <div className="absolute top-4 right-4 z-10">
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={onClose}
-            className="rounded-full hover:bg-[#F5F4F1]"
+            className="rounded-full hover:bg-[#F0F1F2] dark:hover:bg-[#25292F]"
             aria-label="Close menu"
           >
-            <X className="h-4 w-4 text-[#65666A]" />
+            <X className="h-4 w-4 text-[#656B73] dark:text-[#A6ADB5]" />
           </Button>
         </div>
         <Sidebar className="w-full border-r-0" onNavigate={onClose} />

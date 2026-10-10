@@ -13,7 +13,7 @@ export default function AdminLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#F5F4F1]">
+    <div className="flex min-h-screen bg-[#F4F5F6] dark:bg-[#111315] text-[#17191C] dark:text-[#F1F2F3] transition-colors duration-200">
       {/* Persistent Left Sidebar for Desktop */}
       <Sidebar className="hidden lg:flex" />
 

@@ -6,6 +6,7 @@
   :root {
     --background: #F4F5F6;
     --foreground: #17191C;
+    --canvas: #F4F5F6;
 
     --card: #FFFFFF;
     --card-foreground: #17191C;
@@ -15,9 +16,11 @@
 
     --primary: #25292F;
     --primary-foreground: #FFFFFF;
+    --primary-hover: #17191C;
 
     --secondary: #F0F1F2;
     --secondary-foreground: #17191C;
+    --secondary-hover: #E4E6E9;
 
     --muted: #F0F1F2;
     --muted-foreground: #656B73;
@@ -35,6 +38,39 @@
     --radius: 1.5rem;
   }
 
+  .dark {
+    --background: #111315;
+    --foreground: #F1F2F3;
+    --canvas: #111315;
+
+    --card: #1B1E21;
+    --card-foreground: #F1F2F3;
+
+    --popover: #22262A;
+    --popover-foreground: #F1F2F3;
+
+    --primary: #E8EAED;
+    --primary-foreground: #111315;
+    --primary-hover: #FFFFFF;
+
+    --secondary: #25292F;
+    --secondary-foreground: #F1F2F3;
+    --secondary-hover: #30353A;
+
+    --muted: #22262A;
+    --muted-foreground: #A6ADB5;
+
+    --accent: #2A2F35;
+    --accent-foreground: #F1F2F3;
+
+    --destructive: #E8EAED;
+    --destructive-foreground: #111315;
+
+    --border: #30353A;
+    --input: #30353A;
+    --ring: #E8EAED;
+  }
+
   * {
     @apply border-border;
   }
@@ -48,7 +84,7 @@
   }
 }
 
-/* Custom scrollbars for clean UI */
+/* Custom scrollbars for clean UI in both themes */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -63,15 +99,23 @@
   border-radius: 9999px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #40464E;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #AEB3BA;
 }
 
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5E6670;
+}
+
 /* Donezo Monochrome Surface Utilities */
 .donezo-card {
-  background-color: #FFFFFF;
+  background-color: var(--card);
   border-radius: 24px;
-  border: 1px solid #E5E7EA;
+  border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: all 0.2s ease;
 }
