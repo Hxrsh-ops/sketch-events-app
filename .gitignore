@@ -34,3 +34,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# context and prompt specs
+/CONTEXT/
+CONTEXT/
+*.mdx?_prompt*
