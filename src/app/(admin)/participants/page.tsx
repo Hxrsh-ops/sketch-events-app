@@ -279,15 +279,17 @@ export default function ParticipantsPage() {
                             {p.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="font-semibold text-[13px] text-[#17191C] dark:text-[#F1F2F3] group-hover:underline truncate tracking-[-0.01em]">
+                            <span className="text-sm font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline truncate tracking-[-0.01em] leading-tight">
                               {p.name}
                             </span>
-                            <span className="font-sans text-[11px] text-[#656B73] dark:text-[#9EA4AD] truncate max-w-[200px] mt-0.5">{p.email}</span>
+                            <span className="font-sans text-xs font-normal text-[#656B73] dark:text-[#989EA7] truncate max-w-[220px] mt-0.5" title={p.email}>
+                              {p.email}
+                            </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 font-mono text-[10px] uppercase tracking-wider text-[#8A9098] dark:text-[#828892] whitespace-nowrap font-medium">
+                      <td className="px-4 py-3 font-mono text-[11px] tabular-nums tracking-tight text-[#8A9098] dark:text-[#7D858F] whitespace-nowrap font-medium">
                         <div className="flex items-center gap-1.5">
                           <span className="select-all">{p.registrationId}</span>
                           <button
