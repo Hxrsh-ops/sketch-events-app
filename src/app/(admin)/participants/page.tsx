@@ -279,17 +279,17 @@ export default function ParticipantsPage() {
                             {p.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline truncate tracking-[-0.01em] leading-tight">
+                            <span className="text-[15px] font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline truncate tracking-[-0.01em] leading-snug">
                               {p.name}
                             </span>
-                            <span className="font-sans text-xs font-normal text-[#656B73] dark:text-[#989EA7] truncate max-w-[220px] mt-0.5" title={p.email}>
+                            <span className="font-sans text-[12.5px] font-normal text-[#656B73] dark:text-[#989EA7] truncate max-w-[220px] mt-0.5" title={p.email}>
                               {p.email}
                             </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 font-mono text-[11px] tabular-nums tracking-tight text-[#8A9098] dark:text-[#7D858F] whitespace-nowrap font-medium">
+                      <td className="px-4 py-3 font-mono text-[11px] tabular-nums tracking-tight text-[#7D858F] dark:text-[#8D949E] whitespace-nowrap font-medium">
                         <div className="flex items-center gap-1.5">
                           <span className="select-all">{p.registrationId}</span>
                           <button
@@ -307,21 +307,21 @@ export default function ParticipantsPage() {
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 font-medium text-[#17191C] dark:text-[#F1F2F3] max-w-[180px] truncate">
+                      <td className="px-4 py-3 text-[13px] font-medium text-[#17191C] dark:text-[#F1F2F3] max-w-[180px] truncate">
                         {p.eventTitle}
                       </td>
 
-                      <td className="px-4 py-3 text-[#656B73] dark:text-[#989EA7]">
+                      <td className="px-4 py-3 text-[13px] text-[#656B73] dark:text-[#989EA7]">
                         {p.department || "General"}
                       </td>
 
                       <td className="px-4 py-3 text-[#656B73] dark:text-[#989EA7]">
                         {p.teamName ? (
-                          <span className="rounded bg-[#F0F1F2] dark:bg-[#151719] px-1.5 py-0.5 text-[10px] font-medium text-[#17191C] dark:text-[#F1F2F3]">
+                          <span className="rounded bg-[#F0F1F2] dark:bg-[#151719] px-2 py-0.5 text-[11px] font-medium text-[#17191C] dark:text-[#F1F2F3]">
                             {p.teamName}
                           </span>
                         ) : (
-                          <span className="text-[#8A9098] dark:text-[#656B73] italic text-[11px]">Individual</span>
+                          <span className="text-[#8A9098] dark:text-[#656B73] italic text-xs">Individual</span>
                         )}
                       </td>
 

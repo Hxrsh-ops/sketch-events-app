@@ -87,7 +87,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-black dark:bg-white flex items-center justify-center shrink-0 shadow-sm border border-black/10 dark:border-white/10">
             <Image
               src="/sketch-logo.png"
-              alt="SKETCH Logo"
+              alt="SketchHUB Logo"
               width={40}
               height={40}
               className="object-contain p-0.5 dark:invert"
@@ -96,10 +96,10 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           </div>
           <div className="flex flex-col">
             <span className="font-extrabold text-base text-[#17191C] dark:text-[#F1F2F3] tracking-tight leading-tight">
-              SKETCH
+              SketchHUB
             </span>
             <span className="text-[10px] font-semibold text-[#8A9098] dark:text-[#7D858F] tracking-wide uppercase">
-              Event Operations
+              Event Operations Platform
             </span>
           </div>
         </Link>

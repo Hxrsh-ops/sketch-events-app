@@ -460,18 +460,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 {p.name.slice(0, 2).toUpperCase()}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline tracking-[-0.01em] leading-tight">{p.name}</p>
-                                <p className="font-sans text-xs font-normal text-[#656B73] dark:text-[#989EA7] truncate max-w-[210px] mt-0.5" title={p.email}>{p.email}</p>
+                                <p className="text-[15px] font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline tracking-[-0.01em] leading-snug">{p.name}</p>
+                                <p className="font-sans text-[12.5px] font-normal text-[#656B73] dark:text-[#989EA7] truncate max-w-[210px] mt-0.5" title={p.email}>{p.email}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 font-mono text-[11px] tabular-nums tracking-tight text-[#8A9098] dark:text-[#7D858F] whitespace-nowrap select-all font-medium">
+                          <td className="px-4 py-3.5 font-mono text-[11px] tabular-nums tracking-tight text-[#7D858F] dark:text-[#8D949E] whitespace-nowrap select-all font-medium">
                             {p.registrationId}
                           </td>
-                          <td className="px-4 py-3.5 text-[#656B73] dark:text-[#989EA7]">
+                          <td className="px-4 py-3.5 text-[13px] text-[#656B73] dark:text-[#989EA7]">
                             {p.department} ({p.year})
                           </td>
-                          <td className="px-4 py-3.5 text-[#656B73] dark:text-[#989EA7]">
+                          <td className="px-4 py-3.5 text-[13px] text-[#656B73] dark:text-[#989EA7]">
                             {p.teamName || <span className="text-[#8A9098] dark:text-[#656B73] italic">Individual</span>}
                           </td>
                           <td className="px-4 py-3.5">

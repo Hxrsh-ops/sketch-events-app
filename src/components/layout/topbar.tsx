@@ -38,7 +38,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
         >
           <Menu className="h-4 w-4 text-[#17191C] dark:text-[#F1F2F3]" />
         </Button>
-        <span className="font-bold text-sm tracking-tight text-[#17191C] dark:text-[#F1F2F3]">SKETCH</span>
+        <span className="font-bold text-sm tracking-tight text-[#17191C] dark:text-[#F1F2F3]">SketchHUB</span>
       </div>
 
       {/* Global Search / Command Bar */}

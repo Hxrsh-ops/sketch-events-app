@@ -176,7 +176,7 @@ export default function SettingsPage() {
           <div className="space-y-3 text-xs border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3">
             <div className="flex justify-between py-1 border-b border-[#F4F5F6] dark:border-[#262A2E]">
               <span className="text-[#8A9098] dark:text-[#7D858F]">Organization Name:</span>
-              <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">SKETCH Event Operations</span>
+              <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">SketchHUB Event Operations Platform</span>
             </div>
             <div className="flex justify-between py-1 border-b border-[#F4F5F6] dark:border-[#262A2E]">
               <span className="text-[#8A9098] dark:text-[#7D858F]">Domain / Slug:</span>

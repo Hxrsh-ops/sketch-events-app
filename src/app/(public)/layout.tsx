@@ -24,7 +24,7 @@ export default function PublicLayout({
               />
             </div>
             <span className="font-bold text-base tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
-              SKETCH
+              SketchHUB
             </span>
           </Link>
 
@@ -45,7 +45,7 @@ export default function PublicLayout({
       {/* Public Footer */}
       <footer className="border-t border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#151719] py-6 text-center text-xs text-[#8A9098]">
         <div className="max-w-4xl mx-auto px-6">
-          <p>© {new Date().getFullYear()} SKETCH Events. Organized for students, creators, and technologists.</p>
+          <p>© {new Date().getFullYear()} SketchHUB Events. Organized for students, creators, and technologists.</p>
           <p className="mt-1 text-[11px] text-[#AEB3BA] dark:text-[#656B73]">
             Tickets and credentials are sent directly via email. No student account required.
           </p>

@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SKETCH — Event Operations Platform",
+  title: "SketchHUB — Event Operations Platform",
   description: "One calm, dependable workspace to publish events, manage registrations, coordinate attendance, and issue certificates.",
 };
 

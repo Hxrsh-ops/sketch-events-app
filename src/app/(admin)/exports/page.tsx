@@ -129,7 +129,7 @@ export default function ExportsPage() {
       const jsonContent = JSON.stringify(
         {
           exportMeta: {
-            platform: "SKETCH Event Operations",
+            platform: "SketchHUB Event Operations Platform",
             mode: "Client Preview Export",
             exportedAt: new Date().toISOString(),
             eventScope: selectedEventId,
@@ -310,7 +310,7 @@ export default function ExportsPage() {
     const jsonContent = JSON.stringify(
       {
         exportMeta: {
-          platform: "SKETCH Event Operations",
+          platform: "SketchHUB Event Operations Platform",
           mode: "Client Preview Audit Trail",
           exportedAt: new Date().toISOString(),
           recordCount: MOCK_RECENT_ACTIVITY.length,

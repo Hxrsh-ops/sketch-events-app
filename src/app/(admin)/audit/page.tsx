@@ -153,7 +153,7 @@ export default function AuditLogPage() {
                     onClick={() => setSelectedLog(log)}
                     className="hover:bg-[#F9FAFB] dark:hover:bg-[#22262A]/60 transition-colors cursor-pointer"
                   >
-                    <td className="py-3.5 pl-6 pr-4 text-[#8A9098] font-mono text-[11px] whitespace-nowrap">
+                    <td className="py-3.5 pl-6 pr-4 text-[#7D858F] dark:text-[#8D949E] font-mono text-[11px] tabular-nums whitespace-nowrap">
                       {log.timestamp}
                     </td>
                     <td className="px-4 py-3.5">
@@ -163,18 +163,18 @@ export default function AuditLogPage() {
                             {log.actorName.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">{log.actorName}</span>
+                        <span className="font-semibold text-[13.5px] text-[#17191C] dark:text-[#F1F2F3]">{log.actorName}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="rounded-full bg-[#F0F1F2] dark:bg-[#22262A] px-2.5 py-0.5 text-[10px] font-semibold text-[#25292F] dark:text-[#E8EAED]">
+                      <span className="rounded-full bg-[#F0F1F2] dark:bg-[#22262A] px-2.5 py-0.5 text-[11px] font-semibold text-[#25292F] dark:text-[#E8EAED]">
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 font-medium text-[#17191C] dark:text-[#F1F2F3]">
+                    <td className="px-4 py-3.5 text-[13px] font-medium text-[#17191C] dark:text-[#F1F2F3]">
                       {log.target}
                     </td>
-                    <td className="px-4 py-3.5 pr-6 text-[#656B73] dark:text-[#8A9098] max-w-sm truncate">
+                    <td className="px-4 py-3.5 pr-6 text-[12.5px] text-[#656B73] dark:text-[#989EA7] max-w-sm truncate" title={log.details}>
                       {log.details}
                     </td>
                   </tr>
