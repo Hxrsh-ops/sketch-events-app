@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-xs font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#111315] disabled:pointer-events-none disabled:opacity-50 active:translate-y-[0.5px] motion-reduce:transition-none motion-reduce:transform-none select-none",
   {
     variants: {
       variant: {
@@ -13,11 +13,13 @@ const buttonVariants = cva(
         charcoal:
           "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-sm hover:bg-[#17191C] dark:hover:bg-white active:bg-[#0D0E10]",
         outline:
-          "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] hover:border-[#D2D6DC] dark:hover:border-[#40464E]",
+          "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] hover:border-[#CBD0D6] dark:hover:border-[#4A515A]",
         secondary:
           "bg-[#F0F1F2] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#E4E6E9] dark:hover:bg-[#30353A]",
         ghost:
-          "text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#EAECEF] dark:hover:bg-[#2A2F35] hover:text-[#17191C] dark:hover:text-[#F1F2F3]",
+          "text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#EAECEF] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3]",
+        destructive:
+          "border border-[#8A9098]/30 dark:border-[#7D858F]/30 bg-transparent text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#17191C] hover:text-white dark:hover:bg-[#E8EAED] dark:hover:text-[#111315] hover:border-transparent",
         link:
           "text-[#17191C] dark:text-[#F1F2F3] underline-offset-4 hover:underline",
         pillOutlineWhite:

@@ -202,8 +202,17 @@ export default function TeamsPage() {
             return (
               <div
                 key={team.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`View details for team ${team.name}`}
                 onClick={() => setSelectedTeam(team)}
-                className="group cursor-pointer flex flex-col justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all hover:shadow-card"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedTeam(team);
+                  }
+                }}
+                className="group cursor-pointer flex flex-col justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] motion-reduce:transition-none motion-reduce:transform-none select-none"
               >
                 <div>
                   <div className="flex items-start justify-between">

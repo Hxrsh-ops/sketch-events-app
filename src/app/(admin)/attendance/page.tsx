@@ -930,7 +930,7 @@ export default function AttendancePage() {
                   return (
                     <div
                       key={participant.id}
-                      className="pt-2.5 pb-2.5 flex items-center justify-between gap-3 hover:bg-[#F9FAFA] dark:hover:bg-[#151719] px-2 rounded-xl transition-colors"
+                      className="pt-2.5 pb-2.5 flex items-center justify-between gap-3 hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] px-2.5 rounded-xl transition-colors duration-150 ease-out"
                     >
                       {/* Left: Avatar & Info */}
                       <div className="flex items-center gap-3 min-w-0">
@@ -1030,7 +1030,7 @@ export default function AttendancePage() {
                 checkInLog.map((log) => (
                   <div
                     key={log.id}
-                    className="py-2.5 flex items-center justify-between text-xs gap-2 hover:bg-[#F9FAFA] dark:hover:bg-[#151719] px-1 rounded-lg transition-colors"
+                    className="py-2.5 flex items-center justify-between text-xs gap-2 hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] px-2 rounded-lg transition-colors duration-150 ease-out"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="h-2 w-2 rounded-full bg-[#17191C] dark:bg-[#E8EAED]" />

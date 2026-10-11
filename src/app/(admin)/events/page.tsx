@@ -136,7 +136,7 @@ export default function EventsPage() {
               return (
                 <div
                   key={event.id}
-                  className="group flex flex-col justify-between overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm transition-all hover:shadow-card dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.4)]"
+                  className="group flex flex-col justify-between overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none"
                 >
                   {/* Poster / Artwork Header */}
                   <div className="relative h-44 w-full overflow-hidden bg-[#EAECEF] dark:bg-[#2A2F35]">
@@ -144,7 +144,7 @@ export default function EventsPage() {
                       src={event.directoryImage || event.posterUrl}
                       alt={event.title}
                       style={{ objectPosition: event.directoryImageFocalPoint || event.focalPoint || "center center" }}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02] motion-reduce:transform-none"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 

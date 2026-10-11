@@ -150,8 +150,16 @@ export default function AuditLogPage() {
                 filteredLogs.map((log) => (
                   <tr
                     key={log.id}
+                    tabIndex={0}
+                    role="row"
                     onClick={() => setSelectedLog(log)}
-                    className="hover:bg-[#F9FAFB] dark:hover:bg-[#22262A]/60 transition-colors cursor-pointer"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedLog(log);
+                      }
+                    }}
+                    className="hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] transition-colors duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:bg-[#F4F5F6] dark:focus-visible:bg-[#25292F] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
                   >
                     <td className="py-3.5 pl-6 pr-4 text-[#7D858F] dark:text-[#8D949E] font-mono text-[11px] tabular-nums whitespace-nowrap">
                       {log.timestamp}

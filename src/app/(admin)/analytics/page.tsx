@@ -75,24 +75,24 @@ export default function AnalyticsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm">
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
           <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Overall Turnout</span>
           <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">{overallTurnout}</div>
           <span className="text-[11px] text-[#656B73] dark:text-[#989EA7] font-medium mt-1 inline-flex items-center gap-1">
             <TrendingUp className="h-3 w-3 text-[#25292F] dark:text-[#E8EAED]" /> Verified at terminal
           </span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm">
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
           <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Active Registrations</span>
           <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">{totalRegistered}</div>
           <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] mt-1 block">In current scope</span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm">
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
           <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Checked In</span>
           <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">{totalCheckedIn}</div>
           <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] mt-1 block">Passes validated</span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm">
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
           <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Certificates Issued</span>
           <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">540</div>
           <span className="text-[11px] text-[#656B73] dark:text-[#989EA7] font-medium mt-1 block">100% delivery rate</span>

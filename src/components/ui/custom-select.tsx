@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export interface SelectOption {
@@ -35,6 +35,7 @@ export function CustomSelect({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedOption = options.find((opt) => opt.value === value);
+  const shouldReduceMotion = useReducedMotion();
 
   // Click outside to close
   useEffect(() => {
@@ -119,10 +120,10 @@ export function CustomSelect({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.98 }}
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 4, scale: shouldReduceMotion ? 1 : 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
+            exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 4, scale: shouldReduceMotion ? 1 : 0.98 }}
+            transition={{ duration: shouldReduceMotion ? 0.05 : 0.15, ease: "easeOut" }}
             role="listbox"
             className="absolute left-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#22262A] p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
           >

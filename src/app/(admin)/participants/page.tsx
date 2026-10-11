@@ -276,8 +276,16 @@ export default function ParticipantsPage() {
                   return (
                     <tr
                       key={p.id}
+                      tabIndex={0}
+                      role="row"
                       onClick={() => setSelectedParticipant(p)}
-                      className="group cursor-pointer transition-colors hover:bg-[#F9FAFB] dark:hover:bg-[#151719]"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedParticipant(p);
+                        }
+                      }}
+                      className="group cursor-pointer transition-colors duration-150 ease-out hover:bg-[#F4F5F6] dark:hover:bg-[#22262A] focus-visible:outline-none focus-visible:bg-[#F4F5F6] dark:focus-visible:bg-[#22262A] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
                     >
                       <td className="py-3 pl-6 pr-4">
                         <div className="flex items-center gap-3">
@@ -301,7 +309,7 @@ export default function ParticipantsPage() {
                           <button
                             type="button"
                             onClick={(e) => handleCopyId(p.registrationId, e)}
-                            className="text-[#8A9098] dark:text-[#656B73] hover:text-[#17191C] dark:hover:text-[#F1F2F3] p-0.5 rounded"
+                            className="text-[#8A9098] dark:text-[#656B73] hover:text-[#17191C] dark:hover:text-[#F1F2F3] p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                             aria-label={`Copy ${p.registrationId}`}
                           >
                             {copiedId === p.registrationId ? (

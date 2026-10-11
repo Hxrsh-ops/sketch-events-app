@@ -196,11 +196,20 @@ export default function RoundsPage() {
               return (
                 <div
                   key={round.id}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Configure stage ${round.order}: ${round.name}`}
                   onClick={() => setSelectedRound(round)}
-                  className={`group cursor-pointer rounded-2xl border p-5 transition-all hover:shadow-card flex flex-col justify-between ${
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedRound(round);
+                    }
+                  }}
+                  className={`group cursor-pointer rounded-2xl border p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] motion-reduce:transition-none motion-reduce:transform-none select-none flex flex-col justify-between ${
                     isActive
                       ? "border-[#25292F] dark:border-[#E8EAED] bg-[#F9FAFB] dark:bg-[#151719] ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
-                      : "border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]"
+                      : "border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] hover:border-[#CBD0D6] dark:hover:border-[#4A515A]"
                   }`}
                 >
                   <div>

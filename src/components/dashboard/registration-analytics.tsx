@@ -56,11 +56,11 @@ export function RegistrationAnalytics() {
         </div>
 
         {/* Compact Tab Switcher */}
-        <div className="flex items-center rounded-full bg-[#F4F5F6] dark:bg-[#151719] p-0.5 border border-[#E5E7EA] dark:border-[#30353A] self-start sm:self-auto">
+        <div className="flex items-center rounded-full bg-[#F4F5F6] dark:bg-[#151719] p-0.5 border border-[#E5E7EA] dark:border-[#30353A] self-start sm:self-auto select-none">
           <button
             type="button"
             onClick={() => setActiveTab("registrations")}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
               activeTab === "registrations"
                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-sm"
                 : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
@@ -72,7 +72,7 @@ export function RegistrationAnalytics() {
           <button
             type="button"
             onClick={() => setActiveTab("checkins")}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
               activeTab === "checkins"
                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-sm"
                 : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
@@ -90,13 +90,18 @@ export function RegistrationAnalytics() {
           {activeSeries.map((bar, idx) => (
             <div
               key={`${activeTab}-${bar.day}`}
+              tabIndex={0}
+              role="graphics-symbol"
+              aria-label={`${bar.day}: ${bar.count} ${activeTab === "registrations" ? "registrations" : "check-ins"}`}
               onMouseEnter={() => setHoveredIdx(idx)}
               onMouseLeave={() => setHoveredIdx(null)}
-              className="group relative flex flex-1 flex-col items-center justify-end h-full"
+              onFocus={() => setHoveredIdx(idx)}
+              onBlur={() => setHoveredIdx(null)}
+              className="group relative flex flex-1 flex-col items-center justify-end h-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] rounded-t-xl"
             >
-              {/* Tooltip on hover */}
+              {/* Tooltip on hover/focus */}
               {hoveredIdx === idx && (
-                <div className="absolute -top-8 z-20 whitespace-nowrap rounded-full bg-[#17191C] dark:bg-[#E8EAED] px-2.5 py-0.5 text-[10px] font-semibold text-white dark:text-[#111315] shadow-sm pointer-events-none">
+                <div className="absolute -top-8 z-20 whitespace-nowrap rounded-full bg-[#17191C] dark:bg-[#E8EAED] px-2.5 py-0.5 text-[10px] font-semibold text-white dark:text-[#111315] shadow-sm pointer-events-none select-none">
                   {bar.count} {activeTab === "registrations" ? "registered" : "checked in"}
                 </div>
               )}
@@ -108,7 +113,7 @@ export function RegistrationAnalytics() {
                   bar.isPeak
                     ? "bg-[#25292F] dark:bg-[#E8EAED]"
                     : "bg-[#989EA7]/70 dark:bg-[#7D858F]/50 hover:bg-[#25292F]/80 dark:hover:bg-[#E8EAED]/80"
-                }`}
+                } ${hoveredIdx === idx ? "opacity-100 ring-2 ring-black/10 dark:ring-white/20" : ""}`}
               />
             </div>
           ))}

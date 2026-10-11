@@ -111,17 +111,17 @@
   background: #5E6670;
 }
 
-/* Donezo Monochrome Surface Utilities */
+/* SketchHUB Monochrome Surface & Interaction Utilities */
 .donezo-card {
   background-color: var(--card);
   border-radius: 24px;
   border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .donezo-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .donezo-card-charcoal {
@@ -130,4 +130,31 @@
   border-radius: 24px;
   border: 1px solid #3A3F46;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Subtle Interactive Elevation */
+.sketch-card-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sketch-card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  }
+  .dark .sketch-card-lift:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .sketch-card-lift,
+  .donezo-card,
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
 }

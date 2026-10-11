@@ -50,9 +50,9 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
             placeholder="Search events, participants, passes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] pl-9 pr-12 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] transition-all focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED] focus:border-[#25292F] dark:focus:border-[#E8EAED] shadow-sm"
+            className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] pl-9 pr-12 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] transition-all duration-150 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] focus:outline-none focus:ring-2 focus:ring-[#25292F] dark:focus:ring-[#E8EAED] focus:border-[#25292F] dark:focus:border-[#E8EAED] shadow-sm"
           />
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#22262A] px-1.5 py-0.5 text-[10px] font-medium text-[#8A9098] dark:text-[#7D858F]">
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#22262A] px-1.5 py-0.5 text-[10px] font-medium text-[#8A9098] dark:text-[#7D858F] select-none">
             <Command className="h-2.5 w-2.5" />
             <span>K</span>
           </div>
@@ -68,7 +68,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
         <Link href="/communications">
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors hover:bg-[#F0F1F2] dark:hover:bg-[#22262A] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors duration-150 ease-out hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
             title="Communications Outbox"
           >
             <Mail className="h-4 w-4" />
@@ -79,7 +79,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
         <div className="relative">
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors hover:bg-[#F0F1F2] dark:hover:bg-[#22262A] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors duration-150 ease-out hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
             title="Notifications"
             onClick={() => setShowNotifications(!showNotifications)}
           >

@@ -151,8 +151,17 @@ export default function CommunicationsPage() {
           filteredJobs.map((job) => (
             <div
               key={job.id}
+              tabIndex={0}
+              role="button"
+              aria-label={`View dispatch details for ${job.subject}`}
               onClick={() => setSelectedJob(job)}
-              className="cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm gap-4 hover:shadow-card transition-shadow"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedJob(job);
+                }
+              }}
+              className="cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm gap-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] motion-reduce:transition-none motion-reduce:transform-none select-none"
             >
               <div className="flex items-start gap-3.5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">

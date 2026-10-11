@@ -135,7 +135,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all group",
+                      "relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
                       active
                         ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
                         : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
@@ -188,7 +188,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all group",
+                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
                       active
                         ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
                         : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
@@ -227,7 +227,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all group",
+                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
                       active
                         ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
                         : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
@@ -266,7 +266,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all group",
+                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
                       active
                         ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
                         : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"

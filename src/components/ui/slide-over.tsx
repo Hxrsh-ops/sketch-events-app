@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 
 interface SlideOverProps {
@@ -21,6 +21,8 @@ export function SlideOver({
   children,
   widthClass = "max-w-md",
 }: SlideOverProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -45,7 +47,7 @@ export function SlideOver({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: shouldReduceMotion ? 0.05 : 0.2 }}
             onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-xs"
           />
@@ -53,10 +55,14 @@ export function SlideOver({
           {/* Drawer Panel */}
           <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              initial={{ x: shouldReduceMotion ? 0 : "100%", opacity: shouldReduceMotion ? 0 : 1 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: shouldReduceMotion ? 0 : "100%", opacity: shouldReduceMotion ? 0 : 1 }}
+              transition={
+                shouldReduceMotion
+                  ? { duration: 0.1 }
+                  : { type: "spring", damping: 30, stiffness: 300 }
+              }
               className={`w-screen ${widthClass} border-l border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-2xl flex flex-col`}
             >
               {/* Drawer Header */}
@@ -70,7 +76,7 @@ export function SlideOver({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] transition-colors hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] transition-colors hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
                   aria-label="Close panel"
                 >
                   <X className="h-4 w-4" />
