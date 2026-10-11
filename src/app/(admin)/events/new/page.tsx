@@ -430,7 +430,7 @@ export default function NewEventPage() {
                 if (step.id < currentStep) handleJumpToStep(step.id);
               }}
               disabled={step.id > currentStep}
-              className={`flex items-center gap-2.5 rounded-xl p-2 text-left transition-all outline-none ${
+              className={`flex items-center gap-2.5 rounded-xl p-2 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
                 isCurrent
                   ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
                   : isCompleted

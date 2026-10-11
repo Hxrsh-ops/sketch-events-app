@@ -531,7 +531,7 @@ export function RegistrationFormBuilder({
             type="button"
             onClick={() => requestLoadTemplate("diet_code")}
             aria-pressed={activeTemplate === "diet_code"}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
               activeTemplate === "diet_code"
                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
                 : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
@@ -551,7 +551,7 @@ export function RegistrationFormBuilder({
             type="button"
             onClick={() => requestLoadTemplate("individual")}
             aria-pressed={activeTemplate === "individual"}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
               activeTemplate === "individual"
                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
                 : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
@@ -571,7 +571,7 @@ export function RegistrationFormBuilder({
             type="button"
             onClick={() => requestLoadTemplate("team")}
             aria-pressed={activeTemplate === "team"}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
               activeTemplate === "team"
                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
                 : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
@@ -591,7 +591,7 @@ export function RegistrationFormBuilder({
             type="button"
             onClick={() => requestLoadTemplate("clean")}
             aria-pressed={activeTemplate === "clean"}
-            className={`inline-flex items-center gap-1 rounded-full border border-dashed border-[#D4D7DC] dark:border-[#30353A] px-2.5 py-1 text-xs transition-colors ${
+            className={`inline-flex items-center gap-1 rounded-full border border-dashed border-[#D4D7DC] dark:border-[#30353A] px-2.5 py-1 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
               activeTemplate === "clean"
                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
                 : "text-[#8A9098] dark:text-[#7D858F] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"

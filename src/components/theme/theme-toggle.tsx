@@ -135,7 +135,7 @@ export function ThemeSegmentedControl() {
             key={opt.value}
             type="button"
             onClick={() => setTheme(opt.value)}
-            className={`flex flex-col text-left p-4 rounded-2xl border transition-all select-none ${
+            className={`flex flex-col text-left p-4 rounded-2xl border transition-all select-none outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
               isSelected
                 ? "border-[#25292F] dark:border-[#E8EAED] bg-[#F4F5F6] dark:bg-[#25292F] ring-1 ring-[#25292F] dark:ring-[#E8EAED] shadow-sm"
                 : "border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] hover:border-[#D2D6DC] dark:hover:border-[#40464E]"

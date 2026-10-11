@@ -618,7 +618,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
                   href={event.communityLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-bold transition-transform hover:scale-[1.02]"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-bold transition-transform hover:scale-[1.02] outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
                 >
                   <span>Join Discussion Group</span>
                   <ExternalLink className="h-3.5 w-3.5" />

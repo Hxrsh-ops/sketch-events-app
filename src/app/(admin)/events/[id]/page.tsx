@@ -386,7 +386,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <button
                   type="button"
                   onClick={() => setRegistrationStatusFilter("all")}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  aria-pressed={registrationStatusFilter === "all"}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
                     registrationStatusFilter === "all"
                       ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
                       : "bg-[#F4F5F6] dark:bg-[#151719] text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
@@ -397,7 +398,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <button
                   type="button"
                   onClick={() => setRegistrationStatusFilter("checked_in")}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  aria-pressed={registrationStatusFilter === "checked_in"}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
                     registrationStatusFilter === "checked_in"
                       ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
                       : "bg-[#F4F5F6] dark:bg-[#151719] text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
@@ -408,7 +410,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <button
                   type="button"
                   onClick={() => setRegistrationStatusFilter("pending")}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  aria-pressed={registrationStatusFilter === "pending"}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
                     registrationStatusFilter === "pending"
                       ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
                       : "bg-[#F4F5F6] dark:bg-[#151719] text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
@@ -451,8 +454,17 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       return (
                         <tr
                           key={p.id}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`View participant details for ${p.name}`}
                           onClick={() => setSelectedParticipant(p)}
-                          className="group cursor-pointer hover:bg-[#F9FAFB] dark:hover:bg-[#151719] transition-colors"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedParticipant(p);
+                            }
+                          }}
+                          className="group cursor-pointer hover:bg-[#F4F5F6] dark:hover:bg-[#22262A] transition-colors focus-visible:outline-none focus-visible:bg-[#F4F5F6] dark:focus-visible:bg-[#22262A] focus-visible:ring-1 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
                         >
                           <td className="py-3.5 pl-5 pr-4">
                             <div className="flex items-center gap-2.5">
