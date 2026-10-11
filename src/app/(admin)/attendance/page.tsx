@@ -32,7 +32,16 @@ import { Badge } from "@/components/ui/badge";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
-import { getStoredEvents, getAllParticipants, updateParticipantAttendance } from "@/lib/registration-store";
+import {
+  getStoredEvents,
+  getAllParticipants,
+  updateParticipantAttendance,
+  getStoredCheckInLog,
+  saveCheckInLog,
+  CheckInLogEntry,
+  INITIAL_CHECKIN_LOG,
+} from "@/lib/registration-store";
+import { MOCK_EVENTS, MOCK_PARTICIPANTS } from "@/lib/mock-data";
 import { Participant, EventItem } from "@/types";
 
 interface ScanOutcome {
@@ -43,43 +52,29 @@ interface ScanOutcome {
   timestamp?: string;
 }
 
-interface CheckInLogEntry {
-  id: string;
-  participantId: string;
-  participantName: string;
-  registrationId: string;
-  eventId: string;
-  timestamp: string;
-  method: "camera" | "manual" | "simulation";
-}
-
 export default function AttendancePage() {
-  const [events, setEvents] = useState<EventItem[]>(() => getStoredEvents());
+  const [events, setEvents] = useState<EventItem[]>(MOCK_EVENTS);
   const [selectedEventId, setSelectedEventId] = useState("evt-01");
-  const [participants, setParticipants] = useState<Participant[]>(() => getAllParticipants());
+  const [participants, setParticipants] = useState<Participant[]>(MOCK_PARTICIPANTS);
   const [manualQuery, setManualQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [inspectorParticipant, setInspectorParticipant] = useState<Participant | null>(null);
+  const [checkInLog, setCheckInLog] = useState<CheckInLogEntry[]>(INITIAL_CHECKIN_LOG);
 
   useEffect(() => {
+    // Synchronize browser-persisted preview state after mounting
+    setEvents(getStoredEvents());
+    setParticipants(getAllParticipants());
+    setCheckInLog(getStoredCheckInLog());
+
     const handleUpdate = () => {
       setEvents(getStoredEvents());
       setParticipants(getAllParticipants());
+      setCheckInLog(getStoredCheckInLog());
     };
     window.addEventListener("sketch_store_updated", handleUpdate);
     return () => window.removeEventListener("sketch_store_updated", handleUpdate);
   }, []);
-  const [checkInLog, setCheckInLog] = useState<CheckInLogEntry[]>([
-    {
-      id: "log-init-1",
-      participantId: "part-07",
-      participantName: "Vikram Malhotra",
-      registrationId: "REG-2026-8814",
-      eventId: "evt-01",
-      timestamp: "10 mins ago",
-      method: "camera",
-    },
-  ]);
 
   // Camera stream state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -330,7 +325,11 @@ export default function AttendancePage() {
       timestamp: "Just now",
       method,
     };
-    setCheckInLog((prev) => [newLogEntry, ...prev.slice(0, 19)]);
+    setCheckInLog((prev) => {
+      const updated = [newLogEntry, ...prev.slice(0, 19)];
+      saveCheckInLog(updated);
+      return updated;
+    });
   };
 
   // Manual search submit
@@ -365,30 +364,41 @@ export default function AttendancePage() {
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       });
 
-      setCheckInLog((prev) => [
-        {
-          id: `log-${Date.now()}`,
-          participantId: participant.id,
-          participantName: participant.name,
-          registrationId: participant.registrationId,
-          eventId: selectedEventId,
-          timestamp: "Just now",
-          method: "manual",
-        },
-        ...prev.slice(0, 19),
-      ]);
+      const newLogEntry: CheckInLogEntry = {
+        id: `log-${Date.now()}`,
+        participantId: participant.id,
+        participantName: participant.name,
+        registrationId: participant.registrationId,
+        eventId: selectedEventId,
+        timestamp: "Just now",
+        method: "manual",
+      };
+      setCheckInLog((prev) => {
+        const updated = [newLogEntry, ...prev.slice(0, 19)];
+        saveCheckInLog(updated);
+        return updated;
+      });
     } else {
       setScanOutcome({
         status: "idle",
         message: `Check-in cancelled for ${participant.name}.`,
       });
+      setCheckInLog((prev) => {
+        const updated = prev.filter((item) => item.participantId !== participant.id);
+        saveCheckInLog(updated);
+        return updated;
+      });
     }
   };
 
-    // Undo check-in from audit log
+  // Undo check-in from audit log
   const handleUndoCheckIn = (participantId: string) => {
     updateParticipantAttendance(participantId, "not_checked_in");
-    setCheckInLog((prev) => prev.filter((item) => item.participantId !== participantId));
+    setCheckInLog((prev) => {
+      const updated = prev.filter((item) => item.participantId !== participantId);
+      saveCheckInLog(updated);
+      return updated;
+    });
     if (scanOutcome.participant?.id === participantId) {
       setScanOutcome({
         status: "idle",
@@ -477,7 +487,9 @@ export default function AttendancePage() {
             <Users className="h-4 w-4 text-[#8A9098] dark:text-[#656B73]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">{totalEligible}</span>
+            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+              {totalEligible}
+            </span>
             <span className="text-xs text-[#8A9098] dark:text-[#656B73]">Registered</span>
           </div>
           <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73] truncate">{selectedEvent.title}</p>
@@ -490,10 +502,14 @@ export default function AttendancePage() {
             <UserCheck className="h-4 w-4 text-[#17191C] dark:text-[#E8EAED]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">{checkedInCount}</span>
+            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+              {checkedInCount}
+            </span>
             <span className="text-xs font-medium text-[#656B73] dark:text-[#989EA7]">passes</span>
           </div>
-          <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73]">Verified at terminal</p>
+          <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73]">
+            Verified at terminal
+          </p>
         </div>
 
         {/* Metric 3: Remaining */}
@@ -503,7 +519,9 @@ export default function AttendancePage() {
             <Clock className="h-4 w-4 text-[#8A9098] dark:text-[#656B73]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">{remainingCount}</span>
+            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+              {remainingCount}
+            </span>
             <span className="text-xs text-[#8A9098] dark:text-[#656B73]">remaining</span>
           </div>
           <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73]">Awaiting scan / lookup</p>
@@ -516,7 +534,9 @@ export default function AttendancePage() {
             <ShieldCheck className="h-4 w-4 text-[#17191C] dark:text-[#E8EAED]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">{attendanceRate}%</span>
+            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+              {attendanceRate}%
+            </span>
             <span className="text-xs text-[#8A9098] dark:text-[#656B73]">turnout</span>
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F2] dark:bg-[#151719]">

@@ -24,12 +24,13 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getAllTeams, getAllParticipants, getStoredEvents } from "@/lib/registration-store";
+import { MOCK_TEAMS, MOCK_PARTICIPANTS, MOCK_EVENTS } from "@/lib/mock-data";
 import { Team, Participant } from "@/types";
 
 export default function TeamsPage() {
-  const [teams, setTeams] = useState<Team[]>(() => getAllTeams());
-  const [participants, setParticipants] = useState<Participant[]>(() => getAllParticipants());
-  const [events, setEvents] = useState(() => getStoredEvents());
+  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
+  const [participants, setParticipants] = useState<Participant[]>(MOCK_PARTICIPANTS);
+  const [events, setEvents] = useState(MOCK_EVENTS);
   const [activeTab, setActiveTab] = useState("all");
   const [selectedEventId, setSelectedEventId] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +38,11 @@ export default function TeamsPage() {
   const [selectedMember, setSelectedMember] = useState<Participant | null>(null);
 
   useEffect(() => {
+    // Sync live preview store on mount
+    setTeams(getAllTeams());
+    setParticipants(getAllParticipants());
+    setEvents(getStoredEvents());
+
     const handleUpdate = () => {
       setTeams(getAllTeams());
       setParticipants(getAllParticipants());

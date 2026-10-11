@@ -314,3 +314,45 @@ export function updateParticipantAttendance(
   writeStorage(STORAGE_KEY_ATTENDANCE_OVERRIDE, overrides);
   notifySubscribers();
 }
+
+// ==========================================
+// CHECK-IN AUDIT LOG REPOSITORY
+// ==========================================
+
+export interface CheckInLogEntry {
+  id: string;
+  participantId: string;
+  participantName: string;
+  registrationId: string;
+  eventId: string;
+  timestamp: string;
+  method: "camera" | "manual" | "simulation";
+}
+
+export const INITIAL_CHECKIN_LOG: CheckInLogEntry[] = [
+  {
+    id: "log-init-1",
+    participantId: "part-07",
+    participantName: "Vikram Malhotra",
+    registrationId: "REG-2026-8814",
+    eventId: "evt-01",
+    timestamp: "10 mins ago",
+    method: "camera",
+  },
+];
+
+const STORAGE_KEY_CHECKIN_LOG = "sketch_preview_checkin_log_v1";
+let memoryCheckInLog: CheckInLogEntry[] = [...INITIAL_CHECKIN_LOG];
+
+export function getStoredCheckInLog(): CheckInLogEntry[] {
+  if (typeof window === "undefined") return INITIAL_CHECKIN_LOG;
+  const stored = readStorage<CheckInLogEntry[]>(STORAGE_KEY_CHECKIN_LOG, memoryCheckInLog);
+  memoryCheckInLog = stored;
+  return stored;
+}
+
+export function saveCheckInLog(log: CheckInLogEntry[]): void {
+  memoryCheckInLog = log;
+  writeStorage(STORAGE_KEY_CHECKIN_LOG, log);
+  notifySubscribers();
+}

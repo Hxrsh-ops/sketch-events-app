@@ -26,25 +26,31 @@ import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
 import { getAllParticipants, updateParticipantAttendance, getStoredEvents } from "@/lib/registration-store";
+import { MOCK_PARTICIPANTS, MOCK_EVENTS } from "@/lib/mock-data";
 import { Participant } from "@/types";
 import { formatDate } from "@/lib/utils";
 
 export default function ParticipantsPage() {
-  const [participants, setParticipants] = useState<Participant[]>(() => getAllParticipants());
+  const [participants, setParticipants] = useState<Participant[]>(MOCK_PARTICIPANTS);
   const [activeTab, setActiveTab] = useState("all");
   const [selectedEventId, setSelectedEventId] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [events, setEvents] = useState(() => getStoredEvents());
+  const [events, setEvents] = useState(MOCK_EVENTS);
 
   useEffect(() => {
+    // Sync live preview store on mount
+    const all = getAllParticipants();
+    setParticipants(all);
+    setEvents(getStoredEvents());
+
     const handleUpdate = () => {
-      const all = getAllParticipants();
-      setParticipants(all);
+      const freshAll = getAllParticipants();
+      setParticipants(freshAll);
       setEvents(getStoredEvents());
       if (selectedParticipant) {
-        const fresh = all.find((p) => p.id === selectedParticipant.id);
+        const fresh = freshAll.find((p) => p.id === selectedParticipant.id);
         if (fresh) setSelectedParticipant(fresh);
       }
     };

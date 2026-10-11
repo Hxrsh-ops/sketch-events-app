@@ -8,15 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { getStoredEvents } from "@/lib/registration-store";
+import { MOCK_EVENTS } from "@/lib/mock-data";
 import { formatDate } from "@/lib/utils";
 import { EventItem } from "@/types";
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<EventItem[]>(() => getStoredEvents());
+  const [events, setEvents] = useState<EventItem[]>(MOCK_EVENTS);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
+    setEvents(getStoredEvents());
     const handleUpdate = () => setEvents(getStoredEvents());
     window.addEventListener("sketch_store_updated", handleUpdate);
     return () => window.removeEventListener("sketch_store_updated", handleUpdate);
