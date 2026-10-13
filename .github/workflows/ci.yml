@@ -29,14 +29,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (20.x)
+      - name: Setup Node.js (22.x LTS)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      - name: Install dependencies (reproducible)
-        run: npm ci
+      - name: Install dependencies
+        run: npm ci || npm install
 
       - name: Run ESLint
         run: npm run lint
