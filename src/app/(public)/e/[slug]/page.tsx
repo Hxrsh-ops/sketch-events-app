@@ -37,9 +37,10 @@ import {
   HACKATHON_TEAM_TEMPLATE,
 } from "@/lib/form-templates";
 import {
-  getEventBySlugOrId,
+  getStoredEvents,
   saveSubmission,
 } from "@/lib/registration-store";
+import { registerParticipantAction } from "@/app/actions/registration-actions";
 import {
   RegistrationFormSchema,
   FormField,
@@ -55,13 +56,22 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   const resolvedParams = use(params);
   const slug = resolvedParams.slug;
 
-  // Match event by slug from client store (with fallback)
-  const event = getEventBySlugOrId(slug) || MOCK_EVENTS[0];
+  // Match event by slug from client store authoritatively without silent fallback
+  const storedEvents = getStoredEvents();
+  const event = storedEvents.find(
+    (e) =>
+      e.slug === slug ||
+      e.slug === slug.replace("sketch-", "") ||
+      e.id === slug
+  );
 
-  const eventRounds = MOCK_ROUNDS.filter((r) => r.eventId === event.id);
+  const eventRounds = useMemo(() => {
+    return event ? MOCK_ROUNDS.filter((r) => r.eventId === event.id) : [];
+  }, [event]);
 
   // Active form schema for this event
   const formSchema: RegistrationFormSchema = useMemo(() => {
+    if (!event) return STANDARD_INDIVIDUAL_TEMPLATE;
     if (event.registrationForm && event.registrationForm.sections?.length > 0) {
       return event.registrationForm;
     }
@@ -73,6 +83,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
+  const [serverError, setServerError] = useState<string | null>(null);
 
   // Generated Registration Result
   const [registrationResult, setRegistrationResult] = useState<{
@@ -82,6 +93,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
     attendeeName: string;
     email: string;
     teamName?: string;
+    isMockPreview?: boolean;
   } | null>(null);
 
   const handleFieldChange = (fieldId: string, value: unknown) => {
@@ -264,91 +276,147 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   };
 
   // Final submission execution
-  const handleFinalSubmit = () => {
-    if (isSubmitting) return;
+  const handleFinalSubmit = async () => {
+    if (isSubmitting || !event) return;
     setIsSubmitting(true);
+    setServerError(null);
 
-    setTimeout(() => {
-      const generatedRegId = `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const generatedCredHash = `qr_cred_${Math.random().toString(36).substring(2, 10)}`;
-      const { attendeeName, email, teamName } = extractAttendeeMetadata();
+    const { attendeeName, email, teamName } = extractAttendeeMetadata();
 
-      // Extract structured team members from form values if present
-      const teamMembers: TeamMemberSubmission[] = [];
-      for (let i = 1; i <= 6; i++) {
-        const mName =
-          (formValues[`member_${i}_name`] as string) ||
-          (formValues[`team_member_${i}_name`] as string) ||
-          (formValues[`member${i}_name`] as string);
-        const mEmail =
-          (formValues[`member_${i}_email`] as string) ||
-          (formValues[`team_member_${i}_email`] as string) ||
-          (formValues[`member${i}_email`] as string);
-        const mDept =
-          (formValues[`member_${i}_dept`] as string) ||
-          (formValues[`member_${i}_department`] as string);
-        const mPhone = formValues[`member_${i}_phone`] as string;
+    // Extract structured team members from form values if present
+    const teamMembers: TeamMemberSubmission[] = [];
+    for (let i = 1; i <= 6; i++) {
+      const mName =
+        (formValues[`member_${i}_name`] as string) ||
+        (formValues[`team_member_${i}_name`] as string) ||
+        (formValues[`member${i}_name`] as string);
+      const mEmail =
+        (formValues[`member_${i}_email`] as string) ||
+        (formValues[`team_member_${i}_email`] as string) ||
+        (formValues[`member${i}_email`] as string);
+      const mDept =
+        (formValues[`member_${i}_dept`] as string) ||
+        (formValues[`member_${i}_department`] as string);
+      const mPhone = formValues[`member_${i}_phone`] as string;
 
-        if (mName && mName.trim()) {
-          teamMembers.push({
-            name: mName.trim(),
-            email: mEmail ? mEmail.trim() : `member${i}@${email.split("@")[1] || "sketch.events"}`,
-            role: `Team Member #${i}`,
-            department: mDept,
-            phone: mPhone,
-          });
+      if (mName && mName.trim()) {
+        teamMembers.push({
+          name: mName.trim(),
+          email: mEmail ? mEmail.trim() : `member${i}@${email.split("@")[1] || "sketch.events"}`,
+          role: `Team Member #${i}`,
+          department: mDept,
+          phone: mPhone,
+        });
+      }
+    }
+
+    const isTeam = Boolean(event.hasTeams || teamName);
+    const payload = isTeam
+      ? {
+          eventSlug: slug,
+          mode: "team" as const,
+          attendeeName,
+          email,
+          phone: (formValues["phone"] as string) || (formValues["leader_phone"] as string) || undefined,
+          department: (formValues["department"] as string) || (formValues["leader_department"] as string) || undefined,
+          year: (formValues["year"] as string) || (formValues["academic_year"] as string) || undefined,
+          teamName: teamName || `${attendeeName}'s Team`,
+          teamMembers,
+          answers: { ...formValues },
         }
+      : {
+          eventSlug: slug,
+          mode: "individual" as const,
+          attendeeName,
+          email,
+          phone: (formValues["phone"] as string) || (formValues["leader_phone"] as string) || undefined,
+          department: (formValues["department"] as string) || (formValues["leader_department"] as string) || undefined,
+          year: (formValues["year"] as string) || (formValues["academic_year"] as string) || undefined,
+          answers: { ...formValues },
+        };
+
+    try {
+      const result = await registerParticipantAction(payload);
+
+      if (!result.success) {
+        setServerError(result.error || "Registration could not be completed.");
+        if (result.fieldErrors) {
+          setErrors((prev) => ({ ...prev, ...result.fieldErrors }));
+        }
+        setIsSubmitting(false);
+        return;
       }
 
-      // Save submission record into shared preview repository
-      const submissionRecord: RegistrationSubmission = {
-        id: `sub-${Date.now().toString(36)}`,
-        registrationId: generatedRegId,
-        eventId: event.id,
-        eventTitle: event.title,
-        submittedAt: new Date().toISOString(),
-        mode: event.hasTeams || teamName ? "team" : "individual",
-        status: "registered",
-        attendeeName,
-        email,
-        phone: (formValues["phone"] as string) || (formValues["leader_phone"] as string) || undefined,
-        department: (formValues["department"] as string) || (formValues["leader_department"] as string) || undefined,
-        year: (formValues["year"] as string) || (formValues["academic_year"] as string) || undefined,
-        teamName: event.hasTeams || teamName ? teamName : undefined,
-        teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
-        answers: { ...formValues },
-        schemaVersion: formSchema.version || 1,
-        qrCredentialId: generatedCredHash,
-        attendanceStatus: "not_checked_in",
-      };
+      // Authoritative IDs returned by Server Action
+      const authoritativeRegId = result.registrationId || `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const authoritativeCredHash = result.qrCredentialId || `qr_cred_${Math.random().toString(36).substring(2, 10)}`;
+      const registeredAt = result.registeredAt || new Date().toISOString();
 
-      saveSubmission(submissionRecord);
+      if (result.isMockPreview) {
+        // In preview mode, mirror to localStorage store so admin views (participants, check-in) reflect it
+        const submissionRecord: RegistrationSubmission = {
+          id: `sub-${Date.now().toString(36)}`,
+          registrationId: authoritativeRegId,
+          eventId: event.id,
+          eventTitle: event.title,
+          submittedAt: registeredAt,
+          mode: isTeam ? "team" : "individual",
+          status: "registered",
+          attendeeName: result.attendeeName || attendeeName,
+          email: result.email || email,
+          phone: (formValues["phone"] as string) || (formValues["leader_phone"] as string) || undefined,
+          department: (formValues["department"] as string) || (formValues["leader_department"] as string) || undefined,
+          year: (formValues["year"] as string) || (formValues["academic_year"] as string) || undefined,
+          teamName: isTeam ? (result.teamName || teamName) : undefined,
+          teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
+          answers: { ...formValues },
+          schemaVersion: formSchema.version || 1,
+          qrCredentialId: authoritativeCredHash,
+          attendanceStatus: "not_checked_in",
+        };
+        saveSubmission(submissionRecord);
+      }
 
       setRegistrationResult({
-        registrationId: generatedRegId,
-        qrCredentialId: generatedCredHash,
-        registeredAt: submissionRecord.submittedAt,
-        attendeeName,
-        email,
-        teamName: event.hasTeams || teamName ? teamName : undefined,
+        registrationId: authoritativeRegId,
+        qrCredentialId: authoritativeCredHash,
+        registeredAt,
+        attendeeName: result.attendeeName || attendeeName,
+        email: result.email || email,
+        teamName: isTeam ? (result.teamName || teamName) : undefined,
+        isMockPreview: Boolean(result.isMockPreview),
       });
 
       setIsSubmitting(false);
       setJourneyStep("confirmed");
       window.scrollTo({ top: 350, behavior: "smooth" });
-    }, 600);
+    } catch (err) {
+      setServerError(
+        err instanceof Error
+          ? err.message
+          : "An unexpected network or server error occurred. Please try again."
+      );
+      setIsSubmitting(false);
+    }
   };
 
   // Download SVG Pass Image
   const handleDownloadPassSvg = () => {
-    if (!registrationResult) return;
+    if (!registrationResult || !event) return;
+
+    const passHeader = registrationResult.isMockPreview
+      ? "SKETCH PREVIEW EVENT PASS • LOCAL DEMO ONLY"
+      : "SKETCH OFFICIAL EVENT PASS";
+    const passFooter = registrationResult.isMockPreview
+      ? "CLIENT PREVIEW CREDENTIAL • LOCAL TERMINAL TESTING ONLY"
+      : "OFFICIAL EVENT CREDENTIAL • PRESENT AT DESK SCANNER";
 
     const svgPass = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="100%" height="100%">
   <rect width="600" height="800" rx="30" fill="#17191C"/>
   <circle cx="300" cy="150" r="240" fill="#FFFFFF" fill-opacity="0.04"/>
   
-  <text x="50" y="70" font-family="sans-serif" font-size="12" font-weight="bold" letter-spacing="3" fill="#8A9098">SKETCH OFFICIAL EVENT PASS</text>
+  <text x="50" y="70" font-family="sans-serif" font-size="12" font-weight="bold" letter-spacing="3" fill="#8A9098">${passHeader}</text>
   <text x="50" y="110" font-family="sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">${event.title}</text>
   <text x="50" y="140" font-family="sans-serif" font-size="13" fill="#AEB3BA">${event.venue} • ${formatDate(event.startDate)}</text>
   
@@ -371,7 +439,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
   
   ${registrationResult.teamName ? `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">TEAM AFFILIATION</text><text x="50" y="720" font-family="sans-serif" font-size="16" font-weight="bold" fill="#FFFFFF">${registrationResult.teamName}</text>` : `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">REGISTRATION STATUS</text><text x="50" y="720" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF">Confirmed Individual Attendee</text>`}
   
-  <text x="300" y="775" font-family="sans-serif" font-size="10" fill="#656B73" text-anchor="middle">CLIENT PREVIEW CREDENTIAL • PRESENT AT DESK SCANNER</text>
+  <text x="300" y="775" font-family="sans-serif" font-size="10" fill="#656B73" text-anchor="middle">${passFooter}</text>
 </svg>`;
 
     const blob = new Blob([svgPass], { type: "image/svg+xml;charset=utf-8;" });
@@ -384,6 +452,25 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  if (!event) {
+    return (
+      <div className="max-w-md mx-auto py-20 text-center space-y-4">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#F4F5F6] dark:bg-[#1B1E21] text-[#8A9098]">
+          <AlertCircle className="h-7 w-7" />
+        </div>
+        <h2 className="text-xl font-bold text-[#17191C] dark:text-[#F1F2F3]">Event Not Found</h2>
+        <p className="text-xs text-[#656B73] dark:text-[#8A9098] leading-relaxed">
+          The event requested with identifier &quot;{slug}&quot; does not exist or may have been unlisted.
+        </p>
+        <Link href="/">
+          <Button variant="charcoal" size="sm" className="rounded-full text-xs mt-2">
+            Return to Events Portal
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   const isRegistrationClosed = event.registrationState === "closed" || event.lifecycle === "completed";
   const isRegistrationFull = event.registrationState === "full" || event.registeredCount >= event.capacity;
@@ -544,14 +631,33 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
                 <Check className="h-8 w-8 stroke-[3]" />
               </div>
               <h3 className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
-                Registration Confirmed!
+                {registrationResult.isMockPreview ? "Preview Registration Recorded" : "Registration Confirmed!"}
               </h3>
               <p className="text-xs text-[#656B73] dark:text-[#8A9098] max-w-md mx-auto">
-                Your official participant event pass has been generated for <strong className="text-[#17191C] dark:text-[#F1F2F3]">{registrationResult.email}</strong>.
+                {registrationResult.isMockPreview
+                  ? "A simulated participant pass has been generated in Preview Mode for "
+                  : "Your official participant event pass has been generated for "}
+                <strong className="text-[#17191C] dark:text-[#F1F2F3]">{registrationResult.email}</strong>.
               </p>
+
+              {registrationResult.isMockPreview && (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-200 max-w-md mx-auto text-center space-y-1">
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-amber-700 dark:text-amber-300">
+                    Preview Mode • Local Non-Production Persistence
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    This registration was validated by the Server Action and recorded in local preview storage. Authoritative Supabase database schema deployment by Project Lead (Harshanth) is pending.
+                  </p>
+                </div>
+              )}
+
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F4F5F6] dark:bg-[#151719] border border-transparent dark:border-[#30353A] text-[10px] font-semibold text-[#656B73] dark:text-[#8A9098]">
                 <ShieldCheck className="h-3.5 w-3.5 text-[#17191C] dark:text-[#E8EAED]" />
-                <span>Client Preview Credential • Valid for Terminal Check-in</span>
+                <span>
+                  {registrationResult.isMockPreview
+                    ? "Client Preview Credential • Valid for Terminal Simulation"
+                    : "Authoritative Verified Credential"}
+                </span>
               </div>
             </div>
 
@@ -562,14 +668,14 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div>
                   <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">
-                    SKETCH OFFICIAL PASS
+                    {registrationResult.isMockPreview ? "SKETCH PREVIEW PASS" : "SKETCH OFFICIAL PASS"}
                   </span>
                   <p className="font-mono text-xs font-bold text-white mt-0.5">
                     {registrationResult.registrationId}
                   </p>
                 </div>
                 <Badge variant="secondary" className="bg-white text-[#17191C] font-bold text-[10px]">
-                  VERIFIED ENTRY
+                  {registrationResult.isMockPreview ? "PREVIEW PASS" : "VERIFIED ENTRY"}
                 </Badge>
               </div>
 
@@ -737,11 +843,24 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
               })}
             </div>
 
+            {serverError && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-xs text-red-600 dark:text-red-400 flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold">Submission Error</p>
+                  <p>{serverError}</p>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 className="rounded-full text-xs h-11 px-5 border-[#E5E7EA] dark:border-[#30353A] dark:bg-[#1B1E21] dark:text-[#F1F2F3] dark:hover:bg-[#22262A]"
-                onClick={() => setJourneyStep("form")}
+                onClick={() => {
+                  setServerError(null);
+                  setJourneyStep("form");
+                }}
               >
                 <ArrowLeft className="h-3.5 w-3.5 mr-1" />
                 Edit Information
@@ -752,7 +871,7 @@ export default function PublicEventPage({ params }: PublicEventPageProps) {
                 disabled={isSubmitting}
                 onClick={handleFinalSubmit}
               >
-                {isSubmitting ? "Generating Ticket Pass..." : "Confirm & Claim Pass"}
+                {isSubmitting ? "Verifying & Generating Pass..." : "Confirm & Claim Pass"}
               </Button>
             </div>
           </div>
