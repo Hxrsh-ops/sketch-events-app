@@ -35,7 +35,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# context and prompt specs
+# context and prompt specs (private to project lead)
 /CONTEXT/
 CONTEXT/
+/context/
+context/
 *.mdx?_prompt*

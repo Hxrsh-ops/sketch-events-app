@@ -37,19 +37,10 @@ The application interface is derived from the **Donezo dashboard visual referenc
 
 ---
 
-## 📚 Project Documentation
+## 📚 Team Collaboration & Engineering Guide
 
-All product specifications, architecture, and design blueprints are maintained in the [`CONTEXT/`](file:///./CONTEXT/) directory:
-
-1. [01 — Product Vision and Boundaries](file:///./CONTEXT/01-product-vision.md)
-2. [02 — Requirements and Workflows](file:///./CONTEXT/02-requirements-and-workflows.md)
-3. [03 — Design System and Visual Reference](file:///./CONTEXT/03-design-system.md)
-4. [04 — Architecture and Security](file:///./CONTEXT/04-architecture-and-security.md)
-5. [05 — Domain Model and States](file:///./CONTEXT/05-domain-model.md)
-6. [06 — Email, Tickets, QR and Attendance](file:///./CONTEXT/06-email-tickets-attendance.md)
-7. [07 — Roadmap and Decision Log](file:///./CONTEXT/07-roadmap-and-decisions.md)
-8. [08 — Antigravity Operating Instructions](file:///./CONTEXT/08-antigravity.md)
-9. [09 — Frontend Design & Implementation Blueprint](file:///./CONTEXT/09-frontend-design-and-implementation-blueprint.md)
+All developer workflows, subsystem ownership maps, Git branching policies, and integration contracts are documented in:
+👉 [**CONTRIBUTING.md**](./CONTRIBUTING.md)
 
 ---
 
@@ -57,19 +48,19 @@ All product specifications, architecture, and design blueprints are maintained i
 
 ### Prerequisites
 
-- Node.js `v20+` or `v24+` (Installed: `v24.13.0`)
-- npm `v10+` or `v11+` (Installed: `11.6.2`)
+- Node.js `v20+` or `v24+` (LTS recommended)
+- npm `v10+` or `v11+`
 
 ### Installation
 
 ```bash
-# Install dependencies
-npm install
+# 1. Install dependencies
+npm ci
 
-# Copy environment template (optional for mock development)
+# 2. Copy environment template (application runs in Preview Mode by default)
 cp .env.example .env.local
 
-# Start development server
+# 3. Start development server
 npm run dev
 ```
 
@@ -80,5 +71,6 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - `npm run dev`: Starts the Next.js development server
 - `npm run build`: Builds the production application bundle
 - `npm run start`: Runs the built production server
-- `npm run lint`: Runs ESLint checks
-- `npm run type-check`: Validates TypeScript types across the codebase
+- `npm run lint`: Runs ESLint checks across `src/`
+- `npm run type-check`: Validates TypeScript types across the codebase (`tsc --noEmit`)
+- `npm test`: Runs the Vitest test suite (`vitest run`)
