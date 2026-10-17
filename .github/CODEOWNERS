@@ -1,0 +1,44 @@
+# ==============================================================================
+# SketchHUB — GitHub Code Owners Configuration
+# ==============================================================================
+# Syntax: <path-pattern> <github-username-or-team>
+#
+# Rules:
+# - Order matters: Later patterns take precedence over earlier ones.
+# - Harshanth (@Hxrsh-ops) owns overall architecture, database, auth, and CI.
+# - Tharika (@tharikadheena-ui) owns registration and participant interfaces.
+# - Pragadeesh (@praga104656-maker) owns email infrastructure and delivery.
+# ==============================================================================
+
+# Default catch-all: Technical Lead reviews all project changes
+* @Hxrsh-ops
+
+# ------------------------------------------------------------------------------
+# CORE ARCHITECTURE, DATABASE, AUTH & REPO CONFIGURATION (Harshanth)
+# ------------------------------------------------------------------------------
+/.github/ @Hxrsh-ops
+/supabase/ @Hxrsh-ops
+/src/lib/auth/ @Hxrsh-ops
+/src/lib/supabase/ @Hxrsh-ops
+/src/lib/env.ts @Hxrsh-ops
+/src/middleware.ts @Hxrsh-ops
+/package.json @Hxrsh-ops
+/package-lock.json @Hxrsh-ops
+/tsconfig.json @Hxrsh-ops
+/next.config.ts @Hxrsh-ops
+/vitest.config.ts @Hxrsh-ops
+
+# ------------------------------------------------------------------------------
+# REGISTRATION & PARTICIPANT SUBSYSTEM (Tharika)
+# ------------------------------------------------------------------------------
+/src/app/(public)/e/ @tharikadheena-ui
+/src/components/forms/ @tharikadheena-ui
+/src/app/(admin)/participants/ @tharikadheena-ui
+/src/app/actions/registration-actions.ts @tharikadheena-ui
+
+# ------------------------------------------------------------------------------
+# EMAIL INFRASTRUCTURE & OUTBOX SUBSYSTEM (Pragadeesh)
+# ------------------------------------------------------------------------------
+/src/lib/email/ @praga104656-maker
+/src/app/(admin)/communications/ @praga104656-maker
+/src/app/actions/email-actions.ts @praga104656-maker
