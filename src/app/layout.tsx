@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { NavigationProvider } from "@/components/layout/navigation-progress";
 
 import Script from "next/script";
 
@@ -55,7 +56,9 @@ export default function RootLayout({
             __html: THEME_INITIALIZER_SCRIPT,
           }}
         />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <NavigationProvider>{children}</NavigationProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

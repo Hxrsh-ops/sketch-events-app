@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth/auth-context";
+import { getRequiredPermissionForPath } from "@/lib/auth/permissions";
 
 interface NavItem {
   label: string;
@@ -62,6 +64,13 @@ interface SidebarProps {
 
 export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
+  const { can } = useAuth();
+
+  const isItemVisible = (href: string) => {
+    const requiredPermission = getRequiredPermissionForPath(href);
+    if (!requiredPermission) return true;
+    return can(requiredPermission);
+  };
 
   const isItemActive = (href: string) => {
     if (href === "/") {
@@ -84,13 +93,13 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           onClick={onNavigate}
           className="flex items-center gap-3 px-2 group transition-opacity hover:opacity-90"
         >
-          <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-black dark:bg-white flex items-center justify-center shrink-0 shadow-sm border border-black/10 dark:border-white/10">
+          <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-[#F0F1F2] dark:bg-[#22262B] flex items-center justify-center shrink-0 shadow-xs border border-[#E5E7EA] dark:border-[#30353A] p-1.5">
             <Image
               src="/sketch-logo.png"
               alt="SketchHUB Logo"
-              width={40}
-              height={40}
-              className="object-contain p-0.5 dark:invert"
+              width={36}
+              height={36}
+              className="object-contain h-full w-full dark:invert"
               priority
             />
           </div>
@@ -126,7 +135,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               Operations
             </div>
             <nav className="flex flex-col space-y-0.5">
-              {OPERATIONS_ITEMS.map((item) => {
+              {OPERATIONS_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
                 return (
@@ -179,7 +188,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               Delivery & Credentials
             </div>
             <nav className="flex flex-col space-y-0.5">
-              {COMMUNICATIONS_ITEMS.map((item) => {
+              {COMMUNICATIONS_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
                 return (
@@ -218,7 +227,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               Intelligence & Logs
             </div>
             <nav className="flex flex-col space-y-0.5">
-              {INTELLIGENCE_ITEMS.map((item) => {
+              {INTELLIGENCE_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
                 return (
@@ -257,7 +266,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               System
             </div>
             <nav className="flex flex-col space-y-0.5">
-              {SYSTEM_ITEMS.map((item) => {
+              {SYSTEM_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
                 return (

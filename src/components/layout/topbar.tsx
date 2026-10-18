@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Bell, Mail, Menu, Command } from "lucide-react";
+import { Search, Bell, Mail, Menu, Command, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { MOCK_ADMIN_USER } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth/auth-context";
 
 interface TopbarProps {
   onOpenMobileMenu?: () => void;
 }
 
 export function Topbar({ onOpenMobileMenu }: TopbarProps) {
+  const { user, signOut } = useAuth();
+  const currentUser = user || MOCK_ADMIN_USER;
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -38,7 +41,12 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
         >
           <Menu className="h-4 w-4 text-[#17191C] dark:text-[#F1F2F3]" />
         </Button>
-        <span className="font-bold text-sm tracking-tight text-[#17191C] dark:text-[#F1F2F3]">SketchHUB</span>
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded-lg bg-[#F0F1F2] dark:bg-[#22262B] p-0.5 border border-[#E5E7EA] dark:border-[#30353A] flex items-center justify-center">
+            <img src="/sketch-logo.png" alt="Sketch" className="h-4 w-4 object-contain dark:invert" />
+          </div>
+          <span className="font-bold text-sm tracking-tight text-[#17191C] dark:text-[#F1F2F3]">SketchHUB</span>
+        </div>
       </div>
 
       {/* Global Search / Command Bar */}
@@ -115,26 +123,36 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
           )}
         </div>
 
-        {/* Admin Profile - Initials Avatar */}
+        {/* Admin Profile - Session Aware Avatar & Sign Out */}
         <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-[#E5E7EA] dark:border-[#30353A]">
           <Avatar className="h-9 w-9 border border-[#E5E7EA] dark:border-[#30353A] bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
             <AvatarFallback className="bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold">
-              {getInitials(MOCK_ADMIN_USER.name)}
+              {getInitials(currentUser.name)}
             </AvatarFallback>
           </Avatar>
           <div className="hidden md:flex flex-col text-left">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] leading-none">
-                {MOCK_ADMIN_USER.name}
+                {currentUser.name}
               </span>
               <span className="text-[9px] font-semibold text-[#656B73] dark:text-[#A6ADB5] bg-[#EAECEF] dark:bg-[#2A2F35] px-1.5 py-0.5 rounded-full uppercase">
-                Admin
+                {currentUser.role.replace("_", " ")}
               </span>
             </div>
             <span className="text-[10px] text-[#8A9098] dark:text-[#7D858F] leading-tight mt-0.5">
-              {MOCK_ADMIN_USER.email}
+              {currentUser.email}
             </span>
           </div>
+
+          {/* Quick Sign Out Action */}
+          <button
+            type="button"
+            onClick={() => signOut()}
+            title="Sign out of SketchHUB"
+            className="ml-1 p-1.5 rounded-full text-[#8A9098] hover:text-[#B91C1C] dark:text-[#7D858F] dark:hover:text-[#F87171] hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </header>

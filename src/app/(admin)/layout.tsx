@@ -1,35 +1,31 @@
-"use client";
-
-import { useState } from "react";
+import { verifyAdminSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
+import { AuthProvider } from "@/lib/auth/auth-context";
+import { AdminLayoutClient } from "./admin-layout-client";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const sessionResult = await verifyAdminSession();
+
+  // If unauthenticated (in either production or preview mode without active session), redirect to login
+  if (!sessionResult.isAuthenticated) {
+    redirect("/login");
+  }
+
+  // If authenticated in Supabase but lacks admin_profiles entry in database
+  if (!sessionResult.isAdmin) {
+    redirect("/login?error=not_an_admin");
+  }
 
   return (
-    <div className="flex min-h-screen bg-[#F4F5F6] dark:bg-[#111315] text-[#17191C] dark:text-[#F1F2F3] transition-colors duration-200">
-      {/* Persistent Left Sidebar for Desktop */}
-      <Sidebar className="hidden lg:flex" />
-
-      {/* Mobile Drawer */}
-      <MobileDrawer
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
-
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-x-hidden">
-        <Topbar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 p-6 md:p-8 lg:p-10 max-w-[1600px] w-full mx-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+    <AuthProvider initialUser={sessionResult.user}>
+      <AdminLayoutClient user={sessionResult.user}>{children}</AdminLayoutClient>
+    </AuthProvider>
   );
 }
