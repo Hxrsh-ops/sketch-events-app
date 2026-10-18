@@ -24,6 +24,7 @@ import {
   Crop,
   RotateCcw,
   ClipboardList,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
 } from "@/lib/form-templates";
 import { MOCK_EVENTS } from "@/lib/mock-data";
 import { saveEvent } from "@/lib/registration-store";
+import { createEventAction } from "@/app/actions/event-actions";
 import { EventItem, RegistrationFormSchema } from "@/types";
 
 const CATEGORY_OPTIONS: SelectOption[] = [
@@ -109,6 +111,10 @@ export default function NewEventPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPublishedPreview, setIsPublishedPreview] = useState(false);
   const [createdSlug, setCreatedSlug] = useState("");
+  const [createdEventId, setCreatedEventId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingMode, setSubmittingMode] = useState<"draft" | "publish" | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [activeArtworkTab, setActiveArtworkTab] = useState<"directory" | "hero">("directory");
   const [directoryArtworkMode, setDirectoryArtworkMode] = useState<"preset" | "upload">("preset");
@@ -338,56 +344,85 @@ export default function NewEventPage() {
     setFormData({ ...formData, rounds: updated });
   };
 
-  const handlePublish = (isDraft: boolean) => {
+  const handlePublish = async (isDraft: boolean) => {
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
-      setCurrentStep(1);
+      if (!validateStep(1)) setCurrentStep(1);
+      else if (!validateStep(2)) setCurrentStep(2);
+      else setCurrentStep(3);
       return;
     }
+
+    const toIsoString = (val: string) => {
+      if (!val) return "";
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return d.toISOString();
+        }
+      } catch {}
+      return val;
+    };
 
     const generatedSlug =
       formData.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "") || `event-${Date.now()}`;
-    const newId = `evt-${Date.now().toString(36)}`;
 
-    const newEventItem: EventItem = {
-      id: newId,
+    setIsSubmitting(true);
+    setSubmittingMode(isDraft ? "draft" : "publish");
+    setSubmitError(null);
+
+    const payload = {
+      title: formData.title.trim(),
       slug: generatedSlug,
-      title: formData.title,
-      category: formData.category as any,
-      shortDescription: formData.shortDescription,
-      description: formData.description || formData.shortDescription,
-      posterUrl: formData.directoryImage || formData.posterUrl,
-      focalPoint: formData.directoryImageFocalPoint || formData.focalPoint,
-      directoryImage: formData.directoryImage || formData.posterUrl,
-      directoryImageFocalPoint: formData.directoryImageFocalPoint || formData.focalPoint,
-      heroImage: formData.heroImage || formData.directoryImage || formData.posterUrl,
-      heroImageFocalPoint: formData.heroImageFocalPoint || formData.directoryImageFocalPoint || formData.focalPoint,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      venue: formData.venue,
-      venueMode: formData.venueMode as any,
-      capacity: formData.capacity,
-      registeredCount: 0,
-      checkedInCount: 0,
-      lifecycle: isDraft ? "draft" : "published",
-      registrationState: "open",
+      category: formData.category,
+      shortDescription: formData.shortDescription.trim() || undefined,
+      description: (formData.description || formData.shortDescription).trim() || undefined,
+      posterUrl: formData.directoryImage || formData.posterUrl || "",
+      heroImage: formData.heroImage || formData.directoryImage || formData.posterUrl || "",
+      heroImageFocalPoint: formData.heroImageFocalPoint || formData.directoryImageFocalPoint || formData.focalPoint || "center center",
+      directoryImage: formData.directoryImage || formData.posterUrl || "",
+      directoryImageFocalPoint: formData.directoryImageFocalPoint || formData.focalPoint || "center center",
+      startDate: toIsoString(formData.startDate),
+      endDate: toIsoString(formData.endDate),
+      venue: formData.venue.trim(),
+      venueMode: formData.venueMode as "in-person" | "online" | "hybrid",
+      capacity: Number(formData.capacity) || 1,
+      lifecycle: isDraft ? ("draft" as const) : ("published" as const),
+      registrationState: isDraft ? ("upcoming" as const) : ("open" as const),
       hasTeams: formData.participationMode === "team",
+      minTeamSize: formData.participationMode === "team" ? Number(formData.minTeamSize) : null,
+      maxTeamSize: formData.participationMode === "team" ? Number(formData.maxTeamSize) : null,
       hasRounds: formData.hasRounds,
-      minTeamSize: formData.minTeamSize,
-      maxTeamSize: formData.maxTeamSize,
-      registrationForm: formData.registrationForm,
+      featured: false,
+      registrationForm: formData.registrationForm as unknown as Record<string, unknown>,
     };
 
-    saveEvent(newEventItem);
-    setCreatedSlug(generatedSlug);
+    try {
+      const res = await createEventAction(payload);
+      if (!res.success) {
+        setSubmitError(res.message || "Failed to create event. Please verify all fields.");
+        setIsSubmitting(false);
+        setSubmittingMode(null);
+        return;
+      }
 
-    if (isDraft) {
-      alert(`Event "${formData.title}" saved as Draft (Preview Mode).`);
-      router.push("/events");
-    } else {
-      setIsPublishedPreview(true);
+      const created = res.data;
+      setCreatedSlug(created.slug);
+      setCreatedEventId(created.id);
+      setIsSubmitting(false);
+      setSubmittingMode(null);
+
+      if (isDraft) {
+        router.push(`/events/${created.id}`);
+      } else {
+        setIsPublishedPreview(true);
+      }
+    } catch (err: any) {
+      setSubmitError(err?.message || "An unexpected error occurred during submission.");
+      setIsSubmitting(false);
+      setSubmittingMode(null);
     }
   };
 
@@ -1234,6 +1269,21 @@ export default function NewEventPage() {
                 <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Confirm all configuration before saving or launching.</p>
               </div>
 
+              {/* Submission Error Banner */}
+              {submitError && (
+                <div className="rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 p-4 flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-red-900 dark:text-red-200">
+                      Failed to Create Event
+                    </h4>
+                    <p className="text-xs text-red-700/90 dark:text-red-300/90 leading-relaxed">
+                      {submitError}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Review Sections */}
               <div className="space-y-4 text-xs">
                 {/* Section 1: Basic Info */}
@@ -1342,7 +1392,7 @@ export default function NewEventPage() {
             type="button"
             variant="outline"
             onClick={handlePrev}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || isSubmitting}
             className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold px-5"
           >
             Previous
@@ -1364,18 +1414,36 @@ export default function NewEventPage() {
                 type="button"
                 variant="outline"
                 onClick={() => handlePublish(true)}
-                className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold px-4"
+                disabled={isSubmitting}
+                className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold px-4 gap-1.5"
               >
-                Save as Draft
+                {isSubmitting && submittingMode === "draft" ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Saving Draft...</span>
+                  </>
+                ) : (
+                  <span>Save as Draft</span>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="charcoal"
                 onClick={() => handlePublish(false)}
+                disabled={isSubmitting}
                 className="rounded-full text-xs font-semibold px-5 shadow-sm gap-1.5"
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Publish Event (Preview)</span>
+                {isSubmitting && submittingMode === "publish" ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Publishing Event...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Publish Event</span>
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -1404,7 +1472,7 @@ export default function NewEventPage() {
               <div>Form Questions: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.registrationForm.sections.reduce((acc, s) => acc + s.fields.length, 0)} Fields</strong></div>
             </div>
 
-            <div className="flex gap-2.5">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
                 className="flex-1 rounded-full text-xs font-semibold"
@@ -1412,6 +1480,16 @@ export default function NewEventPage() {
               >
                 Return to Directory
               </Button>
+              {createdEventId && (
+                <Link href={`/events/${createdEventId}`} className="flex-1">
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-full text-xs font-semibold"
+                  >
+                    Manage Event
+                  </Button>
+                </Link>
+              )}
               <Link href={`/e/${createdSlug}`} className="flex-1">
                 <Button
                   variant="charcoal"

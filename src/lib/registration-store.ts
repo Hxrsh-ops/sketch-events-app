@@ -1,5 +1,3 @@
-"use client";
-
 import {
   EventItem,
   Participant,
@@ -75,7 +73,7 @@ function writeStorage<T>(key: string, value: T): void {
 // ==========================================
 
 export function getStoredEvents(): EventItem[] {
-  if (typeof window === "undefined") return MOCK_EVENTS;
+  if (typeof window === "undefined") return memoryEvents;
   const storedCustom = readStorage<EventItem[]>(STORAGE_KEY_EVENTS, []);
   
   // Merge stored custom events with base mock events (custom events at top)

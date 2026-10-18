@@ -76,7 +76,7 @@ export class SketchRepository {
       return events;
     }
 
-    const supabase: any = await createClient();
+    const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) {
       throw new Error("Database client is unavailable in production mode.");
     }
@@ -113,7 +113,7 @@ export class SketchRepository {
       return events.find((e) => e.id === id) || null;
     }
 
-    const supabase: any = await createClient();
+    const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) {
       throw new Error("Database client is unavailable in production mode.");
     }
@@ -168,7 +168,7 @@ export class SketchRepository {
       return MOCK_PARTICIPANTS.filter((p) => p.eventId === eventId || eventId === "evt-01");
     }
 
-    const supabase: any = await createClient();
+    const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) {
       throw new Error("Database client is unavailable in production mode.");
     }
@@ -235,7 +235,7 @@ export class SketchRepository {
     },
     actorId?: string
   ): Promise<EventItem> {
-    const supabase: any = await createClient();
+    const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) {
       throw new Error("Database client is unavailable.");
     }
@@ -340,7 +340,7 @@ export class SketchRepository {
       registrationForm?: Record<string, unknown>;
     }
   ): Promise<EventItem> {
-    const supabase: any = await createClient();
+    const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) {
       throw new Error("Database client is unavailable.");
     }
@@ -399,14 +399,30 @@ export class SketchRepository {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    let updateQuery = supabase
       .from("events")
       .update(updatePayload)
-      .eq("id", id)
-      .select("*")
-      .single();
+      .eq("id", id);
+
+    if (input.capacity !== undefined) {
+      updateQuery = updateQuery.lte("registered_count", input.capacity);
+    }
+
+    const { data, error } = await updateQuery.select("*").single();
 
     if (error || !data) {
+      if (input.capacity !== undefined) {
+        const { data: latest } = await supabase
+          .from("events")
+          .select("registered_count")
+          .eq("id", id)
+          .maybeSingle();
+        if (latest && latest.registered_count > input.capacity) {
+          throw new Error(
+            `Capacity cannot be reduced below current registrations (${latest.registered_count}). Current registered count must be accommodated.`
+          );
+        }
+      }
       throw new Error(`Failed to update event: ${error?.message || "Unknown database error"}`);
     }
 
@@ -420,7 +436,7 @@ export class SketchRepository {
     id: string,
     lifecycle: "draft" | "published" | "live" | "completed" | "archived"
   ): Promise<EventItem> {
-    const supabase: any = await createClient();
+    const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) {
       throw new Error("Database client is unavailable.");
     }
@@ -680,16 +696,20 @@ export class SketchRepository {
     target: string;
     details: Record<string, unknown>;
   }): Promise<void> {
-    const supabase: any = await createClient();
+    const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) return;
 
-    await supabase.from("audit_logs").insert({
+    const { error } = await supabase.from("audit_logs").insert({
       actor_name: params.actorName,
       actor_email: params.actorEmail,
       action: params.action,
       target: params.target,
       details: params.details as any,
     });
+
+    if (error) {
+      console.error("[SketchRepository] Failed to record audit log:", error);
+    }
   }
 
   /**
