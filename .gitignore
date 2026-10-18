@@ -41,3 +41,7 @@ CONTEXT/
 /context/
 context/
 *.mdx?_prompt*
+
+# supabase local
+supabase/.temp/
+supabase/.branches/

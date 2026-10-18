@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { getServerEnv } from "@/lib/env.server";
 import { EmailDeliveryJob, EmailProviderAdapter } from "./types";
-import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter } from "./adapters";
+import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter, MailpitEmailAdapter } from "./adapters";
 import { renderTicketPassEmail } from "./templates";
 
 export interface ProcessBatchResult {
@@ -26,6 +26,8 @@ export class EmailOutboxWorker {
         this.adapter = new BrevoEmailAdapter(process.env.BREVO_API_KEY || "", serverEnv.emailFrom);
       } else if (serverEnv.emailProvider === "test") {
         this.adapter = new TestEmailAdapter();
+      } else if (serverEnv.emailProvider === "mailpit" || serverEnv.emailProvider === "local") {
+        this.adapter = new MailpitEmailAdapter(serverEnv.emailFrom, process.env.MAILPIT_URL);
       } else {
         this.adapter = new ResendEmailAdapter(serverEnv.resendApiKey || "", serverEnv.emailFrom);
       }
