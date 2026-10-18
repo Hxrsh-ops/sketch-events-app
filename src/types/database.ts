@@ -448,6 +448,13 @@ export interface Database {
         };
         Returns: Json;
       };
+      claim_outbox_batch: {
+        Args: {
+          p_batch_size?: number;
+          p_max_attempts?: number;
+        };
+        Returns: Database["public"]["Tables"]["communications_outbox"]["Row"][];
+      };
     };
     Enums: {
       admin_role: AdminRole;
