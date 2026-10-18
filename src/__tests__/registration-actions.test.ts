@@ -7,7 +7,7 @@ import {
   teamRegistrationSchema,
   teamMemberSchema,
   RegistrationActionInput,
-} from "../app/actions/registration-actions";
+} from "../lib/registration-schemas";
 
 describeSchemaTests();
 
