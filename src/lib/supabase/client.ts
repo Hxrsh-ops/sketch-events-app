@@ -1,13 +1,14 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { Database } from "@/types/database";
+import { getAppEnv } from "@/lib/env";
 
 export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const env = getAppEnv();
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    // Graceful fallback for mock/preview development
+  if (env.mode === "preview" || !env.supabaseUrl || !env.supabaseAnonKey) {
+    // Return null in preview mode; callers will handle preview fallback explicitly
     return null;
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  return createBrowserClient<Database>(env.supabaseUrl, env.supabaseAnonKey);
 }

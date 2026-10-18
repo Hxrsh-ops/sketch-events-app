@@ -1,17 +1,31 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { Database } from "@/types/database";
+import { getAppEnv } from "@/lib/env";
+import { getServerEnv } from "@/lib/env.server";
 
+/**
+ * Standard server client scoped to current user session (RLS enforced)
+ */
 export async function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const env = getAppEnv();
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (env.mode === "preview" || !env.supabaseUrl || !env.supabaseAnonKey) {
     return null;
   }
 
-  const cookieStore = await cookies();
+  let cookieStore: any;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    cookieStore = {
+      getAll: () => [],
+      set: () => {},
+    };
+  }
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+  return createServerClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -22,10 +36,28 @@ export async function createClient() {
             cookieStore.set(name, value, options as any)
           );
         } catch {
-          // The `setAll` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing user sessions.
+          // May be called from a Server Component where setting cookies is restricted
         }
       },
+    },
+  });
+}
+
+/**
+ * Service role client for privileged backend operations (outbox worker, system jobs)
+ * STRICTLY restricted to server environments. NEVER expose to client.
+ */
+export function createAdminClient() {
+  const env = getServerEnv();
+
+  if (env.mode === "preview" || !env.supabaseUrl || !env.supabaseServiceRoleKey) {
+    return null;
+  }
+
+  return createSupabaseClient<Database>(env.supabaseUrl, env.supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
     },
   });
 }
