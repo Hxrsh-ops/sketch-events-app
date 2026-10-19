@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAppEnv } from "@/lib/env";
-
-/**
- * Validates that redirect destination is a relative path to prevent open redirects.
- */
-function sanitizeRedirect(dest: string | null): string {
-  if (!dest) return "/";
-  if (dest.startsWith("/") && !dest.startsWith("//")) {
-    return dest;
-  }
-  return "/";
-}
+import { sanitizeInternalRedirect } from "@/lib/auth/redirect";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const rawRedirect = searchParams.get("redirect") || "/";
-  const redirectTarget = sanitizeRedirect(rawRedirect);
+  const rawRedirect = searchParams.get("redirect");
+  const redirectTarget = sanitizeInternalRedirect(rawRedirect, "/");
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
