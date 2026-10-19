@@ -290,7 +290,23 @@ export function getAllTeams(eventId?: string): Team[] {
     };
   });
 
-  const combined = [...dynamicTeams, ...MOCK_TEAMS];
+  const mappedMockTeams = MOCK_TEAMS.map((t) => {
+    const teamMembers = MOCK_PARTICIPANTS.filter((p) => p.teamId === t.id);
+    return {
+      ...t,
+      members: teamMembers.map((m) => ({
+        name: m.name,
+        email: m.email,
+        role: m.email === t.captainEmail ? "Captain" : "Member",
+        department: m.department,
+        phone: m.phone,
+        registrationId: m.registrationId,
+        attendanceStatus: m.attendanceStatus,
+      })),
+    };
+  });
+
+  const combined = [...dynamicTeams, ...mappedMockTeams];
 
   if (eventId && eventId !== "all") {
     return combined.filter((t) => t.eventId === eventId);
@@ -465,6 +481,19 @@ export function saveCommunication(job: CommunicationJob): void {
   const updated = [job, ...current];
   memoryCommunications = updated;
   writeStorage(STORAGE_KEY_COMMUNICATIONS, updated);
+  notifySubscribers();
+}
+
+export function updateStoredCommunication(job: CommunicationJob): void {
+  const current = getStoredCommunications();
+  const idx = current.findIndex((j) => j.id === job.id);
+  if (idx >= 0) {
+    current[idx] = job;
+  } else {
+    current.unshift(job);
+  }
+  memoryCommunications = [...current];
+  writeStorage(STORAGE_KEY_COMMUNICATIONS, memoryCommunications);
   notifySubscribers();
 }
 

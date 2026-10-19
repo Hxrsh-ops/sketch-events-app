@@ -34,6 +34,9 @@ import {
   saveCommunication,
   getStoredAuditLogs,
   saveAuditLog,
+  getAllParticipants,
+  getAllTeams,
+  updateParticipantAttendance,
 } from "@/lib/registration-store";
 import { MOCK_PARTICIPANTS, MOCK_TEAMS, MOCK_ROUNDS } from "@/lib/mock-data";
 
@@ -186,10 +189,7 @@ export class SketchRepository {
     attendanceStatus?: "checked_in" | "not_checked_in";
   }): Promise<Participant[]> {
     if (this.isPreview()) {
-      let filtered = MOCK_PARTICIPANTS;
-      if (options?.eventId && options.eventId !== "all") {
-        filtered = filtered.filter((p) => p.eventId === options.eventId);
-      }
+      let filtered = getAllParticipants(options?.eventId);
       if (options?.attendanceStatus) {
         filtered = filtered.filter((p) => p.attendanceStatus === options.attendanceStatus);
       }
@@ -199,7 +199,8 @@ export class SketchRepository {
           (p) =>
             p.name.toLowerCase().includes(q) ||
             p.email.toLowerCase().includes(q) ||
-            p.registrationId.toLowerCase().includes(q)
+            p.registrationId.toLowerCase().includes(q) ||
+            p.eventTitle.toLowerCase().includes(q)
         );
       }
       return filtered;
@@ -300,24 +301,7 @@ export class SketchRepository {
     search?: string;
   }): Promise<Team[]> {
     if (this.isPreview()) {
-      let filtered = MOCK_TEAMS.map((t) => {
-        const teamMembers = MOCK_PARTICIPANTS.filter((p) => p.teamId === t.id);
-        return {
-          ...t,
-          members: teamMembers.map((m) => ({
-            name: m.name,
-            email: m.email,
-            role: m.email === t.captainEmail ? "Captain" : "Member",
-            department: m.department,
-            phone: m.phone,
-            registrationId: m.registrationId,
-            attendanceStatus: m.attendanceStatus,
-          })),
-        };
-      });
-      if (options?.eventId && options.eventId !== "all") {
-        filtered = filtered.filter((t) => t.eventId === options.eventId);
-      }
+      let filtered = getAllTeams(options?.eventId);
       if (options?.search) {
         const q = options.search.toLowerCase();
         filtered = filtered.filter(
@@ -440,11 +424,13 @@ export class SketchRepository {
     error?: string;
   }> {
     if (this.isPreview()) {
-      // In preview mode, fallback to in-memory toggle
-      const target = MOCK_PARTICIPANTS.find(
+      // In preview mode, search dynamic submissions and mock participants
+      const allForEvent = getAllParticipants(params.eventId);
+      const target = allForEvent.find(
         (p) =>
-          (p.id === params.registrationIdOrUid || p.registrationId === params.registrationIdOrUid) &&
-          (!params.eventId || p.eventId === params.eventId)
+          p.id === params.registrationIdOrUid ||
+          p.registrationId === params.registrationIdOrUid ||
+          p.qrCredentialId === params.registrationIdOrUid
       );
 
       if (!target) {
@@ -466,6 +452,9 @@ export class SketchRepository {
 
       target.attendanceStatus = nextStatus;
       target.checkedInAt = nextStatus === "checked_in" ? new Date().toISOString() : undefined;
+
+      updateParticipantAttendance(target.id, nextStatus);
+      updateParticipantAttendance(target.registrationId, nextStatus);
 
       return {
         success: true,

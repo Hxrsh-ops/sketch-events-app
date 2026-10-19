@@ -3,6 +3,7 @@ import { getServerEnv } from "@/lib/env.server";
 import { EmailDeliveryJob, EmailProviderAdapter } from "./types";
 import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter, MailpitEmailAdapter } from "./adapters";
 import { renderTicketPassEmail, renderCertificateEmail, renderAnnouncementEmail } from "./templates";
+import { getStoredCommunications, updateStoredCommunication } from "@/lib/registration-store";
 
 export interface ProcessBatchResult {
   claimed: number;
@@ -77,6 +78,62 @@ export class EmailOutboxWorker {
     };
 
     if (!supabase) {
+      // In preview mode without Supabase connection, process queued communications from preview store
+      const allJobs = getStoredCommunications();
+      const eligible = allJobs
+        .filter((j) => j.status === "queued" || j.status === "failed")
+        .slice(0, batchSize);
+
+      if (eligible.length === 0) {
+        return result;
+      }
+
+      result.claimed = eligible.length;
+
+      for (const rawJob of eligible) {
+        result.processed++;
+        updateStoredCommunication({ ...rawJob, status: "processing" });
+
+        try {
+          const rendered = renderAnnouncementEmail(
+            { bodyContent: `Digital notification dispatched for ${rawJob.subject}` },
+            "Participant",
+            rawJob.subject
+          );
+
+          const sendRes = await this.adapter.sendEmail({
+            to: "attendee@sketch.events",
+            toName: "Participant",
+            subject: rawJob.subject,
+            html: rendered.html,
+            text: rendered.text,
+            idempotencyKey: `preview-outbox-${rawJob.id}`,
+          });
+
+          if (sendRes.success) {
+            result.succeeded++;
+            updateStoredCommunication({
+              ...rawJob,
+              status: "sent",
+              deliveredAt: new Date().toISOString(),
+            });
+          } else {
+            result.failed++;
+            updateStoredCommunication({
+              ...rawJob,
+              status: "failed",
+            });
+          }
+        } catch {
+          result.failed++;
+          result.terminalFailures++;
+          updateStoredCommunication({
+            ...rawJob,
+            status: "failed",
+          });
+        }
+      }
+
       return result;
     }
 

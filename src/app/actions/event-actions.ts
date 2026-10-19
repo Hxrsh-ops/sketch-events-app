@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { verifyAdminSession } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/permissions";
 import { SketchRepository } from "@/lib/supabase/repository";
-import { saveEvent, getStoredEvents } from "@/lib/registration-store";
+import { saveEvent, getStoredEvents, getStoredRounds, saveRound } from "@/lib/registration-store";
 import { EventItem } from "@/types";
 
 /**
@@ -451,6 +451,16 @@ export async function setEventLifecycleAction(
       };
 
       saveEvent(updatedPreview);
+
+      if (lifecycle === "completed") {
+        const eventRounds = getStoredRounds(id);
+        for (const r of eventRounds) {
+          if (r.status === "in_progress") {
+            saveRound({ ...r, status: "completed" });
+          }
+        }
+      }
+
       revalidatePath("/events");
       revalidatePath(`/events/${id}`);
       revalidatePath("/rounds");
