@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getServerEnv } from "@/lib/env.server";
 import { EmailDeliveryJob, EmailProviderAdapter } from "./types";
 import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter, MailpitEmailAdapter } from "./adapters";
-import { renderTicketPassEmail } from "./templates";
+import { renderTicketPassEmail, renderCertificateEmail, renderAnnouncementEmail } from "./templates";
 
 export interface ProcessBatchResult {
   claimed: number;
@@ -151,6 +151,10 @@ export class EmailOutboxWorker {
 
         if (job.templateType === "ticket_pass") {
           rendered = renderTicketPassEmail(job.payload, job.recipientName);
+        } else if (job.templateType === "certificate") {
+          rendered = renderCertificateEmail(job.payload, job.recipientName, job.subject);
+        } else if (job.templateType === "announcement" || job.templateType === "reminder") {
+          rendered = renderAnnouncementEmail(job.payload, job.recipientName, job.subject);
         } else {
           throw new Error(`Unsupported email template type: "${job.templateType}"`);
         }

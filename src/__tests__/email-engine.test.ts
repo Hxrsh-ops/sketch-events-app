@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { renderTicketPassEmail } from "@/lib/email/templates";
+import {
+  renderTicketPassEmail,
+  renderCertificateEmail,
+  renderAnnouncementEmail,
+} from "@/lib/email/templates";
 import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter } from "@/lib/email/adapters";
 import { TicketPassPayload } from "@/lib/email/types";
 
@@ -51,6 +55,44 @@ describe("Email Engine: Templates and Validation", () => {
     expect(() => renderTicketPassEmail(invalidPayload, "Jane Doe")).toThrowError(
       /Invalid ticket pass payload/
     );
+  });
+
+  it("successfully renders certificate HTML and text with serial number and event title", () => {
+    const certPayload = {
+      certificateNumber: "SKETCH-CERT-2026-9999",
+      eventTitle: "Hackathon Finale 2026",
+      issuedAt: "2026-10-19T10:00:00Z",
+    };
+    const rendered = renderCertificateEmail(
+      certPayload,
+      "Charlie Scholar",
+      "Your Certificate for Hackathon Finale 2026"
+    );
+
+    expect(rendered.html).toContain("SKETCH-CERT-2026-9999");
+    expect(rendered.html).toContain("Hackathon Finale 2026");
+    expect(rendered.html).toContain("Charlie Scholar");
+    expect(rendered.text).toContain("Certificate Number: SKETCH-CERT-2026-9999");
+    expect(rendered.text).toContain("Recipient: Charlie Scholar");
+  });
+
+  it("successfully renders announcement HTML and text with custom content and sender", () => {
+    const announcementPayload = {
+      bodyContent: "The venue has been shifted to Conference Hall 3.",
+      sender: "Event Coordinator",
+    };
+    const rendered = renderAnnouncementEmail(
+      announcementPayload,
+      "Dana Attendee",
+      "Urgent: Venue Update"
+    );
+
+    expect(rendered.html).toContain("Urgent: Venue Update");
+    expect(rendered.html).toContain("Dana Attendee");
+    expect(rendered.html).toContain("The venue has been shifted to Conference Hall 3.");
+    expect(rendered.html).toContain("Event Coordinator");
+    expect(rendered.text).toContain("Subject: Urgent: Venue Update");
+    expect(rendered.text).toContain("The venue has been shifted to Conference Hall 3.");
   });
 });
 

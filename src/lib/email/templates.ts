@@ -120,6 +120,145 @@ Please present your Registration ID or Credential at check-in.
   return { html, text };
 }
 
+/**
+ * Validates the job payload and renders responsive HTML and plaintext for certificates.
+ */
+export function renderCertificateEmail(
+  rawPayload: Record<string, unknown>,
+  recipientName: string,
+  subject: string
+): RenderedEmail {
+  const certificateNumber = String(rawPayload.certificateNumber || "SKETCH-CERT-VERIFIED");
+  const eventTitle = String(rawPayload.eventTitle || "SKETCH Event");
+  const issuedAt = String(rawPayload.issuedAt || new Date().toISOString());
+  const formattedDate = new Date(issuedAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:24px;background-color:#F4F5F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#17191C;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#FFFFFF;border-radius:16px;border:1px solid #E5E7EA;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+    <tr>
+      <td style="padding:28px 32px;background:#17191C;color:#FFFFFF;text-align:left;">
+        <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#8F96A0;">CERTIFICATE OF PARTICIPATION</span>
+        <h1 style="margin:6px 0 0 0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#FFFFFF;">${escapeHtml(eventTitle)}</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:32px;">
+        <p style="margin:0 0 16px 0;font-size:15px;line-height:1.5;">Dear <strong>${escapeHtml(recipientName)}</strong>,</p>
+        <p style="margin:0 0 24px 0;font-size:14px;line-height:1.6;color:#555E68;">
+          Congratulations! Your participation and verified attendance at <strong>${escapeHtml(eventTitle)}</strong> has been formally recorded and certified.
+        </p>
+
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F9FAFB;border-radius:12px;border:1px solid #E5E7EA;margin-bottom:24px;">
+          <tr>
+            <td style="padding:20px;">
+              <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;">CERTIFICATE SERIAL NUMBER</div>
+              <div style="font-size:18px;font-weight:800;letter-spacing:0.02em;color:#111827;font-family:monospace;margin-top:2px;">${escapeHtml(certificateNumber)}</div>
+
+              <hr style="border:none;border-top:1px solid #E5E7EA;margin:16px 0;" />
+
+              <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;">Date of Issuance</div>
+              <div style="font-size:13px;font-weight:600;color:#17191C;">${escapeHtml(formattedDate)}</div>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.5;">
+          This digital credential is authenticated on the SKETCH Event Operations Platform.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:20px 32px;background:#F9FAFB;border-top:1px solid #E5E7EA;text-align:center;font-size:12px;color:#9CA3AF;">
+        &copy; ${new Date().getFullYear()} SKETCH Events Platform &bull; Digital Credential Verification Service
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `SKETCH EVENTS: CERTIFICATE OF PARTICIPATION
+
+Event: ${eventTitle}
+Recipient: ${recipientName}
+Certificate Number: ${certificateNumber}
+Issued On: ${formattedDate}
+
+Congratulations! Your attendance has been officially verified and recorded.
+`;
+
+  return { html, text };
+}
+
+/**
+ * Validates the job payload and renders responsive HTML and plaintext for announcements and reminders.
+ */
+export function renderAnnouncementEmail(
+  rawPayload: Record<string, unknown>,
+  recipientName: string,
+  subject: string
+): RenderedEmail {
+  const bodyContent = String(rawPayload.bodyContent || "");
+  const sender = String(rawPayload.sender || "SKETCH Team");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:24px;background-color:#F4F5F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#17191C;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#FFFFFF;border-radius:16px;border:1px solid #E5E7EA;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+    <tr>
+      <td style="padding:28px 32px;background:#17191C;color:#FFFFFF;text-align:left;">
+        <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#8F96A0;">EVENT ANNOUNCEMENT</span>
+        <h1 style="margin:6px 0 0 0;font-size:20px;font-weight:800;letter-spacing:-0.02em;color:#FFFFFF;">${escapeHtml(subject)}</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:32px;">
+        <p style="margin:0 0 16px 0;font-size:15px;line-height:1.5;">Hello <strong>${escapeHtml(recipientName)}</strong>,</p>
+        <div style="font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">
+          ${escapeHtml(bodyContent)}
+        </div>
+        <p style="margin:24px 0 0 0;font-size:13px;color:#6B7280;line-height:1.5;">
+          Sent by ${escapeHtml(sender)} &bull; SKETCH Events Operations
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:20px 32px;background:#F9FAFB;border-top:1px solid #E5E7EA;text-align:center;font-size:12px;color:#9CA3AF;">
+        &copy; ${new Date().getFullYear()} SKETCH Events Platform &bull; Operational Communications
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `SKETCH EVENTS: ANNOUNCEMENT
+
+Subject: ${subject}
+Hello ${recipientName},
+
+${bodyContent}
+
+Sent by ${sender}
+`;
+
+  return { html, text };
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")

@@ -34,6 +34,7 @@ import { SlideOver } from "@/components/ui/slide-over";
 import { formatDate } from "@/lib/utils";
 import { Participant, EventItem, AdminRole, Round } from "@/types";
 import { updateEventAction, setEventLifecycleAction } from "@/app/actions/event-actions";
+import { toggleAttendanceAction } from "@/app/actions/participant-actions";
 
 interface EventDetailClientProps {
   initialEvent: EventItem;
@@ -112,16 +113,23 @@ export default function EventDetailClient({
     Math.round((event.registeredCount / event.capacity) * 100)
   );
 
-  // Check-in toggle simulation / local update
-  const toggleCheckIn = (participantId: string) => {
+  // Check-in toggle with authoritative Server Action integration & optimistic rollback
+  const toggleCheckIn = async (participantId: string) => {
+    const participant = attendees.find((p) => p.id === participantId);
+    if (!participant) return;
+
+    const isCurrentlyChecked = participant.attendanceStatus === "checked_in";
+    const nextStatus: "checked_in" | "not_checked_in" = isCurrentlyChecked ? "not_checked_in" : "checked_in";
+    const nowIso = nextStatus === "checked_in" ? new Date().toISOString() : undefined;
+
+    // Optimistic UI update
     setAttendees((prev) =>
       prev.map((p) => {
         if (p.id === participantId) {
-          const isCurrentlyChecked = p.attendanceStatus === "checked_in";
           const updated: Participant = {
             ...p,
-            attendanceStatus: isCurrentlyChecked ? "not_checked_in" : "checked_in",
-            checkedInAt: isCurrentlyChecked ? undefined : new Date().toISOString(),
+            attendanceStatus: nextStatus,
+            checkedInAt: nowIso,
           };
           if (selectedParticipant?.id === participantId) {
             setSelectedParticipant(updated);
@@ -131,6 +139,34 @@ export default function EventDetailClient({
         return p;
       })
     );
+
+    try {
+      const res = await toggleAttendanceAction({
+        registrationIdOrUid: participant.registrationId || participant.id,
+        eventId: event.id,
+        targetStatus: nextStatus,
+      });
+
+      if (!res.success) {
+        // Rollback optimistic state
+        setAttendees((prev) =>
+          prev.map((p) => (p.id === participantId ? participant : p))
+        );
+        if (selectedParticipant?.id === participantId) {
+          setSelectedParticipant(participant);
+        }
+        alert(res.message || "Failed to update attendance.");
+      }
+    } catch (err: unknown) {
+      console.error("[toggleCheckIn] Error:", err);
+      // Rollback optimistic state
+      setAttendees((prev) =>
+        prev.map((p) => (p.id === participantId ? participant : p))
+      );
+      if (selectedParticipant?.id === participantId) {
+        setSelectedParticipant(participant);
+      }
+    }
   };
 
   // ---------------------------------------------------------------------------

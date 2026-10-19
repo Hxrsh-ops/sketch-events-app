@@ -18,6 +18,8 @@ import {
   RegistrationSubmission,
   AuditLogEntry,
   AdminRole,
+  CertificateRecord,
+  CommunicationJob,
 } from "@/types";
 import { Database, RegistrationMode } from "@/types/database";
 import {
@@ -26,6 +28,12 @@ import {
   getStoredRounds,
   saveRound,
   deleteStoredRound,
+  getStoredCertificates,
+  saveCertificates,
+  getStoredCommunications,
+  saveCommunication,
+  getStoredAuditLogs,
+  saveAuditLog,
 } from "@/lib/registration-store";
 import { MOCK_PARTICIPANTS, MOCK_TEAMS, MOCK_ROUNDS } from "@/lib/mock-data";
 
@@ -1431,6 +1439,19 @@ export class SketchRepository {
     target: string;
     details: Record<string, unknown>;
   }): Promise<void> {
+    if (this.isPreview()) {
+      saveAuditLog({
+        id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        actorName: params.actorName,
+        actorEmail: params.actorEmail,
+        action: params.action,
+        target: params.target,
+        timestamp: "Just now",
+        details: typeof params.details === "string" ? params.details : JSON.stringify(params.details),
+      });
+      return;
+    }
+
     const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) return;
 
@@ -1444,6 +1465,346 @@ export class SketchRepository {
 
     if (error) {
       console.error("[SketchRepository] Failed to record audit log:", error);
+    }
+  }
+
+  /**
+   * List certificates with optional event filter
+   */
+  static async listCertificates(eventId?: string): Promise<CertificateRecord[]> {
+    if (this.isPreview()) {
+      return getStoredCertificates(eventId);
+    }
+
+    try {
+      const supabase = createAdminClient() || (await createClient());
+      if (!supabase) return getStoredCertificates(eventId);
+
+      let query = (supabase as any)
+        .from("certificates")
+        .select(`
+          id,
+          event_id,
+          recipient_name,
+          recipient_email,
+          certificate_number,
+          status,
+          issued_at,
+          events (
+            title
+          )
+        `)
+        .order("issued_at", { ascending: false });
+
+      if (eventId && eventId !== "all") {
+        query = query.eq("event_id", eventId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("[SketchRepository] listCertificates error:", error);
+        return getStoredCertificates(eventId);
+      }
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        eventId: row.event_id,
+        eventTitle: row.events?.title || "Sketch Event",
+        recipientName: row.recipient_name,
+        recipientEmail: row.recipient_email,
+        certificateNumber: row.certificate_number,
+        issuedAt: row.issued_at,
+        status: row.status as "eligible" | "issued" | "revoked",
+      }));
+    } catch (err) {
+      console.error("[SketchRepository] listCertificates exception:", err);
+      return getStoredCertificates(eventId);
+    }
+  }
+
+  /**
+   * Issue batch certificates for checked-in attendees
+   */
+  static async batchIssueCertificates(params: {
+    eventId?: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<{ issuedCount: number; certificates: CertificateRecord[] }> {
+    const isPreviewMode = this.isPreview();
+    const eventId = params.eventId && params.eventId !== "all" ? params.eventId : undefined;
+
+    // Fetch participants and events to identify eligible attendees
+    const [allParticipants, allEvents] = await Promise.all([
+      this.listParticipants({ eventId }),
+      this.listEvents(),
+    ]);
+
+    const eventMap = new Map(allEvents.map((e) => [e.id, e.title]));
+    const existingCerts = await this.listCertificates(eventId);
+    const existingEmails = new Set(existingCerts.map((c) => c.recipientEmail.toLowerCase()));
+
+    // Eligible: checked_in and not yet issued for this event
+    const eligibleAttendees = allParticipants.filter((p) => {
+      const matchesEvent = !eventId || p.eventId === eventId;
+      return matchesEvent && p.attendanceStatus === "checked_in" && !existingEmails.has(p.email.toLowerCase());
+    });
+
+    if (eligibleAttendees.length === 0) {
+      return { issuedCount: 0, certificates: [] };
+    }
+
+    const newCertRecords: CertificateRecord[] = eligibleAttendees.map((p, idx) => ({
+      id: isPreviewMode ? `cert-${Date.now()}-${idx}` : crypto.randomUUID(),
+      eventId: p.eventId,
+      eventTitle: p.eventTitle || eventMap.get(p.eventId) || "Sketch Event",
+      recipientName: p.name,
+      recipientEmail: p.email,
+      certificateNumber: `SKETCH-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      issuedAt: new Date().toISOString(),
+      status: "issued" as const,
+    }));
+
+    if (isPreviewMode) {
+      saveCertificates(newCertRecords);
+    } else {
+      try {
+        const supabase = createAdminClient() || (await createClient());
+        if (supabase) {
+          const insertPayload = newCertRecords.map((c) => ({
+            id: c.id,
+            event_id: c.eventId,
+            recipient_name: c.recipientName,
+            recipient_email: c.recipientEmail,
+            certificate_number: c.certificateNumber,
+            status: c.status,
+            issued_at: c.issuedAt,
+          }));
+
+          const { error: certErr } = await (supabase as any).from("certificates").insert(insertPayload);
+          if (certErr) {
+            console.error("[SketchRepository] Failed to insert certificates:", certErr);
+            throw certErr;
+          }
+
+          // Enqueue outbox delivery jobs
+          const outboxJobs = newCertRecords.map((c) => ({
+            event_id: c.eventId,
+            recipient_email: c.recipientEmail,
+            recipient_name: c.recipientName,
+            subject: `Certificate of Participation — ${c.eventTitle}`,
+            template_type: "certificate",
+            payload: {
+              certificateNumber: c.certificateNumber,
+              recipientName: c.recipientName,
+              eventTitle: c.eventTitle,
+              issuedAt: c.issuedAt,
+            },
+            status: "queued",
+          }));
+
+          await (supabase as any).from("communications_outbox").insert(outboxJobs);
+        }
+      } catch (dbErr) {
+        console.error("[SketchRepository] DB batch issuance failed, falling back to preview store:", dbErr);
+        saveCertificates(newCertRecords);
+      }
+    }
+
+    // Log to audit trail
+    await this.logAudit({
+      actorName: params.actorName || "Administrator",
+      actorEmail: params.actorEmail || "admin@sketch.org",
+      action: "Issued Certificate Batch",
+      target: `${eventId ? eventMap.get(eventId) || eventId : "All Events"} (${newCertRecords.length} certificates)`,
+      details: {
+        count: newCertRecords.length,
+        eventId: eventId || "all",
+      },
+    });
+
+    return { issuedCount: newCertRecords.length, certificates: newCertRecords };
+  }
+
+  /**
+   * List communication outbox jobs
+   */
+  static async listOutboxJobs(eventId?: string): Promise<CommunicationJob[]> {
+    if (this.isPreview()) {
+      return getStoredCommunications(eventId);
+    }
+
+    try {
+      const supabase = createAdminClient() || (await createClient());
+      if (!supabase) return getStoredCommunications(eventId);
+
+      let query = (supabase as any)
+        .from("communications_outbox")
+        .select(`
+          id,
+          event_id,
+          recipient_email,
+          recipient_name,
+          subject,
+          template_type,
+          status,
+          scheduled_at,
+          delivered_at,
+          events (
+            title
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (eventId && eventId !== "all") {
+        query = query.eq("event_id", eventId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("[SketchRepository] listOutboxJobs error:", error);
+        return getStoredCommunications(eventId);
+      }
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        eventId: row.event_id,
+        eventTitle: row.events?.title || "Sketch Event",
+        subject: row.subject,
+        type: (row.template_type === "ticket_pass" ? "confirmation" : row.template_type) as any,
+        recipientCount: 1,
+        status: (row.status === "delivered" ? "sent" : row.status) as any,
+        scheduledAt: row.scheduled_at,
+        deliveredAt: row.delivered_at,
+      }));
+    } catch (err) {
+      console.error("[SketchRepository] listOutboxJobs exception:", err);
+      return getStoredCommunications(eventId);
+    }
+  }
+
+  /**
+   * Enqueue communication outbox job
+   */
+  static async enqueueCommunication(params: {
+    eventId: string;
+    subject: string;
+    templateType: "ticket_pass" | "reminder" | "announcement" | "certificate";
+    recipients: Array<{ email: string; name: string }>;
+    payload?: Record<string, unknown>;
+    scheduledAt?: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<{ success: boolean; enqueuedCount: number }> {
+    const isPreviewMode = this.isPreview();
+    const event = await this.getEventById(params.eventId);
+    const eventTitle = event?.title || "Sketch Event";
+
+    if (params.recipients.length === 0) {
+      return { success: false, enqueuedCount: 0 };
+    }
+
+    if (isPreviewMode) {
+      const commJob: CommunicationJob = {
+        id: `comm-${Date.now()}`,
+        eventId: params.eventId,
+        eventTitle,
+        subject: params.subject,
+        type: params.templateType === "ticket_pass" ? "confirmation" : params.templateType,
+        recipientCount: params.recipients.length,
+        status: "queued",
+        scheduledAt: params.scheduledAt || "Instant",
+      };
+      saveCommunication(commJob);
+    } else {
+      try {
+        const supabase = createAdminClient() || (await createClient());
+        if (supabase) {
+          const rows = params.recipients.map((r) => ({
+            event_id: params.eventId,
+            recipient_email: r.email,
+            recipient_name: r.name,
+            subject: params.subject,
+            template_type: params.templateType,
+            payload: params.payload || {},
+            status: "queued",
+            scheduled_at: params.scheduledAt || new Date().toISOString(),
+          }));
+
+          const { error } = await (supabase as any).from("communications_outbox").insert(rows);
+          if (error) {
+            console.error("[SketchRepository] Failed to insert communications_outbox:", error);
+            throw error;
+          }
+        }
+      } catch (dbErr) {
+        console.error("[SketchRepository] Enqueue outbox DB error, falling back to preview store:", dbErr);
+        const commJob: CommunicationJob = {
+          id: `comm-${Date.now()}`,
+          eventId: params.eventId,
+          eventTitle,
+          subject: params.subject,
+          type: params.templateType === "ticket_pass" ? "confirmation" : params.templateType,
+          recipientCount: params.recipients.length,
+          status: "queued",
+          scheduledAt: params.scheduledAt || "Instant",
+        };
+        saveCommunication(commJob);
+      }
+    }
+
+    // Audit log
+    await this.logAudit({
+      actorName: params.actorName || "Administrator",
+      actorEmail: params.actorEmail || "admin@sketch.org",
+      action: "Queued Announcement Dispatch",
+      target: `${eventTitle} (${params.recipients.length} recipients)`,
+      details: {
+        eventId: params.eventId,
+        subject: params.subject,
+        templateType: params.templateType,
+        recipientCount: params.recipients.length,
+      },
+    });
+
+    return { success: true, enqueuedCount: params.recipients.length };
+  }
+
+  /**
+   * List audit log entries
+   */
+  static async listAuditLogs(options?: { search?: string; limit?: number }): Promise<AuditLogEntry[]> {
+    if (this.isPreview()) {
+      return getStoredAuditLogs();
+    }
+
+    try {
+      const supabase = createAdminClient() || (await createClient());
+      if (!supabase) return getStoredAuditLogs();
+
+      let query = (supabase as any)
+        .from("audit_logs")
+        .select("id, actor_name, actor_email, action, target, details, created_at")
+        .order("created_at", { ascending: false })
+        .limit(options?.limit || 100);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("[SketchRepository] listAuditLogs error:", error);
+        return getStoredAuditLogs();
+      }
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        actorName: row.actor_name,
+        actorEmail: row.actor_email,
+        action: row.action,
+        target: row.target,
+        timestamp: row.created_at,
+        details: typeof row.details === "object" ? JSON.stringify(row.details) : String(row.details || ""),
+      }));
+    } catch (err) {
+      console.error("[SketchRepository] listAuditLogs exception:", err);
+      return getStoredAuditLogs();
     }
   }
 

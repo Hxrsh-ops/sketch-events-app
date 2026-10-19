@@ -5,12 +5,18 @@ import {
   Round,
   RegistrationSubmission,
   TeamMemberSubmission,
+  CertificateRecord,
+  CommunicationJob,
+  AuditLogEntry,
 } from "@/types";
 import {
   MOCK_EVENTS,
   MOCK_PARTICIPANTS,
   MOCK_TEAMS,
   MOCK_ROUNDS,
+  MOCK_CERTIFICATES,
+  MOCK_COMMUNICATIONS,
+  MOCK_RECENT_ACTIVITY,
 } from "@/lib/mock-data";
 
 const STORAGE_KEY_EVENTS = "sketch_preview_events_v1";
@@ -399,5 +405,87 @@ export function deleteStoredRound(roundId: string): void {
   const next = current.filter((r) => r.id !== roundId);
   memoryRounds = next;
   writeStorage(STORAGE_KEY_ROUNDS, next);
+  notifySubscribers();
+}
+
+// ==========================================
+// CERTIFICATES REPOSITORY (PREVIEW)
+// ==========================================
+
+const STORAGE_KEY_CERTIFICATES = "sketch_preview_certificates_v1";
+let memoryCertificates: CertificateRecord[] = [...MOCK_CERTIFICATES];
+
+export function getStoredCertificates(eventId?: string): CertificateRecord[] {
+  if (typeof window === "undefined") {
+    if (eventId && eventId !== "all") {
+      return memoryCertificates.filter((c) => c.eventId === eventId);
+    }
+    return memoryCertificates;
+  }
+  const stored = readStorage<CertificateRecord[]>(STORAGE_KEY_CERTIFICATES, memoryCertificates);
+  memoryCertificates = stored;
+  if (eventId && eventId !== "all") {
+    return stored.filter((c) => c.eventId === eventId);
+  }
+  return stored;
+}
+
+export function saveCertificates(newCerts: CertificateRecord[]): void {
+  const current = getStoredCertificates();
+  const updated = [...newCerts, ...current];
+  memoryCertificates = updated;
+  writeStorage(STORAGE_KEY_CERTIFICATES, updated);
+  notifySubscribers();
+}
+
+// ==========================================
+// COMMUNICATIONS REPOSITORY (PREVIEW)
+// ==========================================
+
+const STORAGE_KEY_COMMUNICATIONS = "sketch_preview_communications_v1";
+let memoryCommunications: CommunicationJob[] = [...MOCK_COMMUNICATIONS];
+
+export function getStoredCommunications(eventId?: string): CommunicationJob[] {
+  if (typeof window === "undefined") {
+    if (eventId && eventId !== "all") {
+      return memoryCommunications.filter((c) => c.eventId === eventId);
+    }
+    return memoryCommunications;
+  }
+  const stored = readStorage<CommunicationJob[]>(STORAGE_KEY_COMMUNICATIONS, memoryCommunications);
+  memoryCommunications = stored;
+  if (eventId && eventId !== "all") {
+    return stored.filter((c) => c.eventId === eventId);
+  }
+  return stored;
+}
+
+export function saveCommunication(job: CommunicationJob): void {
+  const current = getStoredCommunications();
+  const updated = [job, ...current];
+  memoryCommunications = updated;
+  writeStorage(STORAGE_KEY_COMMUNICATIONS, updated);
+  notifySubscribers();
+}
+
+// ==========================================
+// AUDIT LOGS REPOSITORY (PREVIEW)
+// ==========================================
+
+const STORAGE_KEY_AUDIT_LOGS = "sketch_preview_audit_logs_v1";
+let memoryAuditLogs: AuditLogEntry[] = [...MOCK_RECENT_ACTIVITY];
+
+export function getStoredAuditLogs(): AuditLogEntry[] {
+  if (typeof window === "undefined") return memoryAuditLogs;
+  const stored = readStorage<AuditLogEntry[]>(STORAGE_KEY_AUDIT_LOGS, memoryAuditLogs);
+  memoryAuditLogs = stored;
+  return stored;
+}
+
+export function saveAuditLog(entry: AuditLogEntry): void {
+  const current = getStoredAuditLogs();
+  const updated = [entry, ...current];
+  memoryAuditLogs = updated;
+  writeStorage(STORAGE_KEY_AUDIT_LOGS, updated);
   notifySubscribers();
 }

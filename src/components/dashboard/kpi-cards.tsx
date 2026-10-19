@@ -106,32 +106,47 @@ export function KpiCard({
   );
 }
 
-export function DashboardKpiRow() {
+export interface DashboardKpiMetrics {
+  totalRegistrations?: number;
+  totalCapacity?: number;
+  checkInConversion?: number;
+  activeEventsCount?: number;
+  certificatesIssued?: number;
+}
+
+export function DashboardKpiRow({ metrics }: { metrics?: DashboardKpiMetrics } = {}) {
+  const totalReg = metrics?.totalRegistrations ?? 1842;
+  const totalCap = metrics?.totalCapacity ?? 2200;
+  const progressPercent = totalCap > 0 ? Math.min(100, Math.round((totalReg / totalCap) * 100)) : 84;
+  const conversionRate = metrics?.checkInConversion !== undefined ? `${metrics.checkInConversion}%` : "82.4%";
+  const activeEvents = metrics?.activeEventsCount ?? 4;
+  const certsIssued = metrics?.certificatesIssued ?? 620;
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <KpiCard
         title="Total Registrations"
-        value="1,842"
+        value={totalReg.toLocaleString()}
         subtext="Campus capacity fill"
         badge="Live"
         isFeatured
-        progressPercent={84}
+        progressPercent={progressPercent}
       />
       <KpiCard
         title="Check-in Conversion"
-        value="82.4%"
-        subtext="Across 6 active sessions"
+        value={conversionRate}
+        subtext="Across active sessions"
         badge="Verified"
       />
       <KpiCard
         title="Active Events"
-        value="4"
-        subtext="2 published, 2 in-progress"
+        value={activeEvents.toLocaleString()}
+        subtext="Published & in-progress"
       />
       <KpiCard
         title="Certificates Issued"
-        value="620"
-        subtext="99.4% cryptographic valid"
+        value={certsIssued.toLocaleString()}
+        subtext="Cryptographically verified"
         badge="Ready"
       />
     </div>
