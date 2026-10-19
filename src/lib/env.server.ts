@@ -12,6 +12,7 @@ export interface ServerAppEnv extends AppEnv {
   emailProvider: string;
   resendApiKey?: string;
   emailFrom: string;
+  cronSecret?: string;
 }
 
 let cachedServerEnv: ServerAppEnv | null = null;
@@ -28,6 +29,7 @@ export function getServerEnv(): ServerAppEnv {
   const emailProvider = process.env.EMAIL_PROVIDER || "resend";
   const resendApiKey = process.env.RESEND_API_KEY;
   const emailFrom = process.env.EMAIL_FROM || "SKETCH Events <events@sketchevents.org>";
+  const cronSecret = process.env.CRON_SECRET;
 
   cachedServerEnv = {
     ...base,
@@ -35,9 +37,23 @@ export function getServerEnv(): ServerAppEnv {
     emailProvider,
     resendApiKey,
     emailFrom,
+    cronSecret,
   };
 
   return cachedServerEnv;
+}
+
+/**
+ * Retrieves the server-only CRON_SECRET for outbox worker invocation.
+ * Returns null if unset, blank, or placeholder.
+ */
+export function getServerCronSecret(): string | null {
+  const serverEnv = getServerEnv();
+  const secret = serverEnv.cronSecret?.trim();
+  if (!secret || secret === "your-cron-secret-here") {
+    return null;
+  }
+  return secret;
 }
 
 /**
