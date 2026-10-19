@@ -14,13 +14,20 @@ import {
   EventItem,
   Participant,
   Team,
+  Round,
   RegistrationSubmission,
   AuditLogEntry,
   AdminRole,
 } from "@/types";
 import { Database, RegistrationMode } from "@/types/database";
-import { getStoredEvents } from "@/lib/registration-store";
-import { MOCK_PARTICIPANTS, MOCK_TEAMS } from "@/lib/mock-data";
+import {
+  getStoredEvents,
+  saveEvent,
+  getStoredRounds,
+  saveRound,
+  deleteStoredRound,
+} from "@/lib/registration-store";
+import { MOCK_PARTICIPANTS, MOCK_TEAMS, MOCK_ROUNDS } from "@/lib/mock-data";
 
 export interface RegisterResult {
   success: boolean;
@@ -524,6 +531,389 @@ export class SketchRepository {
   }
 
   /**
+   * List competition rounds with optional eventId filter
+   */
+  static async listRounds(eventId?: string): Promise<Round[]> {
+    if (this.isPreview()) {
+      return getStoredRounds(eventId);
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    let query = supabase
+      .from("rounds")
+      .select(`
+        id,
+        event_id,
+        name,
+        round_order,
+        start_time,
+        venue,
+        status,
+        eligible_count,
+        advanced_count,
+        created_at,
+        updated_at,
+        events (
+          id,
+          title
+        )
+      `)
+      .order("round_order", { ascending: true });
+
+    if (eventId && eventId !== "all") {
+      query = query.eq("event_id", eventId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("[SketchRepository.listRounds] Database query failed:", error.message);
+      throw new Error(`Failed to query rounds: ${error.message}`);
+    }
+
+    return (data || []).map((row: any) => this.mapRoundRowToRound(row));
+  }
+
+  /**
+   * Fetch a single competition round by ID
+   */
+  static async getRoundById(id: string): Promise<Round | null> {
+    if (this.isPreview()) {
+      const all = getStoredRounds();
+      return all.find((r) => r.id === id) || null;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    const { data, error } = await supabase
+      .from("rounds")
+      .select(`
+        id,
+        event_id,
+        name,
+        round_order,
+        start_time,
+        venue,
+        status,
+        eligible_count,
+        advanced_count,
+        created_at,
+        updated_at,
+        events (
+          id,
+          title
+        )
+      `)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return this.mapRoundRowToRound(data);
+  }
+
+  /**
+   * Create a new competition stage/round and ensure event.has_rounds is true
+   */
+  static async createRound(input: {
+    eventId: string;
+    name: string;
+    order?: number;
+    startTime?: string;
+    venue?: string;
+    status?: "upcoming" | "in_progress" | "completed";
+    eligibleCount?: number;
+    advancedCount?: number;
+  }): Promise<Round> {
+    if (this.isPreview()) {
+      const existingRounds = getStoredRounds(input.eventId);
+      const computedOrder = input.order || existingRounds.length + 1;
+      const event = getStoredEvents().find((e) => e.id === input.eventId);
+      const newRound: Round = {
+        id: `rnd-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        eventId: input.eventId,
+        eventTitle: event?.title || "Competition Event",
+        name: input.name.trim(),
+        order: computedOrder,
+        startTime: input.startTime || new Date().toISOString(),
+        venue: input.venue ? input.venue.trim() : "Main Auditorium",
+        status: input.status || "upcoming",
+        eligibleCount: input.eligibleCount ?? 10,
+        advancedCount: input.advancedCount ?? 0,
+      };
+      saveRound(newRound);
+      if (event && !event.hasRounds) {
+        saveEvent({ ...event, hasRounds: true });
+      }
+      return newRound;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    // Verify parent event exists
+    const { data: event, error: eventErr } = await supabase
+      .from("events")
+      .select("id, title, has_rounds")
+      .eq("id", input.eventId)
+      .single();
+
+    if (eventErr || !event) {
+      throw new Error(`Event with ID "${input.eventId}" not found.`);
+    }
+
+    // Determine round order if not explicitly specified
+    let targetOrder = input.order;
+    if (!targetOrder) {
+      const { count } = await supabase
+        .from("rounds")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", input.eventId);
+      targetOrder = (count || 0) + 1;
+    }
+
+    const { data, error } = await supabase
+      .from("rounds")
+      .insert({
+        event_id: input.eventId,
+        name: input.name.trim(),
+        round_order: targetOrder,
+        start_time: input.startTime,
+        venue: input.venue ? input.venue.trim() : "Main Auditorium",
+        status: input.status || "upcoming",
+        eligible_count: input.eligibleCount ?? 10,
+        advanced_count: input.advancedCount ?? 0,
+      })
+      .select(`
+        id,
+        event_id,
+        name,
+        round_order,
+        start_time,
+        venue,
+        status,
+        eligible_count,
+        advanced_count,
+        created_at,
+        updated_at
+      `)
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to create round: ${error?.message || "Unknown database error"}`);
+    }
+
+    // Ensure parent event has_rounds flag is set to true
+    if (!event.has_rounds) {
+      await supabase
+        .from("events")
+        .update({ has_rounds: true, updated_at: new Date().toISOString() })
+        .eq("id", input.eventId);
+    }
+
+    return {
+      id: data.id,
+      eventId: data.event_id,
+      eventTitle: event.title,
+      name: data.name,
+      order: data.round_order,
+      startTime: data.start_time,
+      venue: data.venue,
+      status: data.status as "upcoming" | "in_progress" | "completed",
+      eligibleCount: data.eligible_count,
+      advancedCount: data.advanced_count || 0,
+    };
+  }
+
+  /**
+   * Update round details
+   */
+  static async updateRound(
+    id: string,
+    input: {
+      name?: string;
+      order?: number;
+      startTime?: string;
+      venue?: string;
+      status?: "upcoming" | "in_progress" | "completed";
+      eligibleCount?: number;
+      advancedCount?: number;
+    }
+  ): Promise<Round> {
+    if (this.isPreview()) {
+      const all = getStoredRounds();
+      const existing = all.find((r) => r.id === id);
+      if (!existing) {
+        throw new Error(`Round with ID "${id}" not found.`);
+      }
+      const updated: Round = {
+        ...existing,
+        ...(input.name !== undefined && { name: input.name.trim() }),
+        ...(input.order !== undefined && { order: input.order }),
+        ...(input.startTime !== undefined && { startTime: input.startTime }),
+        ...(input.venue !== undefined && { venue: input.venue.trim() }),
+        ...(input.status !== undefined && { status: input.status }),
+        ...(input.eligibleCount !== undefined && { eligibleCount: input.eligibleCount }),
+        ...(input.advancedCount !== undefined && { advancedCount: input.advancedCount }),
+      };
+      saveRound(updated);
+      return updated;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (input.name !== undefined) updatePayload.name = input.name.trim();
+    if (input.order !== undefined) updatePayload.round_order = input.order;
+    if (input.startTime !== undefined) updatePayload.start_time = input.startTime;
+    if (input.venue !== undefined) updatePayload.venue = input.venue.trim();
+    if (input.status !== undefined) updatePayload.status = input.status;
+    if (input.eligibleCount !== undefined) updatePayload.eligible_count = input.eligibleCount;
+    if (input.advancedCount !== undefined) updatePayload.advanced_count = input.advancedCount;
+
+    const { data, error } = await supabase
+      .from("rounds")
+      .update(updatePayload)
+      .eq("id", id)
+      .select(`
+        id,
+        event_id,
+        name,
+        round_order,
+        start_time,
+        venue,
+        status,
+        eligible_count,
+        advanced_count,
+        events (
+          id,
+          title
+        )
+      `)
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to update round: ${error?.message || "Unknown database error"}`);
+    }
+
+    return this.mapRoundRowToRound(data);
+  }
+
+  /**
+   * Delete a round and synchronize event.has_rounds if 0 rounds remain
+   */
+  static async deleteRound(id: string): Promise<{ success: boolean; eventId: string }> {
+    if (this.isPreview()) {
+      const all = getStoredRounds();
+      const existing = all.find((r) => r.id === id);
+      if (!existing) {
+        throw new Error(`Round with ID "${id}" not found.`);
+      }
+      deleteStoredRound(id);
+      const remaining = getStoredRounds(existing.eventId);
+      if (remaining.length === 0) {
+        const event = getStoredEvents().find((e) => e.id === existing.eventId);
+        if (event) {
+          saveEvent({ ...event, hasRounds: false });
+        }
+      }
+      return { success: true, eventId: existing.eventId };
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    // First fetch round to identify parent event_id
+    const { data: round, error: fetchErr } = await supabase
+      .from("rounds")
+      .select("id, event_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !round) {
+      throw new Error(`Round with ID "${id}" not found.`);
+    }
+
+    const eventId = round.event_id;
+
+    const { error: deleteErr } = await supabase
+      .from("rounds")
+      .delete()
+      .eq("id", id);
+
+    if (deleteErr) {
+      throw new Error(`Failed to delete round: ${deleteErr.message}`);
+    }
+
+    // Check if remaining rounds exist for this event
+    const { count } = await supabase
+      .from("rounds")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId);
+
+    if (count === 0) {
+      await supabase
+        .from("events")
+        .update({ has_rounds: false, updated_at: new Date().toISOString() })
+        .eq("id", eventId);
+    }
+
+    return { success: true, eventId };
+  }
+
+  /**
+   * Reorder rounds for an event
+   */
+  static async reorderRounds(eventId: string, roundIds: string[]): Promise<Round[]> {
+    if (this.isPreview()) {
+      const all = getStoredRounds();
+      const eventRounds = all.filter((r) => r.eventId === eventId);
+      const reordered = eventRounds.map((r) => {
+        const newOrder = roundIds.indexOf(r.id) + 1;
+        return newOrder > 0 ? { ...r, order: newOrder } : r;
+      });
+      reordered.sort((a, b) => a.order - b.order);
+      reordered.forEach((r) => saveRound(r));
+      return reordered;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    for (let i = 0; i < roundIds.length; i++) {
+      const roundId = roundIds[i];
+      const newOrder = i + 1;
+      const { error } = await supabase
+        .from("rounds")
+        .update({ round_order: newOrder, updated_at: new Date().toISOString() })
+        .eq("id", roundId)
+        .eq("event_id", eventId);
+
+      if (error) {
+        throw new Error(`Failed to reorder round "${roundId}": ${error.message}`);
+      }
+    }
+
+    return this.listRounds(eventId);
+  }
+
+  /**
    * Create a new event with collision-safe slug generation
    */
   static async createEvent(
@@ -758,6 +1148,53 @@ export class SketchRepository {
     id: string,
     lifecycle: "draft" | "published" | "live" | "completed" | "archived"
   ): Promise<EventItem> {
+    if (this.isPreview()) {
+      const allEvents = getStoredEvents();
+      const existing = allEvents.find((e) => e.id === id);
+      if (!existing) {
+        throw new Error(`Event with id "${id}" not found.`);
+      }
+
+      if (existing.lifecycle === lifecycle) {
+        return existing;
+      }
+
+      if (lifecycle === "draft" && existing.registeredCount > 0) {
+        throw new Error("Cannot revert an event to Draft once registrations have been recorded.");
+      }
+
+      if (
+        (existing.lifecycle === "completed" || existing.lifecycle === "archived") &&
+        (lifecycle === "draft" || lifecycle === "live")
+      ) {
+        throw new Error(`Cannot transition event from terminal state "${existing.lifecycle}" to "${lifecycle}".`);
+      }
+
+      let nextRegistrationState = existing.registrationState;
+      if (lifecycle === "completed" || lifecycle === "archived") {
+        nextRegistrationState = "closed";
+      }
+
+      const updatedEvent: EventItem = {
+        ...existing,
+        lifecycle,
+        registrationState: nextRegistrationState,
+      };
+
+      saveEvent(updatedEvent);
+
+      if (lifecycle === "completed") {
+        const eventRounds = getStoredRounds(id);
+        for (const r of eventRounds) {
+          if (r.status === "in_progress") {
+            saveRound({ ...r, status: "completed" });
+          }
+        }
+      }
+
+      return updatedEvent;
+    }
+
     const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) {
       throw new Error("Database client is unavailable.");
@@ -765,7 +1202,7 @@ export class SketchRepository {
 
     const { data: current, error: fetchErr } = await supabase
       .from("events")
-      .select("lifecycle, registered_count")
+      .select("id, lifecycle, registration_state, registered_count")
       .eq("id", id)
       .single();
 
@@ -773,15 +1210,32 @@ export class SketchRepository {
       throw new Error(`Event with id "${id}" not found.`);
     }
 
-    // Invariant: An archived event with registered attendees cannot simply be discarded
+    const currentLifecycle = current.lifecycle as "draft" | "published" | "live" | "completed" | "archived";
+    if (currentLifecycle === lifecycle) {
+      return this.mapEventRowToEventItem(current as any);
+    }
+
+    // Invariant: Cannot revert to Draft once registrations have been recorded
     if (lifecycle === "draft" && current.registered_count > 0) {
       throw new Error("Cannot revert an event to Draft once registrations have been recorded.");
+    }
+
+    // Terminal state invariant: completed or archived events cannot be moved back to draft or live
+    if ((currentLifecycle === "completed" || currentLifecycle === "archived") && (lifecycle === "draft" || lifecycle === "live")) {
+      throw new Error(`Cannot transition event from terminal state "${currentLifecycle}" to "${lifecycle}".`);
+    }
+
+    // Determine registration_state side-effects
+    let nextRegistrationState = current.registration_state;
+    if (lifecycle === "completed" || lifecycle === "archived") {
+      nextRegistrationState = "closed";
     }
 
     const { data, error } = await supabase
       .from("events")
       .update({
         lifecycle,
+        registration_state: nextRegistrationState,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -790,6 +1244,15 @@ export class SketchRepository {
 
     if (error || !data) {
       throw new Error(`Failed to update event lifecycle: ${error?.message || "Unknown database error"}`);
+    }
+
+    // If event is marked completed, automatically close active in-progress rounds
+    if (lifecycle === "completed") {
+      await supabase
+        .from("rounds")
+        .update({ status: "completed", updated_at: new Date().toISOString() })
+        .eq("event_id", id)
+        .eq("status", "in_progress");
     }
 
     return this.mapEventRowToEventItem(data);
@@ -1018,6 +1481,24 @@ export class SketchRepository {
       contactPhone: row.contact_phone || undefined,
       communityLink: row.community_link || undefined,
       registrationForm: row.registration_form as any,
+    };
+  }
+
+  /**
+   * Helper to convert Postgres row to Round domain type
+   */
+  private static mapRoundRowToRound(row: any): Round {
+    return {
+      id: row.id,
+      eventId: row.event_id,
+      eventTitle: row.events?.title || "",
+      name: row.name,
+      order: row.round_order,
+      startTime: row.start_time,
+      venue: row.venue,
+      status: row.status as "upcoming" | "in_progress" | "completed",
+      eligibleCount: row.eligible_count,
+      advancedCount: row.advanced_count || 0,
     };
   }
 }

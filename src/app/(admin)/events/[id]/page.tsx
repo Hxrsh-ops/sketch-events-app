@@ -17,12 +17,18 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   let event = null;
   let attendees: any[] = [];
+  let rounds: any[] = [];
   let fetchError: string | null = null;
 
   try {
     event = await SketchRepository.getEventById(id);
     if (event) {
-      attendees = await SketchRepository.getEventAttendees(id);
+      const [fetchedAttendees, fetchedRounds] = await Promise.all([
+        SketchRepository.getEventAttendees(id),
+        SketchRepository.listRounds(id),
+      ]);
+      attendees = fetchedAttendees;
+      rounds = fetchedRounds;
     }
   } catch (err: any) {
     fetchError = err.message || "Failed to load event.";
@@ -126,6 +132,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     <EventDetailClient
       initialEvent={event}
       initialAttendees={attendees}
+      initialRounds={rounds}
       isPreview={isPreview}
       currentUserRole={session.user?.role}
     />

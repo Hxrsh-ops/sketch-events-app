@@ -31,14 +31,14 @@ import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDateTimePicker } from "@/components/ui/custom-datetime-picker";
 import { SlideOver } from "@/components/ui/slide-over";
-import { MOCK_ROUNDS } from "@/lib/mock-data";
 import { formatDate } from "@/lib/utils";
-import { Participant, EventItem, AdminRole } from "@/types";
+import { Participant, EventItem, AdminRole, Round } from "@/types";
 import { updateEventAction, setEventLifecycleAction } from "@/app/actions/event-actions";
 
 interface EventDetailClientProps {
   initialEvent: EventItem;
   initialAttendees: Participant[];
+  initialRounds?: Round[];
   isPreview: boolean;
   currentUserRole?: AdminRole;
 }
@@ -54,11 +54,13 @@ const MANAGEMENT_TABS = [
 export default function EventDetailClient({
   initialEvent,
   initialAttendees,
+  initialRounds = [],
   isPreview,
   currentUserRole,
 }: EventDetailClientProps) {
   // Live Event state backed by server mutations
   const [event, setEvent] = useState<EventItem>(initialEvent);
+  const [rounds, setRounds] = useState<Round[]>(initialRounds);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [registrationStatusFilter, setRegistrationStatusFilter] = useState("all");
@@ -823,40 +825,63 @@ export default function EventDetailClient({
             transition={{ duration: 0.15 }}
             className="space-y-5"
           >
-            {event.hasRounds ? (
+            {event.hasRounds || rounds.length > 0 ? (
               <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-3">
                   <div>
                     <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">Competition Stages</h3>
-                    <p className="text-xs text-[#656B73] dark:text-[#989EA7]">Multi-round progression pipeline for {event.title}</p>
+                    <p className="text-xs text-[#656B73] dark:text-[#989EA7]">
+                      Multi-round progression pipeline for {event.title}
+                    </p>
                   </div>
-                  <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-3 py-1 text-xs font-semibold text-[#25292F] dark:text-[#E8EAED]">
-                    Round 1 Active
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-3 py-1 text-xs font-semibold text-[#25292F] dark:text-[#E8EAED]">
+                      {rounds.filter((r) => r.status === "completed").length} of {rounds.length} Completed
+                    </span>
+                    <Link href="/rounds">
+                      <Button variant="outline" size="sm" className="rounded-full text-xs font-semibold h-8 px-3">
+                        Manage Stages
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {MOCK_ROUNDS.map((round) => (
-                    <div
-                      key={round.id}
-                      className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white dark:text-[#F1F2F3] text-xs font-bold">
-                          {round.order}
-                        </span>
-                        <span className="text-[9px] font-bold uppercase rounded-full bg-[#EAECEF] dark:bg-[#22262A] px-2 py-0.5 text-[#17191C] dark:text-[#F1F2F3]">
-                          {round.status}
-                        </span>
+                {rounds.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {rounds.map((round) => (
+                      <div
+                        key={round.id}
+                        className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white dark:text-[#F1F2F3] text-xs font-bold">
+                            {round.order}
+                          </span>
+                          <span className="text-[9px] font-bold uppercase rounded-full bg-[#EAECEF] dark:bg-[#22262A] px-2 py-0.5 text-[#17191C] dark:text-[#F1F2F3]">
+                            {round.status.replace("_", " ")}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">{round.name}</h4>
+                        <div className="text-[11px] text-[#656B73] dark:text-[#989EA7] space-y-1">
+                          <p>Venue: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.venue}</strong></p>
+                          <p>Eligible: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.eligibleCount}</strong></p>
+                          <p>Quota: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.advancedCount || 0} Teams Advance</strong></p>
+                        </div>
                       </div>
-                      <h4 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">{round.name}</h4>
-                      <div className="text-[11px] text-[#656B73] dark:text-[#989EA7] space-y-1">
-                        <p>Venue: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.venue}</strong></p>
-                        <p>Quota: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.advancedCount} Teams Advance</strong></p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[#E5E7EA] dark:border-[#30353A] p-6 text-center space-y-2">
+                    <p className="text-xs text-[#656B73] dark:text-[#989EA7]">
+                      Multi-stage pipeline is enabled, but no rounds have been configured yet.
+                    </p>
+                    <Link href="/rounds">
+                      <Button variant="charcoal" size="sm" className="rounded-full text-xs font-semibold h-8 px-4">
+                        Add First Stage
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-8 text-center space-y-3">
@@ -865,6 +890,11 @@ export default function EventDetailClient({
                 <p className="text-xs text-[#656B73] dark:text-[#989EA7] max-w-md mx-auto">
                   This event is configured as a single continuous session without progressive elimination rounds.
                 </p>
+                <Link href="/rounds">
+                  <Button variant="outline" size="sm" className="rounded-full text-xs font-semibold h-8 px-4">
+                    Configure Multi-Stage Pipeline
+                  </Button>
+                </Link>
               </div>
             )}
           </motion.div>

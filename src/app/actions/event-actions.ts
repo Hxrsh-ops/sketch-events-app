@@ -418,6 +418,11 @@ export async function setEventLifecycleAction(
         return { success: false, error: "NOT_FOUND", message: `Event "${id}" not found.` };
       }
 
+      const currentLifecycle = existing.lifecycle;
+      if (currentLifecycle === lifecycle) {
+        return { success: true, data: existing, message: `Event lifecycle is already "${lifecycle}".` };
+      }
+
       if (lifecycle === "draft" && existing.registeredCount > 0) {
         return {
           success: false,
@@ -426,14 +431,29 @@ export async function setEventLifecycleAction(
         };
       }
 
+      if ((currentLifecycle === "completed" || currentLifecycle === "archived") && (lifecycle === "draft" || lifecycle === "live")) {
+        return {
+          success: false,
+          error: "TERMINAL_STATE",
+          message: `Cannot transition event from terminal state "${currentLifecycle}" to "${lifecycle}".`,
+        };
+      }
+
+      let nextRegState = existing.registrationState;
+      if (lifecycle === "completed" || lifecycle === "archived") {
+        nextRegState = "closed";
+      }
+
       const updatedPreview: EventItem = {
         ...existing,
         lifecycle,
+        registrationState: nextRegState,
       };
 
       saveEvent(updatedPreview);
       revalidatePath("/events");
       revalidatePath(`/events/${id}`);
+      revalidatePath("/rounds");
       return {
         success: true,
         data: updatedPreview,
@@ -454,6 +474,7 @@ export async function setEventLifecycleAction(
 
     revalidatePath("/events");
     revalidatePath(`/events/${id}`);
+    revalidatePath("/rounds");
     revalidatePath(`/e/${updated.slug}`);
 
     return {

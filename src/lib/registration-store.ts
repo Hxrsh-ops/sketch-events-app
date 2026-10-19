@@ -2,6 +2,7 @@ import {
   EventItem,
   Participant,
   Team,
+  Round,
   RegistrationSubmission,
   TeamMemberSubmission,
 } from "@/types";
@@ -9,6 +10,7 @@ import {
   MOCK_EVENTS,
   MOCK_PARTICIPANTS,
   MOCK_TEAMS,
+  MOCK_ROUNDS,
 } from "@/lib/mock-data";
 
 const STORAGE_KEY_EVENTS = "sketch_preview_events_v1";
@@ -352,5 +354,50 @@ export function getStoredCheckInLog(): CheckInLogEntry[] {
 export function saveCheckInLog(log: CheckInLogEntry[]): void {
   memoryCheckInLog = log;
   writeStorage(STORAGE_KEY_CHECKIN_LOG, log);
+  notifySubscribers();
+}
+
+// ==========================================
+// COMPETITION ROUNDS REPOSITORY
+// ==========================================
+
+const STORAGE_KEY_ROUNDS = "sketch_preview_rounds_v1";
+let memoryRounds: Round[] = [...MOCK_ROUNDS];
+
+export function getStoredRounds(eventId?: string): Round[] {
+  if (typeof window === "undefined") {
+    if (eventId && eventId !== "all") {
+      return memoryRounds.filter((r) => r.eventId === eventId);
+    }
+    return memoryRounds;
+  }
+  const stored = readStorage<Round[]>(STORAGE_KEY_ROUNDS, memoryRounds);
+  memoryRounds = stored;
+  if (eventId && eventId !== "all") {
+    return stored.filter((r) => r.eventId === eventId);
+  }
+  return stored;
+}
+
+export function saveRound(round: Round): void {
+  const current = getStoredRounds();
+  const existingIdx = current.findIndex((r) => r.id === round.id);
+  let next: Round[];
+  if (existingIdx >= 0) {
+    next = [...current];
+    next[existingIdx] = round;
+  } else {
+    next = [...current, round];
+  }
+  memoryRounds = next;
+  writeStorage(STORAGE_KEY_ROUNDS, next);
+  notifySubscribers();
+}
+
+export function deleteStoredRound(roundId: string): void {
+  const current = getStoredRounds();
+  const next = current.filter((r) => r.id !== roundId);
+  memoryRounds = next;
+  writeStorage(STORAGE_KEY_ROUNDS, next);
   notifySubscribers();
 }
