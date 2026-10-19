@@ -13,13 +13,14 @@ import { getAppEnv } from "@/lib/env";
 import {
   EventItem,
   Participant,
+  Team,
   RegistrationSubmission,
   AuditLogEntry,
   AdminRole,
 } from "@/types";
 import { Database, RegistrationMode } from "@/types/database";
 import { getStoredEvents } from "@/lib/registration-store";
-import { MOCK_PARTICIPANTS } from "@/lib/mock-data";
+import { MOCK_PARTICIPANTS, MOCK_TEAMS } from "@/lib/mock-data";
 
 export interface RegisterResult {
   success: boolean;
@@ -161,11 +162,32 @@ export class SketchRepository {
   }
 
   /**
-   * Fetch attendee records for an event (Admin view)
+   * List all participants across authorized events, with optional event filtering.
+   * In production mode, queries public.registrations joined with events and teams.
    */
-  static async getEventAttendees(eventId: string): Promise<Participant[]> {
+  static async listParticipants(options?: {
+    eventId?: string;
+    search?: string;
+    attendanceStatus?: "checked_in" | "not_checked_in";
+  }): Promise<Participant[]> {
     if (this.isPreview()) {
-      return MOCK_PARTICIPANTS.filter((p) => p.eventId === eventId || eventId === "evt-01");
+      let filtered = MOCK_PARTICIPANTS;
+      if (options?.eventId && options.eventId !== "all") {
+        filtered = filtered.filter((p) => p.eventId === options.eventId);
+      }
+      if (options?.attendanceStatus) {
+        filtered = filtered.filter((p) => p.attendanceStatus === options.attendanceStatus);
+      }
+      if (options?.search) {
+        const q = options.search.toLowerCase();
+        filtered = filtered.filter(
+          (p) =>
+            p.name.toLowerCase().includes(q) ||
+            p.email.toLowerCase().includes(q) ||
+            p.registrationId.toLowerCase().includes(q)
+        );
+      }
+      return filtered;
     }
 
     const supabase: any = createAdminClient() || (await createClient());
@@ -173,32 +195,332 @@ export class SketchRepository {
       throw new Error("Database client is unavailable in production mode.");
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("registrations")
-      .select("*")
-      .eq("event_id", eventId)
+      .select(`
+        id,
+        registration_id,
+        event_id,
+        team_id,
+        mode,
+        attendee_name,
+        email,
+        phone,
+        department,
+        year,
+        status,
+        attendance_status,
+        checked_in_at,
+        qr_credential_id,
+        custom_answers,
+        created_at,
+        events (
+          id,
+          title
+        ),
+        teams (
+          id,
+          name
+        )
+      `)
       .order("created_at", { ascending: false });
 
-    if (error || !data) return [];
-    return data.map((r: any) => ({
+    if (options?.eventId && options.eventId !== "all") {
+      query = query.eq("event_id", options.eventId);
+    }
+    if (options?.attendanceStatus) {
+      query = query.eq("attendance_status", options.attendanceStatus);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("[SketchRepository.listParticipants] Database query failed:", error.message);
+      throw new Error(`Failed to query participants: ${error.message}`);
+    }
+
+    if (!data) return [];
+
+    let participants: Participant[] = data.map((r: any) => ({
       id: r.id,
       registrationId: r.registration_id,
       eventId: r.event_id,
-      eventTitle: "",
+      eventTitle: r.events?.title || "",
       name: r.attendee_name,
       email: r.email,
       phone: r.phone || undefined,
       department: r.department || undefined,
       year: r.year || undefined,
       teamId: r.team_id || undefined,
-      teamName: r.team_name || undefined,
+      teamName: r.teams?.name || undefined,
       registeredAt: r.created_at,
       status: r.status,
       attendanceStatus: r.attendance_status,
       checkedInAt: r.checked_in_at || undefined,
       qrCredentialId: r.qr_credential_id,
-      customAnswers: r.custom_answers,
+      customAnswers: r.custom_answers || undefined,
     }));
+
+    if (options?.search) {
+      const q = options.search.toLowerCase();
+      participants = participants.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q) ||
+          p.registrationId.toLowerCase().includes(q) ||
+          p.eventTitle.toLowerCase().includes(q) ||
+          (p.department && p.department.toLowerCase().includes(q)) ||
+          (p.teamName && p.teamName.toLowerCase().includes(q))
+      );
+    }
+
+    return participants;
+  }
+
+  /**
+   * List all teams with their events and member rosters.
+   * In production mode, queries public.teams joined with events and registrations.
+   */
+  static async listTeams(options?: {
+    eventId?: string;
+    search?: string;
+  }): Promise<Team[]> {
+    if (this.isPreview()) {
+      let filtered = MOCK_TEAMS.map((t) => {
+        const teamMembers = MOCK_PARTICIPANTS.filter((p) => p.teamId === t.id);
+        return {
+          ...t,
+          members: teamMembers.map((m) => ({
+            name: m.name,
+            email: m.email,
+            role: m.email === t.captainEmail ? "Captain" : "Member",
+            department: m.department,
+            phone: m.phone,
+            registrationId: m.registrationId,
+            attendanceStatus: m.attendanceStatus,
+          })),
+        };
+      });
+      if (options?.eventId && options.eventId !== "all") {
+        filtered = filtered.filter((t) => t.eventId === options.eventId);
+      }
+      if (options?.search) {
+        const q = options.search.toLowerCase();
+        filtered = filtered.filter(
+          (t) =>
+            t.name.toLowerCase().includes(q) ||
+            t.captainName.toLowerCase().includes(q) ||
+            t.eventTitle.toLowerCase().includes(q)
+        );
+      }
+      return filtered;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    let query = supabase
+      .from("teams")
+      .select(`
+        id,
+        event_id,
+        name,
+        captain_name,
+        captain_email,
+        member_count,
+        max_members,
+        status,
+        custom_answers,
+        created_at,
+        events (
+          id,
+          title
+        ),
+        registrations (
+          id,
+          registration_id,
+          attendee_name,
+          email,
+          phone,
+          department,
+          attendance_status,
+          custom_answers
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (options?.eventId && options.eventId !== "all") {
+      query = query.eq("event_id", options.eventId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("[SketchRepository.listTeams] Database query failed:", error.message);
+      throw new Error(`Failed to query teams: ${error.message}`);
+    }
+
+    if (!data) return [];
+
+    let teams: Team[] = data.map((t: any) => {
+      const roster = Array.isArray(t.registrations)
+        ? t.registrations.map((m: any) => ({
+            name: m.attendee_name,
+            email: m.email,
+            role: m.email === t.captain_email ? "Captain" : "Member",
+            department: m.department || undefined,
+            phone: m.phone || undefined,
+            customAnswers: m.custom_answers || undefined,
+            registrationId: m.registration_id,
+            attendanceStatus: m.attendance_status,
+          }))
+        : [];
+
+      return {
+        id: t.id,
+        eventId: t.event_id,
+        eventTitle: t.events?.title || "",
+        name: t.name,
+        captainName: t.captain_name,
+        captainEmail: t.captain_email,
+        memberCount: t.member_count,
+        maxMembers: t.max_members,
+        status: t.status as "complete" | "incomplete",
+        registeredAt: t.created_at,
+        customAnswers: t.custom_answers || undefined,
+        members: roster,
+      };
+    });
+
+    if (options?.search) {
+      const q = options.search.toLowerCase();
+      teams = teams.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.captainName.toLowerCase().includes(q) ||
+          t.eventTitle.toLowerCase().includes(q)
+      );
+    }
+
+    return teams;
+  }
+
+  /**
+   * Toggle attendance check-in status for an attendee.
+   * In production mode, delegates to atomic PostgreSQL RPC public.toggle_attendance
+   * which executes row locks, audit ledger tracking, and event counter sync in a single transaction.
+   */
+  static async toggleParticipantAttendance(params: {
+    registrationIdOrUid: string;
+    eventId: string;
+    targetStatus?: "checked_in" | "not_checked_in";
+    actorId?: string;
+    method?: "manual" | "camera" | "simulation";
+  }): Promise<{
+    success: boolean;
+    registrationId: string;
+    attendanceStatus: "checked_in" | "not_checked_in";
+    checkedInAt?: string;
+    message: string;
+    error?: string;
+  }> {
+    if (this.isPreview()) {
+      // In preview mode, fallback to in-memory toggle
+      const target = MOCK_PARTICIPANTS.find(
+        (p) =>
+          (p.id === params.registrationIdOrUid || p.registrationId === params.registrationIdOrUid) &&
+          (!params.eventId || p.eventId === params.eventId)
+      );
+
+      if (!target) {
+        return {
+          success: false,
+          registrationId: params.registrationIdOrUid,
+          attendanceStatus: "not_checked_in",
+          message: "Participant not found for the specified event in preview store.",
+          error: "REGISTRATION_NOT_FOUND",
+        };
+      }
+
+      const nextStatus =
+        params.targetStatus !== undefined
+          ? params.targetStatus
+          : target.attendanceStatus === "checked_in"
+          ? "not_checked_in"
+          : "checked_in";
+
+      target.attendanceStatus = nextStatus;
+      target.checkedInAt = nextStatus === "checked_in" ? new Date().toISOString() : undefined;
+
+      return {
+        success: true,
+        registrationId: target.registrationId,
+        attendanceStatus: nextStatus,
+        checkedInAt: target.checkedInAt,
+        message: nextStatus === "checked_in" ? "Verified & checked in" : "Check-in undone",
+      };
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    // Attempt atomic execution via database procedure toggle_attendance
+    const { data: rpcData, error: rpcErr } = await supabase.rpc("toggle_attendance", {
+      p_registration_identifier: params.registrationIdOrUid,
+      p_event_id: params.eventId,
+      p_actor_id: params.actorId || null,
+      p_method: params.method || "manual",
+      p_target_status: params.targetStatus || null,
+    });
+
+    if (rpcErr) {
+      console.error("[SketchRepository.toggleParticipantAttendance] RPC failure:", rpcErr.message);
+      return {
+        success: false,
+        registrationId: params.registrationIdOrUid,
+        attendanceStatus: "not_checked_in",
+        message: rpcErr.message || "Failed to update attendance atomically.",
+        error: "DATABASE_RPC_ERROR",
+      };
+    }
+
+    if (rpcData && typeof rpcData === "object") {
+      const res = rpcData as any;
+      if (!res.success) {
+        return {
+          success: false,
+          registrationId: params.registrationIdOrUid,
+          attendanceStatus: "not_checked_in",
+          message: res.message || "Check-in operation was rejected.",
+          error: res.error || "REJECTED",
+        };
+      }
+
+      return {
+        success: true,
+        registrationId: res.registration_id,
+        attendanceStatus: res.attendance_status as "checked_in" | "not_checked_in",
+        checkedInAt: res.checked_in_at || undefined,
+        message: res.message || "Attendance updated successfully.",
+      };
+    }
+
+    return {
+      success: false,
+      registrationId: params.registrationIdOrUid,
+      attendanceStatus: "not_checked_in",
+      message: "Unexpected response from attendance service.",
+      error: "UNKNOWN_RESPONSE",
+    };
+  }
+
+  /**
+   * Fetch attendee records for an event (Admin view)
+   */
+  static async getEventAttendees(eventId: string): Promise<Participant[]> {
+    return this.listParticipants({ eventId });
   }
 
   /**
@@ -607,82 +929,32 @@ export class SketchRepository {
 
   /**
    * Verify and execute attendance check-in for a participant (Admin only)
+   * Delegates directly to atomic toggleParticipantAttendance to preserve ACID invariants.
    */
   static async recordAttendance(params: {
     registrationId: string;
     eventId: string;
     method: "camera" | "manual" | "simulation";
+    actorId?: string;
   }): Promise<{ success: boolean; message: string; participant?: Partial<Participant> }> {
-    const supabase: any = await createClient();
-    if (!supabase) {
-      return { success: false, message: "Database connection unavailable" };
-    }
-
-    // 1. Fetch registration record
-    const { data: registration, error: regError } = await supabase
-      .from("registrations")
-      .select("*")
-      .eq("registration_id", params.registrationId)
-      .eq("event_id", params.eventId)
-      .single();
-
-    if (regError || !registration) {
-      return { success: false, message: "Participant not found for this event" };
-    }
-
-    if (registration.attendance_status === "checked_in") {
-      return {
-        success: false,
-        message: `Already checked in at ${registration.checked_in_at}`,
-      };
-    }
-
-    // 2. Insert attendance record
-    const { error: attError } = await supabase.from("attendance_records").insert({
-      registration_id: registration.id,
-      event_id: params.eventId,
+    const res = await this.toggleParticipantAttendance({
+      registrationIdOrUid: params.registrationId,
+      eventId: params.eventId,
+      targetStatus: "checked_in",
+      actorId: params.actorId,
       method: params.method,
     });
 
-    if (attError) {
-      return { success: false, message: `Check-in failed: ${attError.message}` };
-    }
-
-    // 3. Update registration attendance status
-    const nowIso = new Date().toISOString();
-    await supabase
-      .from("registrations")
-      .update({
-        attendance_status: "checked_in",
-        checked_in_at: nowIso,
-      })
-      .eq("id", registration.id);
-
-    // 4. Increment event checked-in count
-    const { data: event } = await supabase
-      .from("events")
-      .select("checked_in_count")
-      .eq("id", params.eventId)
-      .single();
-
-    if (event) {
-      await supabase
-        .from("events")
-        .update({ checked_in_count: event.checked_in_count + 1 })
-        .eq("id", params.eventId);
-    }
-
     return {
-      success: true,
-      message: "Check-in verified successfully",
-      participant: {
-        id: registration.id,
-        name: registration.attendee_name,
-        email: registration.email,
-        registrationId: registration.registration_id,
-        attendanceStatus: "checked_in",
-        checkedInAt: nowIso,
-      },
+      success: res.success,
+      message: res.message,
+      participant: res.success
+        ? {
+            registrationId: res.registrationId,
+            attendanceStatus: res.attendanceStatus,
+            checkedInAt: res.checkedInAt,
+          }
+        : undefined,
     };
   }
 
