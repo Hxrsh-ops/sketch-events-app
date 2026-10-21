@@ -4,8 +4,6 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { NavigationProvider } from "@/components/layout/navigation-progress";
 
-import Script from "next/script";
-
 const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-manrope",
@@ -47,15 +45,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${inter.variable}`}>
-      <head />
-      <body className="font-sans min-h-screen bg-[#F4F5F6] dark:bg-[#111315] text-[#17191C] dark:text-[#F1F2F3] selection:bg-[#25292F] dark:selection:bg-[#E8EAED] selection:text-white dark:selection:text-[#111315] antialiased transition-colors duration-200">
-        <Script
+      <head>
+        <script
           id="sketch-theme-initializer"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: THEME_INITIALIZER_SCRIPT,
           }}
         />
+      </head>
+      <body className="font-sans min-h-screen bg-[#F4F5F6] dark:bg-[#111315] text-[#17191C] dark:text-[#F1F2F3] selection:bg-[#25292F] dark:selection:bg-[#E8EAED] selection:text-white dark:selection:text-[#111315] antialiased transition-colors duration-200">
         <ThemeProvider>
           <NavigationProvider>{children}</NavigationProvider>
         </ThemeProvider>

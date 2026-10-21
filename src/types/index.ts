@@ -208,7 +208,11 @@ export interface CommunicationJob {
   subject: string;
   type: "confirmation" | "reminder" | "announcement" | "certificate";
   recipientCount: number;
+  recipientEmail?: string;
+  recipientName?: string;
   status: "queued" | "processing" | "sent" | "failed";
+  attempts?: number;
+  lastError?: string;
   scheduledAt: string;
   deliveredAt?: string;
 }
@@ -258,3 +262,61 @@ export interface DashboardMetrics {
     subtext: string;
   };
 }
+
+export interface TicketTemplate {
+  id: string;
+  name: string;
+  slug: string;
+  category: "cinematic" | "minimal" | "modern" | "vip" | "conference";
+  description?: string;
+  isActive: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketTemplateVersion {
+  id: string;
+  templateId: string;
+  versionNumber: number;
+  designData: any;
+  isPublished: boolean;
+  publishedAt?: string;
+  publishedBy?: string;
+  createdAt: string;
+}
+
+export interface TicketRecord {
+  id: string;
+  registrationId: string;
+  eventId: string;
+  templateVersionId?: string;
+  ticketNumber: string;
+  bearerTokenHash: string;
+  status: "active" | "revoked" | "cancelled";
+  issuedAt: string;
+  revokedAt?: string;
+  revokedBy?: string;
+  revocationReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LiveTicketData {
+  ticketId: string;
+  ticketNumber: string;
+  eventId: string;
+  eventTitle: string;
+  eventSlug: string;
+  venue: string;
+  venueMode: string;
+  startDate: string;
+  endDate: string;
+  attendeeName: string;
+  teamName?: string;
+  ticketStatus: "active" | "revoked" | "cancelled";
+  attendanceStatus: "not_checked_in" | "checked_in";
+  templateDesign: any;
+  checkedInAt?: string;
+}
+

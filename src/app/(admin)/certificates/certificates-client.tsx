@@ -38,13 +38,13 @@ export default function CertificatesClient({
   isPreview,
 }: CertificatesClientProps) {
   const [certificates, setCertificates] = useState<CertificateRecord[]>(
-    initialCertificates.length > 0 ? initialCertificates : MOCK_CERTIFICATES
+    initialCertificates.length > 0 ? initialCertificates : (isPreview ? MOCK_CERTIFICATES : [])
   );
   const [events] = useState<EventItem[]>(
-    initialEvents.length > 0 ? initialEvents : MOCK_EVENTS
+    initialEvents.length > 0 ? initialEvents : (isPreview ? MOCK_EVENTS : [])
   );
   const [participants] = useState<Participant[]>(
-    initialParticipants.length > 0 ? initialParticipants : MOCK_PARTICIPANTS
+    initialParticipants.length > 0 ? initialParticipants : (isPreview ? MOCK_PARTICIPANTS : [])
   );
   const [selectedCert, setSelectedCert] = useState<CertificateRecord | null>(null);
   const [selectedEventId, setSelectedEventId] = useState("all");
@@ -146,8 +146,15 @@ export default function CertificatesClient({
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
               Verified Credentials & Certificates
             </h1>
-            <Badge variant="outline" className="text-[10px] uppercase font-semibold">
-              Preview Mode
+            <Badge
+              variant="outline"
+              className={`text-[10px] uppercase font-semibold ${
+                isPreview
+                  ? "border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5]"
+                  : "border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20"
+              }`}
+            >
+              {isPreview ? "Preview Mode" : "Production Live"}
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#989EA7]">
@@ -184,28 +191,30 @@ export default function CertificatesClient({
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Total Verified & Issued</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">
+        <div className="sketch-card-hero rounded-[20px] p-5 select-none cursor-default">
+          <span className="text-xs font-semibold text-white/80">Total Verified & Issued</span>
+          <div className="text-3xl font-bold text-white mt-2 tabular-nums">
             {certificates.length}
           </div>
-          <span className="text-[11px] text-[#656B73] dark:text-[#989EA7] font-medium mt-1 block">
-            Recorded in local preview ledger
+          <span className="text-[11px] text-white/65 font-medium mt-1 block">
+            {isPreview ? "Recorded in local preview ledger" : "Verified in production database"}
           </span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Awaiting Issuance</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
+          <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Awaiting Issuance</span>
+          <div className="text-3xl font-bold text-[#17191C] dark:text-white mt-2 tabular-nums">
             {eligibleAttendees.length}
           </div>
-          <span className="text-[11px] text-[#656B73] dark:text-[#989EA7] mt-1 block">
+          <span className="text-[11px] text-[#656B73] dark:text-[#8A9098] mt-1 block">
             Checked-in attendees
           </span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Delivery Reliability</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">100%</div>
-          <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] mt-1 block">Client Preview Simulation</span>
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
+          <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Delivery Reliability</span>
+          <div className="text-3xl font-bold text-[#17191C] dark:text-white mt-2 tabular-nums">100%</div>
+          <span className="text-[11px] text-[#8A9098] dark:text-[#8A9098] mt-1 block">
+            {isPreview ? "Client Preview Simulation" : "Transactional email outbox"}
+          </span>
         </div>
       </div>
 

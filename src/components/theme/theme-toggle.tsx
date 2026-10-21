@@ -129,6 +129,45 @@ export function ThemeSegmentedControl() {
       {OPTIONS.map((opt) => {
         const Icon = opt.icon;
         const isSelected = theme === opt.value;
+        const isDarkCard = opt.value === "dark";
+
+        if (isDarkCard) {
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTheme(opt.value)}
+              className={`sketch-card-hero flex flex-col text-left p-4 rounded-2xl transition-all select-none outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                isSelected
+                  ? "ring-2 ring-white/90 border-white/60 shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.18)]"
+                  : "border-[#363C46] hover:border-[#48515E]"
+              }`}
+            >
+              <div className="flex items-center justify-between w-full mb-2">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${
+                    isSelected
+                      ? "bg-white text-[#111315]"
+                      : "bg-white/10 text-white/90 border border-white/10"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+                {isSelected && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#111315]">
+                    <Check className="h-3 w-3" />
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-bold text-white">
+                {opt.label}
+              </span>
+              <span className="text-[11px] text-white/70 mt-1 line-clamp-2 leading-relaxed">
+                {opt.desc}
+              </span>
+            </button>
+          );
+        }
 
         return (
           <button

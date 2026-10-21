@@ -1,13 +1,12 @@
-"use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Layers, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { EventItem, Participant } from "@/types";
 
-const ACTIVE_EVENTS = [
+const PREVIEW_ACTIVE_EVENTS = [
   {
     id: "evt-01",
     name: "Design Sprint '26",
@@ -15,7 +14,7 @@ const ACTIVE_EVENTS = [
     checkedIn: 642,
     totalRegistered: 868,
     activeRound: "Round 2: Prototype Evaluation",
-    teamsAdvanced: 34,
+    teamsAdvanced: "34 Teams",
   },
   {
     id: "evt-02",
@@ -24,18 +23,80 @@ const ACTIVE_EVENTS = [
     checkedIn: 240,
     totalRegistered: 500,
     activeRound: "Round 1: Idea Pitch",
-    teamsAdvanced: 50,
+    teamsAdvanced: "50 Teams",
   },
 ];
 
-export function EventProgressGauge() {
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const currentEvent = ACTIVE_EVENTS[selectedIdx];
+interface EventProgressGaugeProps {
+  events?: EventItem[];
+  participants?: Participant[];
+  isPreview?: boolean;
+}
 
-  // Calculate arc stroke offset for SVG gauge
-  // Circumference of semi-circle with r=75 is PI * 75 ≈ 235.6
+export function EventProgressGauge({
+  events = [],
+  participants = [],
+  isPreview = false,
+}: EventProgressGaugeProps = {}) {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const mappedEvents = events
+    .filter((e) => e.lifecycle === "published" || e.lifecycle === "live" || e.lifecycle === "draft")
+    .map((e) => {
+      const eventParticipants = participants.filter((p) => p.eventId === e.id);
+      const totalRegistered = eventParticipants.length > 0 ? eventParticipants.length : (e.registeredCount || 0);
+      const checkedIn = eventParticipants.length > 0
+        ? eventParticipants.filter((p) => p.attendanceStatus === "checked_in").length
+        : (e.checkedInCount || 0);
+      const progress = totalRegistered > 0 ? Math.round((checkedIn / totalRegistered) * 100) : 0;
+      return {
+        id: e.id,
+        name: e.title,
+        progress,
+        checkedIn,
+        totalRegistered,
+        activeRound: e.hasRounds ? "Competition Stages" : "Single Stage Session",
+        teamsAdvanced: e.hasTeams ? "Team Evaluation" : "Individual",
+      };
+    });
+
+  const activeEventsList = mappedEvents.length > 0
+    ? mappedEvents
+    : isPreview
+    ? PREVIEW_ACTIVE_EVENTS
+    : [];
+
+  const safeIdx = Math.min(selectedIdx, Math.max(0, activeEventsList.length - 1));
+  const currentEvent = activeEventsList[safeIdx];
+
   const totalLength = 235.6;
-  const strokeDashoffset = totalLength - (totalLength * currentEvent.progress) / 100;
+  const strokeDashoffset = currentEvent
+    ? totalLength - (totalLength * currentEvent.progress) / 100
+    : totalLength;
+
+  if (activeEventsList.length === 0) {
+    return (
+      <div className="flex h-full flex-col justify-between rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-2">
+          <Layers className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+          <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">
+            Live Event Throughput
+          </h3>
+        </div>
+        <div className="my-10 rounded-xl border border-dashed border-[#E5E7EA] dark:border-[#30353A] p-8 text-center text-xs text-[#8A9098] dark:text-[#656B73]">
+          No active events in scope for throughput analysis.
+        </div>
+        <Link href="/events/new">
+          <Button
+            variant="outline"
+            className="w-full rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold"
+          >
+            Create New Event
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col justify-between rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-card">
@@ -49,11 +110,11 @@ export function EventProgressGauge() {
 
         <div className="w-52">
           <CustomSelect
-            options={ACTIVE_EVENTS.map((evt, idx) => ({
+            options={activeEventsList.map((evt, idx) => ({
               value: String(idx),
               label: evt.name,
             }))}
-            value={String(selectedIdx)}
+            value={String(safeIdx)}
             onChange={(val) => setSelectedIdx(Number(val))}
           />
         </div>

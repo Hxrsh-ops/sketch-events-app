@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import {
@@ -12,6 +14,7 @@ import {
   QrCode,
   FileBadge,
   Mail,
+  Ticket,
   BarChart3,
   Download,
   ShieldCheck,
@@ -24,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getRequiredPermissionForPath } from "@/lib/auth/permissions";
+import { getAppEnv } from "@/lib/env";
 
 interface NavItem {
   label: string;
@@ -34,7 +38,7 @@ interface NavItem {
 
 const OPERATIONS_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutGrid },
-  { label: "Events", href: "/events", icon: CalendarDays, badge: "24" },
+  { label: "Events", href: "/events", icon: CalendarDays },
   { label: "Participants", href: "/participants", icon: Users },
   { label: "Teams", href: "/teams", icon: UserCheck },
   { label: "Rounds & Stages", href: "/rounds", icon: GitBranch },
@@ -42,6 +46,7 @@ const OPERATIONS_ITEMS: NavItem[] = [
 ];
 
 const COMMUNICATIONS_ITEMS: NavItem[] = [
+  { label: "Ticket Studio", href: "/studio", icon: Ticket },
   { label: "Certificates", href: "/certificates", icon: FileBadge },
   { label: "Communications", href: "/communications", icon: Mail },
 ];
@@ -60,11 +65,76 @@ const SYSTEM_ITEMS: NavItem[] = [
 interface SidebarProps {
   className?: string;
   onNavigate?: () => void;
+  eventCount?: number | null;
+  isPreview?: boolean;
 }
 
-export function Sidebar({ className, onNavigate }: SidebarProps) {
+export function Sidebar({
+  className,
+  onNavigate,
+  eventCount: initialEventCount,
+  isPreview: propIsPreview,
+}: SidebarProps) {
   const pathname = usePathname();
   const { can } = useAuth();
+  const isPreview = propIsPreview !== undefined ? propIsPreview : (getAppEnv().mode === "preview");
+
+  const [dynamicCount, setDynamicCount] = useState<number | null>(
+    initialEventCount !== undefined ? initialEventCount : null
+  );
+
+  useEffect(() => {
+    if (initialEventCount !== undefined) {
+      setDynamicCount(initialEventCount);
+    }
+  }, [initialEventCount]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/events/count");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && typeof data.count === "number") {
+            setDynamicCount(data.count);
+          }
+        }
+      } catch {
+        // Silently preserve current state without throwing in UI
+      }
+    };
+
+    if (initialEventCount === undefined) {
+      fetchCount();
+    }
+
+    const handleUpdate = () => {
+      fetchCount();
+    };
+
+    window.addEventListener("sketch:events-changed", handleUpdate);
+    window.addEventListener("sketch_store_updated", handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("sketch:events-changed", handleUpdate);
+      window.removeEventListener("sketch_store_updated", handleUpdate);
+    };
+  }, [initialEventCount]);
+
+  const getBadgeForItem = (href: string): string | undefined => {
+    if (href === "/events") {
+      if (dynamicCount !== null && dynamicCount !== undefined) {
+        return String(dynamicCount);
+      }
+      if (isPreview) {
+        return "2";
+      }
+      return undefined;
+    }
+    return undefined;
+  };
+
 
   const isItemVisible = (href: string) => {
     const requiredPermission = getRequiredPermissionForPath(href);
@@ -73,11 +143,13 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   };
 
   const isItemActive = (href: string) => {
+    if (!pathname) return false;
     if (href === "/") {
       return pathname === "/";
     }
     return pathname.startsWith(href);
   };
+
 
   return (
     <aside
@@ -164,18 +236,25 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                       />
                       <span>{item.label}</span>
                     </div>
-                    {item.badge && (
-                      <span
-                        className={cn(
-                          "text-[10px] px-1.5 py-0.2 rounded-full font-bold",
-                          active
-                            ? "bg-[#F0F1F2] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3]"
-                            : "bg-[#EAECEF] dark:bg-[#2A2F35] text-[#8A9098] dark:text-[#7D858F]"
-                        )}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
+                    {(() => {
+                      const badge = item.badge ?? getBadgeForItem(item.href);
+                      if (badge === undefined || badge === null) return null;
+                      return (
+                        <span
+                          data-testid={`sidebar-badge-${item.label.toLowerCase()}`}
+                          title={isPreview ? "Preview event count" : "Authoritative event count"}
+                          className={cn(
+                            "text-[10px] px-1.5 py-0.2 rounded-full font-bold tabular-nums",
+                            active
+                              ? "bg-[#F0F1F2] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3]"
+                              : "bg-[#EAECEF] dark:bg-[#2A2F35] text-[#8A9098] dark:text-[#7D858F]"
+                          )}
+                        >
+                          {badge}
+                        </span>
+                      );
+                    })()}
+
                   </Link>
                 );
               })}

@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getAppEnv } from "@/lib/env";
 import { AdminRole, AdminUser } from "@/types";
 import { MOCK_ADMIN_USER } from "@/lib/mock-data";
-
-export const PREVIEW_SESSION_COOKIE = "sketch_preview_session";
+import { verifySignedSessionToken } from "@/lib/auth/temporary-admin";
+import { PREVIEW_SESSION_COOKIE } from "@/lib/auth/constants";
+export { PREVIEW_SESSION_COOKIE };
 
 export interface SessionVerificationResult {
   isAuthenticated: boolean;
@@ -53,6 +54,23 @@ export async function verifyAdminSession(): Promise<SessionVerificationResult> {
       };
     }
 
+    // Cryptographically verified signed session token
+    const verified = verifySignedSessionToken(previewCookie.value);
+    if (verified) {
+      return {
+        isAuthenticated: true,
+        isAdmin: true,
+        user: {
+          id: verified.id,
+          name: verified.name,
+          email: verified.email,
+          role: verified.role,
+          avatarUrl: verified.avatarUrl,
+        },
+        isPreview: true,
+      };
+    }
+
     try {
       const parsed = JSON.parse(decodeURIComponent(previewCookie.value));
       return {
@@ -69,9 +87,10 @@ export async function verifyAdminSession(): Promise<SessionVerificationResult> {
       };
     } catch {
       return {
-        isAuthenticated: true,
-        isAdmin: true,
-        user: { ...MOCK_ADMIN_USER },
+        isAuthenticated: false,
+        isAdmin: false,
+        user: null,
+        error: "INVALID_SESSION_TOKEN",
         isPreview: true,
       };
     }

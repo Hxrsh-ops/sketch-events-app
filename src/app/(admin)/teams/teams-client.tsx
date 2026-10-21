@@ -66,8 +66,11 @@ export default function TeamsClient({
     ];
 
     const escapeCsv = (val: unknown) => {
-      const str = String(val ?? "");
-      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      let str = String(val ?? "");
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return `"${str}"`;

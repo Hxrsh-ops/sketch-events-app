@@ -10,6 +10,13 @@
 
     --card: #FFFFFF;
     --card-foreground: #17191C;
+    --card-border: #E5E7EA;
+    --card-border-hover: #D2D6DC;
+    --card-muted: #F8F9FA;
+
+    --surface-inset: #F8F9FA;
+    --surface-inset-border: #F0F1F2;
+    --surface-elevated: #FFFFFF;
 
     --popover: #FFFFFF;
     --popover-foreground: #17191C;
@@ -43,31 +50,40 @@
     --foreground: #F1F2F3;
     --canvas: #111315;
 
-    --card: #1B1E21;
+    /* Primary Card: Softly illuminated slate-charcoal with dimensional depth */
+    --card: #1F2329;
     --card-foreground: #F1F2F3;
+    --card-border: #363C46;
+    --card-border-hover: #48515E;
+    --card-muted: #171A1E;
 
-    --popover: #22262A;
+    /* Inset Wells & Grouped Lists */
+    --surface-inset: #15181C;
+    --surface-inset-border: #282E37;
+    --surface-elevated: #282D34;
+
+    --popover: #1E2228;
     --popover-foreground: #F1F2F3;
 
     --primary: #E8EAED;
     --primary-foreground: #111315;
     --primary-hover: #FFFFFF;
 
-    --secondary: #25292F;
+    --secondary: #252A31;
     --secondary-foreground: #F1F2F3;
-    --secondary-hover: #30353A;
+    --secondary-hover: #313740;
 
-    --muted: #22262A;
+    --muted: #22272E;
     --muted-foreground: #A6ADB5;
 
-    --accent: #2A2F35;
+    --accent: #2A3038;
     --accent-foreground: #F1F2F3;
 
     --destructive: #E8EAED;
     --destructive-foreground: #111315;
 
-    --border: #30353A;
-    --input: #30353A;
+    --border: #363C46;
+    --input: #363C46;
     --ring: #E8EAED;
   }
 
@@ -111,25 +127,121 @@
   background: #5E6670;
 }
 
+/* Luminous Charcoal Hero Card (Active in both Light and Dark mode for designated hero cards) */
+.sketch-card-hero {
+  background: linear-gradient(180deg, #282D34 0%, #1F2329 50%, #171A1E 100%);
+  color: #FFFFFF;
+  border: 1px solid #363C46;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease;
+}
+
+.sketch-card-hero:hover {
+  border-color: #48515E;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* Polished Skeleton Shimmer Loader */
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer-sweep 1.8s infinite ease-in-out;
+  content: "";
+}
+
+.dark .skeleton-shimmer::after {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
 /* SketchHUB Monochrome Surface & Interaction Utilities */
+.sketch-card {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease;
+}
+
+.dark .sketch-card {
+  background: linear-gradient(180deg, #282D34 0%, #1A1D22 100%);
+  border: 1px solid #363C46;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dark .sketch-card:hover {
+  border-color: #48515E;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.sketch-card-inset {
+  background-color: var(--surface-inset);
+  border: 1px solid var(--surface-inset-border);
+  border-radius: 14px;
+}
+
 .donezo-card {
   background-color: var(--card);
   border-radius: 24px;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.02);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.dark .donezo-card {
+  background: linear-gradient(180deg, #282D34 0%, #1A1D22 100%);
+  border: 1px solid #363C46;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
 .donezo-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.dark .donezo-card:hover {
+  border-color: #48515E;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .donezo-card-charcoal {
-  background: linear-gradient(145deg, #3A3F46 0%, #23272D 100%);
+  background: linear-gradient(145deg, #323842 0%, #1C2025 100%);
   color: #FFFFFF;
   border-radius: 24px;
-  border: 1px solid #3A3F46;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #3A424D;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* Subtle Interactive Elevation */
@@ -141,14 +253,22 @@
   .sketch-card-lift:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    border-color: var(--card-border-hover);
   }
   .dark .sketch-card-lift:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    border-color: var(--card-border-hover);
   }
 }
 
 /* Respect Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none !important;
+    display: none !important;
+  }
+  .sketch-card-hero,
   .sketch-card-lift,
   .donezo-card,
   .motion-safe-transition {
@@ -156,5 +276,36 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     transform: none !important;
+  }
+}
+
+/* Clean Landscape Ticket Print Styles */
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
+  .print-hide,
+  nav,
+  header,
+  aside,
+  button,
+  .no-print {
+    display: none !important;
+  }
+  .unified-ticket-wrapper {
+    margin: 0 auto !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .unified-ticket-root {
+    box-shadow: none !important;
+    border: 1px solid #D1D5DB !important;
   }
 }

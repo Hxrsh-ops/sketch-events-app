@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
-import { isPreviewMode } from "@/lib/env";
 import { BrandedInitScreen } from "@/components/feedback/branded-init-screen";
 import { sanitizeInternalRedirect } from "@/lib/auth/redirect";
 import { getAuthErrorMessage } from "@/lib/auth/auth-errors";
@@ -73,18 +72,11 @@ function LoginForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(
     getAuthErrorMessage(urlError, urlDetails)
   );
-  const isPreview = isPreviewMode();
-
   // Genuine session check on initial mount
   useEffect(() => {
     let mounted = true;
 
     async function checkExistingAuth() {
-      if (isPreview) {
-        if (mounted) setCheckingExistingSession(false);
-        return;
-      }
-
       try {
         const supabase = createClient();
         if (supabase) {
@@ -105,19 +97,19 @@ function LoginForm() {
     return () => {
       mounted = false;
     };
-  }, [isPreview, redirectTarget, router]);
+  }, [redirectTarget, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password) {
+    const trimmedIdentifier = email.trim();
+    if (!trimmedIdentifier || !password) {
       setErrorMessage("Please enter both administrator email and password.");
       return;
     }
 
-    if (!trimmedEmail.includes("@")) {
+    if (!trimmedIdentifier.includes("@")) {
       setErrorMessage("Please enter a valid administrator email address.");
       return;
     }
@@ -125,23 +117,6 @@ function LoginForm() {
     setEmailLoading(true);
 
     try {
-      if (isPreview) {
-        // Establish an explicit preview session cookie via server route
-        const res = await fetch("/api/auth/preview-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: trimmedEmail, role: "master_admin" }),
-        });
-
-        if (!res.ok) {
-          throw new Error("Unable to establish preview session.");
-        }
-
-        router.replace(redirectTarget);
-        router.refresh();
-        return;
-      }
-
       // Production Supabase Auth Flow
       const supabase = createClient();
       if (!supabase) {
@@ -149,15 +124,25 @@ function LoginForm() {
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
+        email: trimmedIdentifier,
         password,
       });
 
       if (error) {
-        setErrorMessage(error.message);
+        if (
+          error.message?.toLowerCase().includes("invalid login credentials") ||
+          error.message?.toLowerCase().includes("invalid grant")
+        ) {
+          setErrorMessage(
+            "Invalid email or password. If your administrator account was registered using Google OAuth, please use 'Sign in with Google' or use 'Forgot Password' below to establish an email password."
+          );
+        } else {
+          setErrorMessage(error.message);
+        }
         setEmailLoading(false);
         return;
       }
+
 
       if (data.user) {
         // Verify admin profile exists in PostgreSQL database
@@ -190,16 +175,6 @@ function LoginForm() {
     setGoogleLoading(true);
 
     try {
-      if (isPreview) {
-        // In local preview environment where Supabase is not configured:
-        // Do NOT silently fake production OAuth. Provide honest, actionable feedback.
-        setErrorMessage(
-          "Google OAuth requires a remote Supabase project. In Preview Workspace mode, you can sign in directly using email & password or click the preview demo indicator above."
-        );
-        setGoogleLoading(false);
-        return;
-      }
-
       // Production Supabase Google OAuth Flow
       const supabase = createClient();
       if (!supabase) {
@@ -251,16 +226,6 @@ function LoginForm() {
 
     setRecoveryLoading(true);
     try {
-      if (isPreview) {
-        // Honest preview feedback
-        setRecoveryMessage({
-          type: "success",
-          text: `[Preview Mode] Password reset instructions simulated for ${trimmed}. In production, Supabase Auth will send a secure recovery link.`,
-        });
-        setRecoveryLoading(false);
-        return;
-      }
-
       const supabase = createClient();
       if (!supabase) {
         throw new Error("Authentication service is unavailable.");
@@ -287,11 +252,6 @@ function LoginForm() {
     } finally {
       setRecoveryLoading(false);
     }
-  };
-
-  const handleQuickPreviewFill = () => {
-    setEmail("admin@sketch.org");
-    setPassword("••••••••••••");
   };
 
   const isAnyLoading = emailLoading || googleLoading;
@@ -439,19 +399,6 @@ function LoginForm() {
             CAMPUS EVENT OPERATIONS
           </p>
 
-          {/* Preview Mode Pill Indicator */}
-          {isPreview && (
-            <button
-              type="button"
-              onClick={handleQuickPreviewFill}
-              title="Click to auto-populate preview credentials"
-              className="mt-5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-black/40 hover:bg-black/60 backdrop-blur-md text-[10.5px] font-medium tracking-[0.16em] uppercase text-white/80 hover:text-white transition-all cursor-pointer group shadow-lg"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-[#10B981] animate-pulse" />
-              <span>PREVIEW WORKSPACE · LOCAL ENVIRONMENT</span>
-            </button>
-          )}
-
           {/* Dynamic Error Banner */}
           <AnimatePresence>
             {errorMessage && (
@@ -479,7 +426,7 @@ function LoginForm() {
 
           {/* Translucent Form Container */}
           <form onSubmit={handleSignIn} className="w-full mt-6 space-y-3.5">
-            {/* Administrator Email Input with Leading Envelope Icon */}
+            {/* Administrator Identifier Input with Leading Envelope Icon */}
             <div className="relative flex items-center">
               <input
                 id="email-input"

@@ -18,9 +18,15 @@ import {
   RegistrationSubmission,
   AuditLogEntry,
   AdminRole,
+  AdminUser,
   CertificateRecord,
   CommunicationJob,
+  TicketTemplate,
+  TicketTemplateVersion,
+  TicketRecord,
+  LiveTicketData,
 } from "@/types";
+import { hashBearerToken } from "@/lib/ticket/rotating-qr";
 import { Database, RegistrationMode } from "@/types/database";
 import {
   getStoredEvents,
@@ -32,17 +38,18 @@ import {
   saveCertificates,
   getStoredCommunications,
   saveCommunication,
+  updateStoredCommunication,
   getStoredAuditLogs,
   saveAuditLog,
   getAllParticipants,
   getAllTeams,
   updateParticipantAttendance,
 } from "@/lib/registration-store";
-import { MOCK_PARTICIPANTS, MOCK_TEAMS, MOCK_ROUNDS } from "@/lib/mock-data";
 
 export interface RegisterResult {
   success: boolean;
   registrationId?: string;
+  registrationRowId?: string;
   qrCredentialId?: string;
   error?: string;
   message?: string;
@@ -122,6 +129,32 @@ export class SketchRepository {
 
     return (data || []).map((row: any) => this.mapEventRowToEventItem(row));
   }
+
+  /**
+   * Authoritative total event count for navigation badges and metrics.
+   * Uses lightweight HEAD count query in live mode without fetching row bodies.
+   */
+  static async getEventCount(): Promise<number> {
+    if (this.isPreview()) {
+      return getStoredEvents().length;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    const { count, error } = await supabase
+      .from("events")
+      .select("*", { count: "exact", head: true });
+
+    if (error) {
+      throw new Error(`Failed to count events: ${error.message}`);
+    }
+
+    return count ?? 0;
+  }
+
 
   /**
    * Fetch an event by ID (Admin view)
@@ -1379,9 +1412,32 @@ export class SketchRepository {
       };
     }
 
+    let registrationRowId: string | undefined;
+    try {
+      const adminClient: any = createAdminClient() || supabase;
+      if (adminClient && typeof adminClient.from === "function") {
+        const resQuery = adminClient.from("registrations");
+        if (resQuery && typeof resQuery.select === "function") {
+          const selectBuilder = resQuery.select("id");
+          if (selectBuilder && typeof selectBuilder.eq === "function") {
+            const eqBuilder = selectBuilder.eq("registration_id", res.registration_id);
+            if (eqBuilder && typeof eqBuilder.maybeSingle === "function") {
+              const { data: regRow } = await eqBuilder.maybeSingle();
+              if (regRow?.id) {
+                registrationRowId = regRow.id;
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore if mock client in unit tests does not support full builder
+    }
+
     return {
       success: true,
       registrationId: res.registration_id,
+      registrationRowId,
       qrCredentialId: res.qr_credential_id,
       message: res.message || "Registration confirmed.",
     };
@@ -1467,7 +1523,7 @@ export class SketchRepository {
 
     try {
       const supabase = createAdminClient() || (await createClient());
-      if (!supabase) return getStoredCertificates(eventId);
+      if (!supabase) return [];
 
       let query = (supabase as any)
         .from("certificates")
@@ -1492,7 +1548,7 @@ export class SketchRepository {
       const { data, error } = await query;
       if (error) {
         console.error("[SketchRepository] listCertificates error:", error);
-        return getStoredCertificates(eventId);
+        return [];
       }
 
       return (data || []).map((row: any) => ({
@@ -1507,7 +1563,65 @@ export class SketchRepository {
       }));
     } catch (err) {
       console.error("[SketchRepository] listCertificates exception:", err);
-      return getStoredCertificates(eventId);
+      return [];
+    }
+  }
+
+  /**
+   * Verify an issued certificate publicly by certificate number.
+   * Calls scoped database RPC public.verify_certificate to prevent disclosing recipient email or private keys.
+   */
+  static async verifyCertificate(certificateNumber: string): Promise<{
+    isValid: boolean;
+    certificateNumber?: string;
+    eventTitle?: string;
+    recipientName?: string;
+    issuedAt?: string;
+    status?: string;
+  } | null> {
+    const cleanCertNumber = certificateNumber.trim();
+    if (!cleanCertNumber) return null;
+
+    if (this.isPreview()) {
+      const all = getStoredCertificates();
+      const found = all.find(
+        (c) => c.certificateNumber.toLowerCase() === cleanCertNumber.toLowerCase() && c.status === "issued"
+      );
+      if (!found) return null;
+      return {
+        isValid: true,
+        certificateNumber: found.certificateNumber,
+        eventTitle: found.eventTitle,
+        recipientName: found.recipientName,
+        issuedAt: found.issuedAt,
+        status: found.status,
+      };
+    }
+
+    try {
+      const supabase: any = (await createClient()) || createAdminClient();
+      if (!supabase) return null;
+
+      const { data, error } = await supabase.rpc("verify_certificate", {
+        p_certificate_number: cleanCertNumber,
+      });
+
+      if (error || !data || data.length === 0) {
+        return null;
+      }
+
+      const row = data[0];
+      return {
+        isValid: Boolean(row.is_valid),
+        certificateNumber: row.certificate_number,
+        eventTitle: row.event_title,
+        recipientName: row.recipient_name,
+        issuedAt: row.issued_at,
+        status: row.status,
+      };
+    } catch (err) {
+      console.error("[SketchRepository.verifyCertificate] Exception:", err);
+      return null;
     }
   }
 
@@ -1594,8 +1708,12 @@ export class SketchRepository {
           await (supabase as any).from("communications_outbox").insert(outboxJobs);
         }
       } catch (dbErr) {
-        console.error("[SketchRepository] DB batch issuance failed, falling back to preview store:", dbErr);
-        saveCertificates(newCertRecords);
+        console.error("[SketchRepository] DB batch issuance failed:", dbErr);
+        if (this.isPreview()) {
+          saveCertificates(newCertRecords);
+        } else {
+          throw dbErr;
+        }
       }
     }
 
@@ -1624,7 +1742,7 @@ export class SketchRepository {
 
     try {
       const supabase = createAdminClient() || (await createClient());
-      if (!supabase) return getStoredCommunications(eventId);
+      if (!supabase) return [];
 
       let query = (supabase as any)
         .from("communications_outbox")
@@ -1636,6 +1754,8 @@ export class SketchRepository {
           subject,
           template_type,
           status,
+          attempts,
+          last_error,
           scheduled_at,
           delivered_at,
           events (
@@ -1651,7 +1771,7 @@ export class SketchRepository {
       const { data, error } = await query;
       if (error) {
         console.error("[SketchRepository] listOutboxJobs error:", error);
-        return getStoredCommunications(eventId);
+        return [];
       }
 
       return (data || []).map((row: any) => ({
@@ -1661,13 +1781,17 @@ export class SketchRepository {
         subject: row.subject,
         type: (row.template_type === "ticket_pass" ? "confirmation" : row.template_type) as any,
         recipientCount: 1,
+        recipientEmail: row.recipient_email || undefined,
+        recipientName: row.recipient_name || undefined,
         status: (row.status === "delivered" ? "sent" : row.status) as any,
+        attempts: typeof row.attempts === "number" ? row.attempts : 0,
+        lastError: row.last_error || undefined,
         scheduledAt: row.scheduled_at,
         deliveredAt: row.delivered_at,
       }));
     } catch (err) {
       console.error("[SketchRepository] listOutboxJobs exception:", err);
-      return getStoredCommunications(eventId);
+      return [];
     }
   }
 
@@ -1726,18 +1850,22 @@ export class SketchRepository {
           }
         }
       } catch (dbErr) {
-        console.error("[SketchRepository] Enqueue outbox DB error, falling back to preview store:", dbErr);
-        const commJob: CommunicationJob = {
-          id: `comm-${Date.now()}`,
-          eventId: params.eventId,
-          eventTitle,
-          subject: params.subject,
-          type: params.templateType === "ticket_pass" ? "confirmation" : params.templateType,
-          recipientCount: params.recipients.length,
-          status: "queued",
-          scheduledAt: params.scheduledAt || "Instant",
-        };
-        saveCommunication(commJob);
+        console.error("[SketchRepository] Enqueue outbox DB error:", dbErr);
+        if (this.isPreview()) {
+          const commJob: CommunicationJob = {
+            id: `comm-${Date.now()}`,
+            eventId: params.eventId,
+            eventTitle,
+            subject: params.subject,
+            type: params.templateType === "ticket_pass" ? "confirmation" : params.templateType,
+            recipientCount: params.recipients.length,
+            status: "queued",
+            scheduledAt: params.scheduledAt || "Instant",
+          };
+          saveCommunication(commJob);
+        } else {
+          throw dbErr;
+        }
       }
     }
 
@@ -1759,6 +1887,49 @@ export class SketchRepository {
   }
 
   /**
+   * Retry an eligible failed communication outbox job
+   */
+  static async retryFailedCommunication(jobId: string): Promise<{ success: boolean; message?: string }> {
+    if (this.isPreview()) {
+      const comms = getStoredCommunications();
+      const found = comms.find((c) => c.id === jobId);
+      if (found) {
+        updateStoredCommunication({ ...found, status: "queued" });
+        return { success: true, message: "Delivery retried in preview store." };
+      }
+      return { success: false, message: "Job not found in preview store." };
+    }
+
+    try {
+      const supabase = createAdminClient();
+      if (!supabase) {
+        return { success: false, message: "Storage client unavailable." };
+      }
+
+      const { data, error } = await (supabase as any)
+        .from("communications_outbox")
+        .update({
+          status: "queued",
+          scheduled_at: new Date().toISOString(),
+          last_error: null,
+        })
+        .eq("id", jobId)
+        .in("status", ["failed", "dead_letter"])
+        .select("id")
+        .single();
+
+      if (error || !data) {
+        return { success: false, message: error?.message || "Job not eligible for retry or already sent." };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error("[SketchRepository] retryFailedCommunication error:", err);
+      return { success: false, message: err?.message || "Failed to retry delivery." };
+    }
+  }
+
+  /**
    * List audit log entries
    */
   static async listAuditLogs(options?: { search?: string; limit?: number }): Promise<AuditLogEntry[]> {
@@ -1768,7 +1939,7 @@ export class SketchRepository {
 
     try {
       const supabase = createAdminClient() || (await createClient());
-      if (!supabase) return getStoredAuditLogs();
+      if (!supabase) return [];
 
       let query = (supabase as any)
         .from("audit_logs")
@@ -1779,7 +1950,7 @@ export class SketchRepository {
       const { data, error } = await query;
       if (error) {
         console.error("[SketchRepository] listAuditLogs error:", error);
-        return getStoredAuditLogs();
+        return [];
       }
 
       return (data || []).map((row: any) => ({
@@ -1793,7 +1964,49 @@ export class SketchRepository {
       }));
     } catch (err) {
       console.error("[SketchRepository] listAuditLogs exception:", err);
-      return getStoredAuditLogs();
+      return [];
+    }
+  }
+
+  /**
+   * List administrators and coordinators from admin_profiles
+   */
+  static async listAdminProfiles(): Promise<AdminUser[]> {
+    if (this.isPreview()) {
+      return [
+        {
+          id: "preview-admin",
+          name: "Harshanth",
+          email: "harshanth@sketch.org",
+          role: "master_admin",
+        },
+      ];
+    }
+
+    try {
+      const supabase = createAdminClient() || (await createClient());
+      if (!supabase) return [];
+
+      const { data, error } = await (supabase as any)
+        .from("admin_profiles")
+        .select("id, email, full_name, role, avatar_url")
+        .order("created_at", { ascending: true });
+
+      if (error || !data) {
+        console.error("[SketchRepository] listAdminProfiles error:", error);
+        return [];
+      }
+
+      return data.map((row: any) => ({
+        id: row.id,
+        name: row.full_name || row.email,
+        email: row.email,
+        role: row.role as AdminRole,
+        avatarUrl: row.avatar_url || undefined,
+      }));
+    } catch (err) {
+      console.error("[SketchRepository] listAdminProfiles exception:", err);
+      return [];
     }
   }
 
@@ -1850,5 +2063,741 @@ export class SketchRepository {
       eligibleCount: row.eligible_count,
       advancedCount: row.advanced_count || 0,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // TICKET STUDIO & ROTATING QR METHODS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * List all ticket templates with their active/published status
+   */
+  static async listTicketTemplates(): Promise<TicketTemplate[]> {
+    if (this.isPreview()) {
+      return [
+        {
+          id: "77777777-7777-7777-7777-777777770001",
+          name: "Cinematic Midnight Premiere",
+          slug: "cinematic-midnight-premiere",
+          category: "cinematic",
+          description: "Deep charcoal pass with gold accents, perforated tear-off stub, and rotating live QR badge.",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return [];
+
+    const { data, error } = await (supabase as any)
+      .from("ticket_templates")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[SketchRepository.listTicketTemplates] Database query failed:", {
+        code: error.code,
+        message: error.message,
+        hint: error.hint,
+        details: error.details,
+      });
+      if (error.code === "PGRST205" || error.code === "42P01") {
+        throw new Error(
+          "Table 'ticket_templates' was not found in the connected database. Migration 00007 must be applied to the target database."
+        );
+      }
+      throw new Error(error.message || "Failed to load ticket templates from database.");
+    }
+
+    if (!data) return [];
+
+    return data.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+      category: t.category,
+      description: t.description || undefined,
+      isActive: t.is_active,
+      createdBy: t.created_by || undefined,
+      createdAt: t.created_at,
+      updatedAt: t.updated_at,
+    }));
+  }
+
+  /**
+   * Get a ticket template with all its published and draft versions
+   */
+  static async getTicketTemplateById(id: string): Promise<{
+    template: TicketTemplate | null;
+    versions: TicketTemplateVersion[];
+  }> {
+    if (this.isPreview()) {
+      return {
+        template: {
+          id,
+          name: "Standard Event Pass",
+          slug: "standard-event-pass",
+          category: "cinematic",
+          description: "Clean event pass with QR code, attendee details, and optional background.",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        versions: [
+          {
+            id: "88888888-8888-8888-8888-888888880001",
+            templateId: id,
+            versionNumber: 1,
+            designData: {
+              layout: "cinematic-horizontal",
+              canvas: { width: 800, height: 380, unit: "px" },
+              theme: {
+                background: "#111315",
+                surface: "#181B1E",
+                accent: "#E2B857",
+                textColor: "#F3F4F6",
+                secondaryTextColor: "#9CA3AF",
+                borderColor: "#2C3136",
+              },
+              stub: {
+                perforationPosition: "right",
+                stubWidth: 240,
+                badgeText: "ENTRY PASS",
+              },
+              qr: {
+                size: 180,
+                label: "SCAN TO VERIFY",
+                rotating: true,
+                refreshIntervalSec: 30,
+              },
+            },
+            isPublished: true,
+            publishedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      };
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return { template: null, versions: [] };
+
+    const [tplRes, verRes] = await Promise.all([
+      (supabase as any).from("ticket_templates").select("*").eq("id", id).single(),
+      (supabase as any)
+        .from("ticket_template_versions")
+        .select("*")
+        .eq("template_id", id)
+        .order("version_number", { ascending: false }),
+    ]);
+
+    if (tplRes.error || !tplRes.data) return { template: null, versions: [] };
+
+    const t = tplRes.data;
+    const template: TicketTemplate = {
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+      category: t.category,
+      description: t.description || undefined,
+      isActive: t.is_active,
+      createdBy: t.created_by || undefined,
+      createdAt: t.created_at,
+      updatedAt: t.updated_at,
+    };
+
+    const versions: TicketTemplateVersion[] = (verRes.data || []).map((v: any) => ({
+      id: v.id,
+      templateId: v.template_id,
+      versionNumber: v.version_number,
+      designData: v.design_data,
+      isPublished: v.is_published,
+      publishedAt: v.published_at || undefined,
+      publishedBy: v.published_by || undefined,
+      createdAt: v.created_at,
+    }));
+
+    return { template, versions };
+  }
+
+  /**
+   * Create a new ticket template with an initial draft version
+   */
+  static async createTicketTemplate(params: {
+    name: string;
+    slug?: string;
+    category?: string;
+    description?: string;
+    initialDesign?: any;
+    actorId?: string;
+  }): Promise<{ templateId: string; versionId: string }> {
+    const slug =
+      params.slug ||
+      params.name
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-");
+
+    if (this.isPreview()) {
+      return {
+        templateId: `tpl-${Date.now()}`,
+        versionId: `ver-${Date.now()}`,
+      };
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) throw new Error("Database client unavailable");
+
+    const { data: tpl, error: tplErr } = await (supabase as any)
+      .from("ticket_templates")
+      .insert({
+        name: params.name,
+        slug,
+        category: params.category || "cinematic",
+        description: params.description || null,
+        created_by: params.actorId || null,
+      })
+      .select()
+      .single();
+
+    if (tplErr || !tpl) {
+      throw new Error(tplErr?.message || "Failed to create ticket template");
+    }
+
+    const { data: ver, error: verErr } = await (supabase as any)
+      .from("ticket_template_versions")
+      .insert({
+        template_id: tpl.id,
+        version_number: 1,
+        design_data: params.initialDesign || {},
+        is_published: false,
+        published_by: params.actorId || null,
+      })
+      .select()
+      .single();
+
+    if (verErr || !ver) {
+      throw new Error(verErr?.message || "Failed to create initial template version");
+    }
+
+    return { templateId: tpl.id, versionId: ver.id };
+  }
+
+  /**
+   * Save a draft version of a ticket template
+   */
+  static async saveTemplateDraft(params: {
+    templateId: string;
+    designData: any;
+  }): Promise<boolean> {
+    if (this.isPreview()) return true;
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return false;
+
+    // Look for existing unpublished draft
+    const { data: existingDraft } = await (supabase as any)
+      .from("ticket_template_versions")
+      .select("id")
+      .eq("template_id", params.templateId)
+      .eq("is_published", false)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingDraft) {
+      const { error } = await (supabase as any)
+        .from("ticket_template_versions")
+        .update({ design_data: params.designData })
+        .eq("id", existingDraft.id);
+      return !error;
+    } else {
+      // Find latest version number
+      const { data: latest } = await (supabase as any)
+        .from("ticket_template_versions")
+        .select("version_number")
+        .eq("template_id", params.templateId)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const nextVer = (latest?.version_number || 0) + 1;
+      const { error } = await (supabase as any).from("ticket_template_versions").insert({
+        template_id: params.templateId,
+        version_number: nextVer,
+        design_data: params.designData,
+        is_published: false,
+      });
+      return !error;
+    }
+  }
+
+  /**
+   * Publish an immutable template version.
+   * Increments version number and locks the design from in-place mutation.
+   */
+  static async publishTemplateVersion(params: {
+    templateId: string;
+    designData: any;
+    actorId?: string;
+  }): Promise<{ versionId: string; versionNumber: number }> {
+    if (this.isPreview()) {
+      return { versionId: `ver-${Date.now()}`, versionNumber: 2 };
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) throw new Error("Database client unavailable");
+
+    // Fetch highest version number
+    const { data: latest } = await (supabase as any)
+      .from("ticket_template_versions")
+      .select("version_number")
+      .eq("template_id", params.templateId)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const newVersionNumber = (latest?.version_number || 0) + 1;
+
+    const { data, error } = await (supabase as any)
+      .from("ticket_template_versions")
+      .insert({
+        template_id: params.templateId,
+        version_number: newVersionNumber,
+        design_data: params.designData,
+        is_published: true,
+        published_at: new Date().toISOString(),
+        published_by: params.actorId || null,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message || "Failed to publish template version");
+    }
+
+    return { versionId: data.id, versionNumber: data.version_number };
+  }
+
+  /**
+   * Assign an immutable ticket template version to an event
+   */
+  static async assignEventTicketTemplate(params: {
+    eventId: string;
+    templateVersionId: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<boolean> {
+    if (this.isPreview()) return true;
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return false;
+
+    const { error } = await (supabase as any)
+      .from("events")
+      .update({ ticket_template_version_id: params.templateVersionId })
+      .eq("id", params.eventId);
+
+    if (error) {
+      console.error("[SketchRepository.assignEventTicketTemplate] Error:", error);
+      return false;
+    }
+
+    await this.logAudit({
+      actorName: params.actorName || "Admin",
+      actorEmail: params.actorEmail || "admin@sketch.org",
+      action: "ASSIGN_TICKET_TEMPLATE",
+      target: params.eventId,
+      details: { templateVersionId: params.templateVersionId },
+    });
+
+    return true;
+  }
+
+  /**
+   * Atomically issue or reconcile a ticket for a registration
+   */
+  static async issueOrReconcileTicket(params: {
+    registrationId: string;
+    bearerTokenHash: string;
+    ticketNumber: string;
+  }): Promise<{
+    success: boolean;
+    ticketId?: string;
+    ticketNumber?: string;
+    status?: string;
+    isExisting?: boolean;
+    error?: string;
+    message?: string;
+  }> {
+    if (this.isPreview()) {
+      return {
+        success: true,
+        ticketId: `tkt-${Date.now()}`,
+        ticketNumber: params.ticketNumber,
+        status: "active",
+        isExisting: false,
+      };
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return { success: false, error: "NO_DB", message: "Database offline" };
+
+    const { data, error } = await (supabase as any).rpc("issue_or_reconcile_ticket", {
+      p_registration_id: params.registrationId,
+      p_bearer_token_hash: params.bearerTokenHash,
+      p_ticket_number: params.ticketNumber,
+    });
+
+    if (error || !data) {
+      console.error("[SketchRepository.issueOrReconcileTicket] Error:", error);
+      return {
+        success: false,
+        error: error?.code || "TICKET_ISSUANCE_FAILED",
+        message: error?.message || "Failed to issue ticket",
+      };
+    }
+
+    const res = data as any;
+    return {
+      success: Boolean(res.success),
+      ticketId: res.ticket_id,
+      ticketNumber: res.ticket_number,
+      status: res.status,
+      isExisting: Boolean(res.is_existing),
+      error: res.error,
+      message: res.message,
+    };
+  }
+
+  /**
+   * Safe lookup of an attendee registration and its associated ticket by event and email.
+   * Returns display and reconciliation data without exposing internal credentials.
+   */
+  static async getRegistrationByEventAndEmail(eventId: string, email: string): Promise<{
+    id: string;
+    registrationId: string;
+    eventId: string;
+    attendeeName: string;
+    email: string;
+    teamName?: string;
+    status: string;
+    attendanceStatus: string;
+    qrCredentialId: string;
+    createdAt: string;
+    ticketId?: string;
+    ticketNumber?: string;
+    bearerTokenHash?: string;
+    liveTicketUrl?: string;
+  } | null> {
+    if (this.isPreview()) {
+      return null;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) return null;
+
+    const { data: reg, error } = await supabase
+      .from("registrations")
+      .select(`
+        id,
+        registration_id,
+        event_id,
+        team_id,
+        attendee_name,
+        email,
+        status,
+        attendance_status,
+        qr_credential_id,
+        created_at,
+        teams (
+          name
+        )
+      `)
+      .eq("event_id", eventId)
+      .ilike("email", email.trim().toLowerCase())
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !reg) return null;
+
+    // Check associated ticket
+    const { data: ticket } = await supabase
+      .from("tickets")
+      .select("id, ticket_number, bearer_token_hash, status")
+      .eq("registration_id", reg.id)
+      .maybeSingle();
+
+    // Check communications outbox for live_ticket_url
+    const { data: outbox } = await supabase
+      .from("communications_outbox")
+      .select("payload")
+      .eq("event_id", eventId)
+      .ilike("recipient_email", email.trim().toLowerCase())
+      .eq("template_type", "ticket_pass")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const liveTicketUrl = (outbox?.payload as any)?.live_ticket_url;
+
+    return {
+      id: reg.id,
+      registrationId: reg.registration_id,
+      eventId: reg.event_id,
+      attendeeName: reg.attendee_name,
+      email: reg.email,
+      teamName: reg.teams?.name || undefined,
+      status: reg.status,
+      attendanceStatus: reg.attendance_status,
+      qrCredentialId: reg.qr_credential_id,
+      createdAt: reg.created_at,
+      ticketId: ticket?.id,
+      ticketNumber: ticket?.ticket_number,
+      bearerTokenHash: ticket?.bearer_token_hash,
+      liveTicketUrl,
+    };
+  }
+
+  /**
+   * Updates an outbox ticket_pass job payload with live ticket URL and ticket number.
+   */
+  static async updateOutboxTicketPassPayload(params: {
+    eventId: string;
+    recipientEmail: string;
+    liveTicketUrl: string;
+    ticketNumber?: string;
+  }): Promise<boolean> {
+    if (this.isPreview()) return true;
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) return false;
+
+    const { data: existingOutbox, error: fetchErr } = await supabase
+      .from("communications_outbox")
+      .select("id, payload")
+      .eq("event_id", params.eventId)
+      .ilike("recipient_email", params.recipientEmail.trim().toLowerCase())
+      .eq("template_type", "ticket_pass")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchErr || !existingOutbox) return false;
+
+    const updatedPayload = {
+      ...(typeof existingOutbox.payload === "object" && existingOutbox.payload !== null
+        ? existingOutbox.payload
+        : {}),
+      live_ticket_url: params.liveTicketUrl,
+      ...(params.ticketNumber ? { ticket_number: params.ticketNumber } : {}),
+    };
+
+    const { error: updateErr } = await supabase
+      .from("communications_outbox")
+      .update({ payload: updatedPayload })
+      .eq("id", existingOutbox.id);
+
+    if (updateErr) {
+      console.error("[SketchRepository.updateOutboxTicketPassPayload] Failed:", updateErr);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Updates a ticket's bearer token hash during pass reconciliation.
+   */
+  static async updateTicketBearerTokenHash(ticketId: string, bearerTokenHash: string): Promise<boolean> {
+    if (this.isPreview()) return true;
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) return false;
+
+    const { error } = await supabase
+      .from("tickets")
+      .update({
+        bearer_token_hash: bearerTokenHash,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", ticketId);
+
+    return !error;
+  }
+
+  /**
+   * Safe public lookup of a live ticket by bearer token
+   * Returns display details only (zero PII exposure)
+   */
+  static async getTicketByBearerToken(rawBearerToken: string): Promise<LiveTicketData | null> {
+    const cleanToken = rawBearerToken.trim();
+    if (!cleanToken) return null;
+
+    const tokenHash = hashBearerToken(cleanToken);
+
+    if (this.isPreview()) {
+      return {
+        ticketId: "preview-ticket-001",
+        ticketNumber: "TKT-2026-9999",
+        eventId: "preview-event-001",
+        eventTitle: "Sketch Premiere Summit 2026",
+        eventSlug: "sketch-premiere-summit-2026",
+        venue: "Grand Hall, Innovation Centre",
+        venueMode: "in-person",
+        startDate: new Date(Date.now() + 86400000).toISOString(),
+        endDate: new Date(Date.now() + 172800000).toISOString(),
+        attendeeName: "Sample Attendee",
+        teamName: "Sample Team",
+        ticketStatus: "active",
+        attendanceStatus: "not_checked_in",
+        templateDesign: {
+          layout: "cinematic-horizontal",
+          theme: {
+            background: "#111315",
+            surface: "#181B1E",
+            accent: "#E2B857",
+            textColor: "#F3F4F6",
+            secondaryTextColor: "#9CA3AF",
+            borderColor: "#2C3136",
+          },
+          stub: {
+            perforationPosition: "right",
+            stubWidth: 240,
+            badgeText: "ENTRY PASS",
+          },
+          qr: {
+            size: 180,
+            label: "SCAN TO VERIFY",
+            rotating: true,
+            refreshIntervalSec: 30,
+          },
+        },
+      };
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return null;
+
+    const { data, error } = await (supabase as any).rpc("get_ticket_by_bearer_hash", {
+      p_bearer_token_hash: tokenHash,
+    });
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const row = data[0];
+    return {
+      ticketId: row.ticket_id,
+      ticketNumber: row.ticket_number,
+      eventId: row.event_id,
+      eventTitle: row.event_title,
+      eventSlug: row.event_slug,
+      venue: row.venue,
+      venueMode: row.venue_mode,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      attendeeName: row.attendee_name,
+      teamName: row.team_name || undefined,
+      ticketStatus: row.ticket_status,
+      attendanceStatus: row.attendance_status,
+      templateDesign: row.template_design,
+      checkedInAt: row.checked_in_at || undefined,
+    };
+  }
+
+  /**
+   * Atomic server verification of a rotating QR token
+   */
+  static async verifyRotatingQrToken(params: {
+    ticketId: string;
+    eventId: string;
+    actorId: string;
+    method?: string;
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    message: string;
+    attendanceStatus?: string;
+    attendeeName?: string;
+    ticketNumber?: string;
+    checkedInAt?: string;
+  }> {
+    if (this.isPreview()) {
+      return {
+        success: true,
+        message: "Check-in confirmed (Preview).",
+        attendanceStatus: "checked_in",
+        attendeeName: "Sample Attendee",
+        ticketNumber: "TKT-2026-9999",
+      };
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return { success: false, error: "NO_DB", message: "Database offline" };
+
+    const { data, error } = await (supabase as any).rpc("verify_rotating_qr_token", {
+      p_ticket_id: params.ticketId,
+      p_event_id: params.eventId,
+      p_actor_id: params.actorId,
+      p_method: params.method || "camera",
+    });
+
+    if (error || !data) {
+      console.error("[SketchRepository.verifyRotatingQrToken] Error:", error);
+      return {
+        success: false,
+        error: error?.code || "VERIFICATION_FAILED",
+        message: error?.message || "Failed to verify QR token",
+      };
+    }
+
+    const res = data as any;
+    return {
+      success: Boolean(res.success),
+      error: res.error,
+      message: res.message,
+      attendanceStatus: res.attendance_status,
+      attendeeName: res.attendee_name,
+      ticketNumber: res.ticket_number,
+      checkedInAt: res.checked_in_at,
+    };
+  }
+
+  /**
+   * Revoke an active ticket
+   */
+  static async revokeTicket(params: {
+    ticketId: string;
+    actorId: string;
+    reason?: string;
+  }): Promise<{ success: boolean; message: string; error?: string }> {
+    if (this.isPreview()) {
+      return { success: true, message: "Ticket revoked (Preview)." };
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return { success: false, error: "NO_DB", message: "Database offline" };
+
+    const { data, error } = await (supabase as any).rpc("revoke_ticket", {
+      p_ticket_id: params.ticketId,
+      p_actor_id: params.actorId,
+      p_reason: params.reason || "Revoked by administration",
+    });
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: error?.code || "REVOCATION_FAILED",
+        message: error?.message || "Failed to revoke ticket",
+      };
+    }
+
+    return data as any;
   }
 }

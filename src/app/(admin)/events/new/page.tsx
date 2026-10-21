@@ -40,7 +40,6 @@ import {
   HACKATHON_TEAM_TEMPLATE,
   cloneFormSchema,
 } from "@/lib/form-templates";
-import { MOCK_EVENTS } from "@/lib/mock-data";
 import { saveEvent } from "@/lib/registration-store";
 import { createEventAction } from "@/app/actions/event-actions";
 import { EventItem, RegistrationFormSchema } from "@/types";

@@ -176,7 +176,7 @@ BEGIN
         )
         SELECT
             p_actor_id,
-            COALESCE(u.name, 'Admin'),
+            COALESCE(u.full_name, 'Admin'),
             COALESCE(u.email, 'admin@sketch.org'),
             'ATTENDANCE_CHECK_IN',
             v_registration.registration_id,
@@ -231,7 +231,7 @@ BEGIN
         )
         SELECT
             p_actor_id,
-            COALESCE(u.name, 'Admin'),
+            COALESCE(u.full_name, 'Admin'),
             COALESCE(u.email, 'admin@sketch.org'),
             'ATTENDANCE_REVOKED',
             v_registration.registration_id,

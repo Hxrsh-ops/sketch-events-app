@@ -23,12 +23,13 @@ export class EmailOutboxWorker {
       this.adapter = customAdapter;
     } else {
       const serverEnv = getServerEnv();
-      if (serverEnv.emailProvider === "brevo") {
-        this.adapter = new BrevoEmailAdapter(process.env.BREVO_API_KEY || "", serverEnv.emailFrom);
-      } else if (serverEnv.emailProvider === "test") {
+      const provider = (serverEnv.emailProvider || "resend").toLowerCase().trim();
+      if (provider === "brevo") {
+        this.adapter = new BrevoEmailAdapter(serverEnv.brevoApiKey || "", serverEnv.emailFrom);
+      } else if (provider === "test") {
         this.adapter = new TestEmailAdapter();
-      } else if (serverEnv.emailProvider === "mailpit" || serverEnv.emailProvider === "local") {
-        this.adapter = new MailpitEmailAdapter(serverEnv.emailFrom, process.env.MAILPIT_URL);
+      } else if (provider === "mailpit" || provider === "local") {
+        this.adapter = new MailpitEmailAdapter(serverEnv.emailFrom, serverEnv.mailpitUrl);
       } else {
         this.adapter = new ResendEmailAdapter(serverEnv.resendApiKey || "", serverEnv.emailFrom);
       }
@@ -222,7 +223,7 @@ export class EmailOutboxWorker {
           subject: job.subject,
           html: rendered.html,
           text: rendered.text,
-          idempotencyKey: `outbox-${job.id}-${job.attempts + 1}`,
+          idempotencyKey: `outbox-${job.id}`,
         });
 
         if (sendRes.success) {

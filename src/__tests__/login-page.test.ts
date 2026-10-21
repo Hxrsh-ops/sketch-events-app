@@ -122,16 +122,10 @@ describe("Slice 2.3 & Commit 10: Administrator Login & Security Boundaries", () 
       process.env.NEXT_PUBLIC_SUPABASE_URL = "https://sketch-actual-project.supabase.co";
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_token";
 
-      const req = new NextRequest("http://localhost:3000/api/auth/preview-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "admin@sketch.org" }),
-      });
-
-      const res = await previewLoginHandler(req);
+      const res = await previewLoginHandler();
       expect(res.status).toBe(403);
       const json = await res.json();
-      expect(json.error).toBe("PREVIEW_AUTH_FORBIDDEN");
+      expect(json.error).toBe("AUTH_BYPASS_DISABLED");
     });
 
     it("strictly ignores preview session cookies in production mode", async () => {
@@ -174,4 +168,61 @@ describe("Slice 2.3 & Commit 10: Administrator Login & Security Boundaries", () 
       expect(element.props.fallback.props.message).toBe("Loading workspace");
     });
   });
+
+  describe("6. Production Login Security & Placeholder Verification", () => {
+    it("ensures SKETCHADMIN and temporary login bypass are completely eliminated from login page source", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const loginPageSource = fs.readFileSync(
+        path.join(process.cwd(), "src/app/(auth)/login/page.tsx"),
+        "utf8"
+      );
+
+      // 1. SKETCHADMIN must not appear anywhere in user-facing copy or code
+      expect(loginPageSource.toLowerCase()).not.toContain("sketchadmin");
+
+      // 2. Placeholder must be strictly "Administrator email"
+      expect(loginPageSource).toContain('placeholder="Administrator email"');
+
+      // 3. Email input must be type="email"
+      expect(loginPageSource).toContain('type="email"');
+
+      // 4. Temporary preview bypasses must not exist
+      expect(loginPageSource).not.toContain("handleQuickPreviewFill");
+      expect(loginPageSource).not.toContain("isPreviewMode");
+      expect(loginPageSource).not.toContain("/api/auth/preview-login");
+    });
+  });
+
+  describe("7. OAuth & Password Login Convergence & Safe Error Handling", () => {
+    it("provides a clear explanation when invalid login credentials occur without revealing account existence", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const loginPageSource = fs.readFileSync(
+        path.join(process.cwd(), "src/app/(auth)/login/page.tsx"),
+        "utf8"
+      );
+
+      // Must clearly guide Google OAuth users to use 'Sign in with Google' or 'Forgot Password'
+      expect(loginPageSource).toContain("Sign in with Google");
+      expect(loginPageSource).toContain("Forgot Password");
+      expect(loginPageSource).toContain("establish an email password");
+    });
+
+    it("ensures unauthenticated Google or email users without admin_profiles are strictly denied with not_an_admin", () => {
+      const errorMsg = getAuthErrorMessage("not_an_admin");
+      expect(errorMsg).toContain("Access Denied");
+      expect(errorMsg).toContain("does not possess an administrator profile");
+    });
+
+    it("ensures OAuth callback failures provide actionable error messages", () => {
+      const exchangeError = getAuthErrorMessage("auth_exchange_failed", "Token expired");
+      expect(exchangeError).toContain("Failed to verify authorization token");
+      expect(exchangeError).toContain("Token expired");
+
+      const providerError = getAuthErrorMessage("oauth_provider_error", "access_denied");
+      expect(providerError).toContain("Authentication canceled or failed by provider");
+    });
+  });
 });
+

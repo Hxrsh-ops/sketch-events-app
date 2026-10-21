@@ -16,26 +16,31 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { RegistrationAnalytics } from "@/components/dashboard/registration-analytics";
 import { EventProgressGauge } from "@/components/dashboard/event-progress-gauge";
 import { MOCK_EVENTS, MOCK_PARTICIPANTS } from "@/lib/mock-data";
-import { EventItem, Participant } from "@/types";
-import { getStoredEvents, getAllParticipants } from "@/lib/registration-store";
+import { EventItem, Participant, CertificateRecord } from "@/types";
+import { getStoredEvents, getAllParticipants, getStoredCertificates } from "@/lib/registration-store";
 import { useEffect } from "react";
 
 interface AnalyticsClientProps {
   initialEvents: EventItem[];
   initialParticipants: Participant[];
+  initialCertificates?: CertificateRecord[];
   isPreview: boolean;
 }
 
 export default function AnalyticsClient({
   initialEvents,
   initialParticipants,
+  initialCertificates = [],
   isPreview,
 }: AnalyticsClientProps) {
   const [events, setEvents] = useState<EventItem[]>(
-    initialEvents.length > 0 ? initialEvents : MOCK_EVENTS
+    initialEvents.length > 0 ? initialEvents : (isPreview ? MOCK_EVENTS : [])
   );
   const [participants, setParticipants] = useState<Participant[]>(
-    initialParticipants.length > 0 ? initialParticipants : MOCK_PARTICIPANTS
+    initialParticipants.length > 0 ? initialParticipants : (isPreview ? MOCK_PARTICIPANTS : [])
+  );
+  const [certificates, setCertificates] = useState<CertificateRecord[]>(
+    initialCertificates
   );
   const [selectedEventId, setSelectedEventId] = useState("all");
 
@@ -44,6 +49,7 @@ export default function AnalyticsClient({
       const syncData = () => {
         setEvents(getStoredEvents());
         setParticipants(getAllParticipants());
+        setCertificates(getStoredCertificates());
       };
       syncData();
       window.addEventListener("sketch_store_updated", syncData);
@@ -74,6 +80,15 @@ export default function AnalyticsClient({
     deptCounts[dept] = (deptCounts[dept] || 0) + 1;
   });
 
+  const filteredCerts =
+    selectedEventId === "all"
+      ? certificates
+      : certificates.filter((c) => c.eventId === selectedEventId);
+  const totalCertificatesIssued =
+    filteredCerts.length > 0
+      ? filteredCerts.length
+      : 0;
+
   return (
     <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto">
       {/* Header */}
@@ -84,7 +99,7 @@ export default function AnalyticsClient({
               Analytics & Insights
             </h1>
             <Badge variant="outline" className="text-[10px] uppercase font-semibold">
-              Preview Data
+              {isPreview ? "Preview Data" : "Live Metrics"}
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#989EA7]">
@@ -106,37 +121,37 @@ export default function AnalyticsClient({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Overall Turnout</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">{overallTurnout}</div>
-          <span className="text-[11px] text-[#656B73] dark:text-[#989EA7] font-medium mt-1 inline-flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-[#25292F] dark:text-[#E8EAED]" /> Verified at terminal
+        <div className="sketch-card-hero rounded-[20px] p-5 select-none cursor-default">
+          <span className="text-xs font-semibold text-white/80">Overall Turnout</span>
+          <div className="text-3xl font-bold text-white mt-2 tabular-nums">{overallTurnout}</div>
+          <span className="text-[11px] text-white/75 font-medium mt-1 inline-flex items-center gap-1">
+            <TrendingUp className="h-3 w-3 text-white" /> Verified at terminal
           </span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Active Registrations</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">{totalRegistered}</div>
-          <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] mt-1 block">In current scope</span>
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
+          <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Active Registrations</span>
+          <div className="text-3xl font-bold text-[#17191C] dark:text-white mt-2 tabular-nums">{totalRegistered}</div>
+          <span className="text-[11px] text-[#8A9098] dark:text-[#8A9098] mt-1 block">In current scope</span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Checked In</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">{totalCheckedIn}</div>
-          <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] mt-1 block">Passes validated</span>
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
+          <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Checked In</span>
+          <div className="text-3xl font-bold text-[#17191C] dark:text-white mt-2 tabular-nums">{totalCheckedIn}</div>
+          <span className="text-[11px] text-[#8A9098] dark:text-[#8A9098] mt-1 block">Passes validated</span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Certificates Issued</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-[#F1F2F3] mt-2 tabular-nums">540</div>
-          <span className="text-[11px] text-[#656B73] dark:text-[#989EA7] font-medium mt-1 block">100% delivery rate</span>
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
+          <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Certificates Issued</span>
+          <div className="text-3xl font-bold text-[#17191C] dark:text-white mt-2 tabular-nums">{totalCertificatesIssued}</div>
+          <span className="text-[11px] text-[#656B73] dark:text-[#8A9098] font-medium mt-1 block">100% delivery rate</span>
         </div>
       </div>
 
       {/* Main Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         <div className="lg:col-span-7">
-          <RegistrationAnalytics />
+          <RegistrationAnalytics participants={filteredAttendees} isPreview={isPreview} />
         </div>
         <div className="lg:col-span-5">
-          <EventProgressGauge />
+          <EventProgressGauge events={events} participants={filteredAttendees} isPreview={isPreview} />
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, ArrowUpRight, Palette, Code, PenTool, Layers, Compass } from "lucide-react";
-import { MOCK_EVENTS } from "@/lib/mock-data";
 import { formatDate } from "@/lib/utils";
+import { EventItem } from "@/types";
 
 const CATEGORY_ICONS: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bg: string }> = {
   Design: { icon: Palette, color: "text-rose-600", bg: "bg-rose-50" },
@@ -11,7 +11,13 @@ const CATEGORY_ICONS: Record<string, { icon: React.ComponentType<{ className?: s
   Conference: { icon: Compass, color: "text-purple-600", bg: "bg-purple-50" },
 };
 
-export function RecentEvents() {
+interface RecentEventsProps {
+  events?: EventItem[];
+}
+
+export function RecentEvents({ events = [] }: RecentEventsProps = {}) {
+  const displayEvents = events.slice(0, 5);
+
   return (
     <div className="flex flex-col justify-between rounded-[22px] border border-[#EAE8E3] bg-white p-6 shadow-sm">
       {/* Header */}
@@ -26,43 +32,47 @@ export function RecentEvents() {
         </Link>
       </div>
 
-      {/* Events List (Donezo styled) */}
+      {/* Events List */}
       <div className="mt-3 flex flex-col divide-y divide-[#F5F4F1]">
-        {MOCK_EVENTS.slice(0, 5).map((event) => {
-          const catConfig = CATEGORY_ICONS[event.category] || CATEGORY_ICONS.Design;
-          const Icon = catConfig.icon;
+        {displayEvents.length === 0 ? (
+          <div className="py-6 text-center text-xs text-[#929398]">No events found.</div>
+        ) : (
+          displayEvents.map((event) => {
+            const catConfig = CATEGORY_ICONS[event.category] || CATEGORY_ICONS.Design;
+            const Icon = catConfig.icon;
 
-          return (
-            <Link
-              key={event.id}
-              href={`/events`}
-              className="group flex items-center justify-between py-3 transition-colors hover:bg-[#FAF9F7] px-2 rounded-xl"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${catConfig.bg}`}
-                >
-                  <Icon className={`h-4 w-4 ${catConfig.color}`} />
+            return (
+              <Link
+                key={event.id}
+                href={`/events`}
+                className="group flex items-center justify-between py-3 transition-colors hover:bg-[#FAF9F7] px-2 rounded-xl"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${catConfig.bg}`}
+                  >
+                    <Icon className={`h-4 w-4 ${catConfig.color}`} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-[#191A1C] group-hover:text-[#8F2635] transition-colors line-clamp-1">
+                      {event.title}
+                    </span>
+                    <span className="text-[11px] text-[#929398]">
+                      Date: {formatDate(event.startDate)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold text-[#191A1C] group-hover:text-[#8F2635] transition-colors line-clamp-1">
-                    {event.title}
-                  </span>
-                  <span className="text-[11px] text-[#929398]">
-                    Date: {formatDate(event.startDate)}
-                  </span>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EFEEEA] text-[#65666A]">
-                  {event.registeredCount}/{event.capacity}
-                </span>
-                <ArrowUpRight className="h-3.5 w-3.5 text-[#929398] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </Link>
-          );
-        })}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EFEEEA] text-[#65666A]">
+                    {event.registeredCount}/{event.capacity}
+                  </span>
+                  <ArrowUpRight className="h-3.5 w-3.5 text-[#929398] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </Link>
+            );
+          })
+        )}
       </div>
     </div>
   );

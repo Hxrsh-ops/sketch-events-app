@@ -95,7 +95,11 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
   }
 
   async sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-    if (!this.apiKey) {
+    if (
+      !this.apiKey ||
+      this.apiKey === "your-brevo-api-key-here" ||
+      this.apiKey.includes("your_brevo_api_key")
+    ) {
       return {
         success: false,
         error: "BREVO_API_KEY_UNCONFIGURED: Cannot dispatch live email without valid Brevo credentials.",
@@ -108,7 +112,7 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
       const senderName = fromParts?.[1]?.trim() || "SKETCH Events";
       const senderEmail = fromParts?.[2]?.trim() || this.fromAddress;
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         sender: { name: senderName, email: senderEmail },
         to: [{ email: options.to, name: options.toName || options.to }],
         subject: options.subject,
@@ -116,14 +120,33 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
         textContent: options.text,
       };
 
+      if (options.replyTo) {
+        payload.replyTo = { email: options.replyTo };
+      }
+
+      if (options.idempotencyKey) {
+        payload.headers = {
+          "X-Idempotency-Key": options.idempotencyKey,
+          "X-Mailin-Custom": options.idempotencyKey,
+        };
+        payload.tags = [options.idempotencyKey];
+      }
+
+      const reqHeaders: Record<string, string> = {
+        "api-key": this.apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+
+      if (options.idempotencyKey) {
+        reqHeaders["X-Idempotency-Key"] = options.idempotencyKey;
+      }
+
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
-        headers: {
-          "api-key": this.apiKey,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: reqHeaders,
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -131,6 +154,7 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
       if (!res.ok) {
         const statusCode = res.status;
         const errorMessage = (data as any)?.message || `HTTP ${statusCode}`;
+        // 429 (rate limit) and 5xx (server error) are retryable; 400 (unverified sender), 401 (bad key), 402 (quota exceeded) are terminal
         const retryable = statusCode === 429 || statusCode >= 500;
 
         return {
@@ -145,9 +169,12 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
         messageId: (data as any)?.messageId,
       };
     } catch (err: any) {
+      const isTimeout = err?.name === "TimeoutError" || err?.name === "AbortError";
       return {
         success: false,
-        error: `Transport failure: ${err instanceof Error ? err.message : "Unknown error"}`,
+        error: isTimeout
+          ? "Brevo Transport Timeout: Connection timed out after 10000ms"
+          : `Transport failure: ${err instanceof Error ? err.message : "Unknown error"}`,
         retryable: true,
       };
     }

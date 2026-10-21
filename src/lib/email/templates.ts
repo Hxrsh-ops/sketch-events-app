@@ -32,6 +32,10 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
       )}</div>`
     : "";
 
+  const headerBackgroundStyle = payload.background_image_url
+    ? `padding:28px 32px;background:#17191C url('${escapeHtml(payload.background_image_url)}') center/cover no-repeat;color:#FFFFFF;text-align:left;position:relative;`
+    : `padding:28px 32px;background:#17191C;color:#FFFFFF;text-align:left;`;
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -42,7 +46,7 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
 <body style="margin:0;padding:24px;background-color:#F4F5F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#17191C;">
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#FFFFFF;border-radius:16px;border:1px solid #E5E7EA;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.04);">
     <tr>
-      <td style="padding:28px 32px;background:#17191C;color:#FFFFFF;text-align:left;">
+      <td style="${headerBackgroundStyle}">
         <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#8F96A0;">SKETCH EVENTS</span>
         <h1 style="margin:6px 0 0 0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#FFFFFF;">${escapeHtml(
           payload.event_title
@@ -87,12 +91,27 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
           </tr>
         </table>
 
-        <div style="background:#F3F4F6;border-radius:8px;padding:12px 16px;text-align:center;">
+        <div style="background:#F3F4F6;border-radius:8px;padding:12px 16px;text-align:center;margin-bottom:20px;">
           <span style="font-size:11px;color:#6B7280;text-transform:uppercase;font-weight:700;letter-spacing:0.05em;">QR Credential ID:</span>
           <span style="font-family:monospace;font-size:12px;font-weight:700;color:#374151;margin-left:6px;">${escapeHtml(
             payload.qr_credential_id
           )}</span>
         </div>
+
+        ${
+          payload.live_ticket_url
+            ? `<div style="text-align:center;margin:24px 0 16px 0;">
+                <a href="${escapeHtml(
+                  payload.live_ticket_url
+                )}" style="display:inline-block;padding:14px 28px;background:#17191C;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:700;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                  Open Live Ticket &amp; Rotating QR &rarr;
+                </a>
+              </div>
+              <p style="margin:0;font-size:11px;color:#6B7280;text-align:center;line-height:1.5;">
+                <strong>Anti-Replay Notice:</strong> Your official entry QR code continuously rotates on your secure live ticket page. Screenshots are invalid at the entrance terminal.
+              </p>`
+            : ""
+        }
       </td>
     </tr>
     <tr>
@@ -110,7 +129,7 @@ Event: ${payload.event_title}
 Attendee: ${recipientName}
 ${payload.team_name ? `Team: ${payload.team_name}\n` : ""}Registration ID: ${payload.registration_id}
 QR Credential ID: ${payload.qr_credential_id}
-
+${payload.live_ticket_url ? `Live Ticket & Rotating QR: ${payload.live_ticket_url}\n` : ""}
 Date: ${formattedDate}
 Venue: ${payload.venue}
 

@@ -40,18 +40,23 @@ import {
   RegistrationFormSchema,
   RegistrationSubmission,
   TeamMemberSubmission,
+  Round,
 } from "@/types";
 
 interface PublicEventClientProps {
   event: EventItem;
+  rounds?: Round[];
   isPreview?: boolean;
 }
 
 export default function PublicEventClient({
   event,
+  rounds,
   isPreview = false,
 }: PublicEventClientProps) {
-  const eventRounds = event.hasRounds
+  const eventRounds = (rounds && rounds.length > 0)
+    ? rounds
+    : isPreview && event.hasRounds
     ? MOCK_ROUNDS.filter((r) => r.eventId === event.id)
     : [];
 
@@ -78,6 +83,9 @@ export default function PublicEventClient({
     attendeeName: string;
     email: string;
     teamName?: string;
+    ticketNumber?: string;
+    liveTicketUrl?: string;
+    isExisting?: boolean;
     isMockPreview?: boolean;
   } | null>(null);
 
@@ -365,6 +373,25 @@ export default function PublicEventClient({
         });
 
         if (!result.success) {
+          if (result.error === "ALREADY_REGISTERED" && result.data) {
+            setRegistrationResult({
+              registrationId: result.data.registrationId,
+              qrCredentialId: result.data.qrCredentialId,
+              registeredAt: result.data.registeredAt,
+              attendeeName: result.data.attendeeName,
+              email: result.data.email,
+              teamName: result.data.teamName,
+              ticketNumber: result.data.ticketNumber,
+              liveTicketUrl: result.data.liveTicketUrl,
+              isExisting: true,
+              isMockPreview: false,
+            });
+            setIsSubmitting(false);
+            setJourneyStep("confirmed");
+            window.scrollTo({ top: 350, behavior: "smooth" });
+            return;
+          }
+
           setSubmissionError(result.message || "Registration could not be completed.");
           setIsSubmitting(false);
           return;
@@ -377,6 +404,9 @@ export default function PublicEventClient({
           attendeeName: result.data.attendeeName,
           email: result.data.email,
           teamName: result.data.teamName,
+          ticketNumber: result.data.ticketNumber,
+          liveTicketUrl: result.data.liveTicketUrl,
+          isExisting: false,
           isMockPreview: false,
         });
 
@@ -620,7 +650,7 @@ export default function PublicEventClient({
                     Preview Mode • Local Non-Production Persistence
                   </div>
                   <p className="text-[11px] leading-relaxed">
-                    This registration was validated and recorded in local preview storage. Authoritative database persistence will be active once connected to production Supabase.
+                    This registration was validated in local preview sandbox. Authoritative database persistence is enabled in production environment.
                   </p>
                 </div>
               )}
@@ -687,6 +717,30 @@ export default function PublicEventClient({
                 <p className="text-[11px] text-white/50">{event.venue}</p>
               </div>
             </div>
+
+            {/* Existing Registration Notice */}
+            {registrationResult.isExisting && (
+              <div className="max-w-md mx-auto rounded-2xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 p-3 text-center text-xs text-amber-800 dark:text-amber-300">
+                <span className="font-semibold">Existing Registration Found</span>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                  You were already registered for this event. Your verified pass has been safely retrieved.
+                </p>
+              </div>
+            )}
+
+            {/* Live Ticket Link */}
+            {registrationResult.liveTicketUrl && (
+              <div className="max-w-md mx-auto text-center pt-1">
+                <Link
+                  href={registrationResult.liveTicketUrl}
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#17191C] dark:bg-white text-white dark:text-[#17191C] text-xs font-bold shadow-lg hover:scale-[1.01] transition-transform"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>Open Live Rotating Ticket</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            )}
 
             {/* Official Community Link */}
             {event.communityLink && (

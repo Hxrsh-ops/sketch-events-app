@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { AdminUser } from "@/types";
 import { createClient } from "@/lib/supabase/client";
-import { MOCK_ADMIN_USER } from "@/lib/mock-data";
 import { isPreviewMode } from "@/lib/env";
 import { Permission, hasPermission } from "@/lib/auth/permissions";
 

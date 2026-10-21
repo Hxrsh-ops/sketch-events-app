@@ -6,6 +6,20 @@ SKETCH is an admin-first event operations and management platform designed to gi
 
 ---
 
+## 🤝 Complete Project Handover Package (Leadership Transition)
+
+The SketchHUB project ownership and technical leadership is transitioning to **Tharika** ([tharikadheena@gmail.com](mailto:tharikadheena@gmail.com) / [`@tharikadheena-ui`](https://github.com/tharikadheena-ui)).
+
+A comprehensive, 13-document transition, architecture, and operational manual is available in the [`docs/handover/`](./docs/handover/) directory:
+- 🚀 **New Project Lead Start Here:** [**docs/handover/00-START-HERE.md**](./docs/handover/00-START-HERE.md)
+- 📑 **Complete Handover Document Index:** [**docs/handover/HANDOVER-INDEX.md**](./docs/handover/HANDOVER-INDEX.md)
+- 💻 **Windows Local Setup & Run Guide:** [**docs/handover/03-LOCAL-SETUP-AND-TROUBLESHOOTING.md**](./docs/handover/03-LOCAL-SETUP-AND-TROUBLESHOOTING.md)
+- 🔑 **Account Delegation & Access Register:** [**docs/handover/04-ACCOUNTS-INTEGRATIONS-AND-ACCESS.md**](./docs/handover/04-ACCOUNTS-INTEGRATIONS-AND-ACCESS.md)
+- 🛡️ **Secret Management & Zero-Leak Rules:** [**docs/handover/05-ENVIRONMENT-AND-SECRET-MANAGEMENT.md**](./docs/handover/05-ENVIRONMENT-AND-SECRET-MANAGEMENT.md)
+- 🗄️ **Supabase Database & Migrations:** [**docs/handover/06-SUPABASE-DATABASE-AND-MIGRATIONS.md**](./docs/handover/06-SUPABASE-DATABASE-AND-MIGRATIONS.md)
+
+---
+
 ## 🏛 Product Boundaries
 
 - **Authenticated Admin Dashboard:** Dedicated operational portal for organizers, event managers, check-in staff, and analysts.

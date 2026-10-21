@@ -45,3 +45,7 @@ context/
 # supabase local
 supabase/.temp/
 supabase/.branches/
+
+# uploads (local development and test artifacts)
+/public/uploads/
+

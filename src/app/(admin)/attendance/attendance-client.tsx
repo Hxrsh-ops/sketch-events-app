@@ -25,7 +25,10 @@ import {
   Calendar,
   MapPin,
   Check,
+  RefreshCw,
+  Plus,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -56,44 +59,86 @@ interface ScanOutcome {
 interface AttendanceClientProps {
   initialEvents: EventItem[];
   initialParticipants: Participant[];
+  initialError?: string | null;
   isPreview: boolean;
+}
+
+function playDeskBeep(type: "success" | "error" | "warning") {
+  if (typeof window === "undefined") return;
+  const isAudioEnabled = localStorage.getItem("sketch_attendance_audio") !== "false";
+  if (!isAudioEnabled) return;
+
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === "success") {
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } else if (type === "warning") {
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+    } else {
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    }
+  } catch {
+    // Audio tone suppressed
+  }
 }
 
 export default function AttendanceClient({
   initialEvents,
   initialParticipants,
+  initialError = null,
   isPreview,
 }: AttendanceClientProps) {
   const [events, setEvents] = useState<EventItem[]>(
-    initialEvents.length > 0 ? initialEvents : MOCK_EVENTS
+    initialEvents.length > 0 ? initialEvents : (isPreview ? MOCK_EVENTS : [])
   );
   const [selectedEventId, setSelectedEventId] = useState(
-    (initialEvents[0] || MOCK_EVENTS[0])?.id || "evt-01"
+    initialEvents[0]?.id || (isPreview ? MOCK_EVENTS[0]?.id : "") || ""
   );
+  const [error] = useState<string | null>(initialError);
   const [participants, setParticipants] = useState<Participant[]>(
-    initialParticipants.length > 0 ? initialParticipants : MOCK_PARTICIPANTS
+    initialParticipants.length > 0 ? initialParticipants : (isPreview ? MOCK_PARTICIPANTS : [])
   );
   const [manualQuery, setManualQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [inspectorParticipant, setInspectorParticipant] = useState<Participant | null>(null);
-  const [checkInLog, setCheckInLog] = useState<CheckInLogEntry[]>(INITIAL_CHECKIN_LOG);
+  const [checkInLog, setCheckInLog] = useState<CheckInLogEntry[]>(
+    isPreview ? INITIAL_CHECKIN_LOG : []
+  );
 
   useEffect(() => {
     // In preview mode or client updates, synchronize preview store
     if (isPreview) {
       setEvents(getStoredEvents());
       setParticipants(getAllParticipants());
-    }
-    setCheckInLog(getStoredCheckInLog());
-
-    const handleUpdate = () => {
-      setEvents(getStoredEvents());
-      setParticipants(getAllParticipants());
       setCheckInLog(getStoredCheckInLog());
-    };
-    window.addEventListener("sketch_store_updated", handleUpdate);
-    return () => window.removeEventListener("sketch_store_updated", handleUpdate);
-  }, []);
+
+      const handleUpdate = () => {
+        setEvents(getStoredEvents());
+        setParticipants(getAllParticipants());
+        setCheckInLog(getStoredCheckInLog());
+      };
+      window.addEventListener("sketch_store_updated", handleUpdate);
+      return () => window.removeEventListener("sketch_store_updated", handleUpdate);
+    }
+  }, [isPreview]);
 
   // Camera stream state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -113,7 +158,7 @@ export default function AttendanceClient({
     message: "Ready to scan. Align participant QR pass or search by registration ID.",
   });
 
-  const selectedEvent = events.find((e) => e.id === selectedEventId) || events[0];
+  const selectedEvent = events.find((e) => e.id === selectedEventId) || events[0] || null;
 
   // Stop camera tracks helper
   const stopCameraStream = useCallback(() => {
@@ -279,6 +324,7 @@ export default function AttendanceClient({
 
     // If not found in current event, check if registered for a different event
     if (!found) {
+      playDeskBeep("error");
       const otherEventMatch = participants.find(
         (p) =>
           p.registrationId.toLowerCase() === cleanCode ||
@@ -289,14 +335,14 @@ export default function AttendanceClient({
       if (otherEventMatch) {
         setScanOutcome({
           status: "not_found",
-          message: `Pass belongs to "${otherEventMatch.eventTitle}", not "${selectedEvent.title}". Switch event selector to check in.`,
+          message: `Pass belongs to "${otherEventMatch.eventTitle}", not "${selectedEvent?.title || "the selected event"}". Switch event selector to check in.`,
           method,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         });
       } else {
         setScanOutcome({
           status: "not_found",
-          message: `No participant matching "${code}" was found for ${selectedEvent.title}.`,
+          message: `No participant matching "${code}" was found for ${selectedEvent?.title || "the selected event"}.`,
           method,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         });
@@ -306,6 +352,7 @@ export default function AttendanceClient({
 
     // Already checked in
     if (found.attendanceStatus === "checked_in") {
+      playDeskBeep("warning");
       setScanOutcome({
         status: "already_checked_in",
         message: `Already checked in at ${found.checkedInAt ? new Date(found.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "earlier today"}. Entry already validated.`,
@@ -324,6 +371,7 @@ export default function AttendanceClient({
     });
 
     if (!res.success) {
+      playDeskBeep("error");
       setScanOutcome({
         status: "not_found",
         message: res.message || "Failed to validate check-in.",
@@ -334,6 +382,15 @@ export default function AttendanceClient({
     }
 
     // Success check-in
+    playDeskBeep("success");
+    if (
+      typeof window !== "undefined" &&
+      localStorage.getItem("sketch_attendance_auto_advance") === "false" &&
+      method === "camera"
+    ) {
+      stopCameraStream();
+    }
+
     const nowIso = res.data?.checkedInAt || new Date().toISOString();
     updateParticipantAttendance(found.id, "checked_in");
 
@@ -349,7 +406,7 @@ export default function AttendanceClient({
 
     setScanOutcome({
       status: "accepted",
-      message: `Access Granted! Participant verified for ${selectedEvent.title}.`,
+      message: `Access Granted! Participant verified for ${selectedEvent?.title || "event"}.`,
       participant: updatedFound,
       method,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -501,10 +558,12 @@ export default function AttendanceClient({
     return true;
   });
 
-  const eventOptions = events.map((e) => ({
-    value: e.id,
-    label: `${e.title} (${e.category})`,
-  }));
+  const eventOptions = events.length > 0
+    ? events.map((e) => ({
+        value: e.id,
+        label: `${e.title} (${e.category})`,
+      }))
+    : [{ value: "", label: "No events available" }];
 
   const cameraOptions =
     availableDevices.length > 0
@@ -523,8 +582,15 @@ export default function AttendanceClient({
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
               Live Attendance Desk
             </h1>
-            <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold">
-              Preview Mode
+            <Badge
+              variant="outline"
+              className={`text-[10px] uppercase tracking-wider font-semibold ${
+                isPreview
+                  ? "border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5]"
+                  : "border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20"
+              }`}
+            >
+              {isPreview ? "Preview Mode" : "Production Live"}
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-[#65666B] dark:text-[#989EA7]">
@@ -540,6 +606,7 @@ export default function AttendanceClient({
           <CustomSelect
             options={eventOptions}
             value={selectedEventId}
+            disabled={events.length === 0}
             onChange={(val) => {
               setSelectedEventId(val);
               setScanOutcome({
@@ -550,6 +617,53 @@ export default function AttendanceClient({
           />
         </div>
       </div>
+
+      {/* Production Database Error Banner (Never silently hides) */}
+      {error && (
+        <div
+          role="alert"
+          className="rounded-[20px] border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 p-5 shadow-sm text-rose-900 dark:text-rose-200"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs space-y-1">
+              <h3 className="font-bold text-sm">Database Connection Error</h3>
+              <p className="text-rose-800 dark:text-rose-300">
+                Unable to load live attendance records from the persistent database: <code className="bg-rose-100 dark:bg-rose-900/60 px-1 py-0.5 rounded font-mono">{error}</code>
+              </p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-400 pt-1">
+                Notice: Mock attendance data is strictly not substituted in production to preserve data integrity.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+              className="rounded-full text-xs font-semibold gap-1.5 border-rose-300 dark:border-rose-800"
+            >
+              <RefreshCw className="h-3 w-3" />
+              <span>Retry</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State Banner when no events exist and no error */}
+      {!error && events.length === 0 && (
+        <div className="rounded-[20px] border border-dashed border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-8 text-center shadow-sm space-y-3">
+          <Users className="mx-auto h-8 w-8 text-[#8A9098] dark:text-[#656B73] opacity-60" />
+          <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">No Active Events Found</h3>
+          <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] max-w-md mx-auto">
+            Attendance check-in requires at least one active event. Create an event to begin check-in operations.
+          </p>
+          <Link href="/events/new">
+            <Button variant="charcoal" size="sm" className="rounded-full text-xs font-semibold mt-2 gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              <span>Create Event</span>
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Operational Attendance Metrics Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -565,7 +679,11 @@ export default function AttendanceClient({
             </span>
             <span className="text-xs text-[#8A9098] dark:text-[#656B73]">Registered</span>
           </div>
-          <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73] truncate">{selectedEvent.title}</p>
+          {selectedEvent ? (
+            <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73] truncate">{selectedEvent.title}</p>
+          ) : (
+            <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73] italic">No event selected</p>
+          )}
         </div>
 
         {/* Metric 2: Checked In */}

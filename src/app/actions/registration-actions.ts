@@ -10,54 +10,24 @@ import {
 } from "@/lib/registration-store";
 import { RegistrationSubmission } from "@/types";
 import { RegistrationMode } from "@/types/database";
+import { generateTicketBearerToken } from "@/lib/ticket/rotating-qr";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 /**
  * Standard Result Type for Server Actions
  */
 export type ActionResult<T = unknown> =
   | { success: true; data: T; message?: string }
-  | { success: false; error: string; message: string; details?: Record<string, string[]> };
+  | { success: false; error: string; message: string; details?: Record<string, string[]>; data?: any };
 
-export interface RegistrationPassData {
-  registrationId: string;
-  qrCredentialId: string;
-  attendeeName: string;
-  email: string;
-  teamName?: string;
-  eventTitle: string;
-  registeredAt: string;
-}
+import {
+  RegisterForEventInputSchema,
+  type RegisterForEventInput,
+  type RegistrationPassData,
+} from "@/lib/validations/registration-schemas";
 
-// -----------------------------------------------------------------------------
-// ZOD VALIDATION SCHEMA
-// -----------------------------------------------------------------------------
+export type { RegistrationPassData, RegisterForEventInput };
 
-export const RegisterForEventInputSchema = z.object({
-  eventId: z.string().min(1, "Event ID is required"),
-  slug: z.string().optional(),
-  mode: z.enum(["individual", "team"]).default("individual"),
-  attendeeName: z.string().trim().min(1, "Name is required").max(100, "Name cannot exceed 100 characters"),
-  email: z.string().trim().email("Valid email is required"),
-  phone: z.string().trim().optional().nullable(),
-  department: z.string().trim().optional().nullable(),
-  year: z.string().trim().optional().nullable(),
-  teamName: z.string().trim().optional().nullable(),
-  teamMembers: z
-    .array(
-      z.object({
-        name: z.string().trim().min(1, "Member name is required"),
-        email: z.string().trim().email("Member email must be valid"),
-        phone: z.string().trim().optional().nullable(),
-        department: z.string().trim().optional().nullable(),
-        role: z.string().optional(),
-      })
-    )
-    .optional()
-    .default([]),
-  customAnswers: z.record(z.string(), z.unknown()).optional().default({}),
-});
-
-export type RegisterForEventInput = z.infer<typeof RegisterForEventInputSchema>;
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -426,6 +396,61 @@ export async function registerForEventAction(
     });
 
     if (!regResult.success) {
+      if (regResult.error === "ALREADY_REGISTERED") {
+        const existing = await SketchRepository.getRegistrationByEventAndEmail(
+          authoritativeEventId,
+          normalizedEmail
+        );
+
+        if (existing) {
+          const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+          let liveTicketUrl = existing.liveTicketUrl;
+          let ticketNumber = existing.ticketNumber;
+
+          // If ticket or live url was missing, reconcile it now
+          if (!existing.ticketId || !liveTicketUrl) {
+            const { rawToken, tokenHash } = generateTicketBearerToken();
+            ticketNumber = ticketNumber || `TKT-${existing.registrationId.replace(/^REG-/, "")}`;
+
+            if (!existing.ticketId) {
+              await SketchRepository.issueOrReconcileTicket({
+                registrationId: existing.id,
+                bearerTokenHash: tokenHash,
+                ticketNumber,
+              });
+            } else {
+              await SketchRepository.updateTicketBearerTokenHash(existing.ticketId, tokenHash);
+            }
+
+            liveTicketUrl = `${appUrl}/tickets/${rawToken}`;
+            await SketchRepository.updateOutboxTicketPassPayload({
+              eventId: authoritativeEventId,
+              recipientEmail: normalizedEmail,
+              liveTicketUrl,
+              ticketNumber,
+            });
+          }
+
+          return {
+            success: false,
+            error: "ALREADY_REGISTERED",
+            message: "You are already registered for this event.",
+            data: {
+              registrationId: existing.registrationId,
+              qrCredentialId: existing.qrCredentialId,
+              attendeeName: existing.attendeeName,
+              email: normalizedEmail,
+              teamName: existing.teamName,
+              eventTitle: event.title,
+              registeredAt: existing.createdAt,
+              ticketNumber,
+              liveTicketUrl,
+              isExisting: true,
+            },
+          };
+        }
+      }
+
       const isSafeError = regResult.error && regResult.error in SAFE_BUSINESS_ERRORS;
       if (!isSafeError) {
         console.error("[registerForEventAction] Unexpected registration database error:", {
@@ -440,6 +465,96 @@ export async function registerForEventAction(
           ? regResult.message || SAFE_BUSINESS_ERRORS[regResult.error!]
           : "Database service temporarily unavailable. Please try again.",
       };
+    }
+
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+    let issuedTicketNumber = `TKT-${regResult.registrationId!.replace(/^REG-/, "")}`;
+    let liveTicketUrl: string | undefined;
+
+    // Automatically issue the official ticket and wire rotating QR access link into communications outbox
+    let regRowId = regResult.registrationRowId;
+    if (!regRowId && regResult.registrationId) {
+      try {
+        const supabase: any = createAdminClient() || (await createClient());
+        if (supabase && typeof supabase.from === "function") {
+          const resQuery = supabase.from("registrations");
+          if (resQuery && typeof resQuery.select === "function") {
+            const { data: regRow } = await resQuery
+              .select("id")
+              .eq("registration_id", regResult.registrationId)
+              .maybeSingle();
+            if (regRow?.id) {
+              regRowId = regRow.id;
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (regRowId) {
+      try {
+        const { rawToken, tokenHash } = generateTicketBearerToken();
+        const ticketRes = await SketchRepository.issueOrReconcileTicket({
+          registrationId: regRowId,
+          bearerTokenHash: tokenHash,
+          ticketNumber: issuedTicketNumber,
+        });
+
+        if (ticketRes.ticketNumber) {
+          issuedTicketNumber = ticketRes.ticketNumber;
+        }
+
+        liveTicketUrl = `${appUrl}/tickets/${rawToken}`;
+
+        await SketchRepository.updateOutboxTicketPassPayload({
+          eventId: authoritativeEventId,
+          recipientEmail: normalizedEmail,
+          liveTicketUrl,
+          ticketNumber: issuedTicketNumber,
+        });
+
+        // Reconcile tickets for individual team members if team registration
+        if (data.mode === "team" && mappedTeamMembers.length > 0) {
+          try {
+            const supabase: any = createAdminClient() || (await createClient());
+            if (supabase && typeof supabase.from === "function") {
+              const memberEmails = mappedTeamMembers.map((m) => m.email.toLowerCase().trim());
+              const resQuery = supabase.from("registrations");
+              if (resQuery && typeof resQuery.select === "function") {
+                const { data: memberRegs } = await resQuery
+                  .select("id, registration_id, email")
+                  .eq("event_id", authoritativeEventId)
+                  .in("email", memberEmails);
+
+                if (memberRegs && memberRegs.length > 0) {
+                  for (const member of memberRegs) {
+                    const memberTokens = generateTicketBearerToken();
+                    const memberTicketNum = `TKT-${member.registration_id.replace(/^REG-/, "")}`;
+                    await SketchRepository.issueOrReconcileTicket({
+                      registrationId: member.id,
+                      bearerTokenHash: memberTokens.tokenHash,
+                      ticketNumber: memberTicketNum,
+                    });
+                    const memberLiveUrl = `${appUrl}/tickets/${memberTokens.rawToken}`;
+                    await SketchRepository.updateOutboxTicketPassPayload({
+                      eventId: authoritativeEventId,
+                      recipientEmail: member.email,
+                      liveTicketUrl: memberLiveUrl,
+                      ticketNumber: memberTicketNum,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (memberErr) {
+            console.error("[registerForEventAction] Failed to reconcile team member tickets:", memberErr);
+          }
+        }
+      } catch (ticketErr) {
+        console.warn("[registerForEventAction] Ticket issuance or outbox payload update skipped:", ticketErr);
+      }
     }
 
     revalidatePath(`/e/${event.slug}`);
@@ -457,6 +572,9 @@ export async function registerForEventAction(
         teamName: data.mode === "team" ? data.teamName || undefined : undefined,
         eventTitle: event.title,
         registeredAt: new Date().toISOString(),
+        ticketNumber: issuedTicketNumber,
+        liveTicketUrl,
+        isExisting: false,
       },
       message: "Registration confirmed successfully.",
     };

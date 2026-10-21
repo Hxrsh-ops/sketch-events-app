@@ -179,7 +179,7 @@ export default function EventsDirectoryClient({
       )}
 
       {/* Filter Tabs, Category Selector & Search Bar */}
-      <div className="flex flex-col gap-3 rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm">
+      <div className="flex flex-col gap-3 rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Lifecycle Tabs */}
           <AnimatedTabs
@@ -197,14 +197,14 @@ export default function EventsDirectoryClient({
               placeholder="Search events, venues, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] pl-9 pr-4 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] transition-all focus:bg-white dark:focus:bg-[#1B1E21] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED] focus:border-[#25292F] dark:focus:border-[#E8EAED]"
+              className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#363C46] bg-[#F4F5F6] dark:bg-[#181B1F] pl-9 pr-4 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] transition-all focus:bg-white dark:focus:bg-[#20252C] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED] focus:border-[#25292F] dark:focus:border-[#E8EAED]"
             />
           </div>
         </div>
 
         {/* Category Pill Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[#F4F5F6] dark:border-[#262A2E] text-xs">
-          <span className="text-[#8A9098] dark:text-[#7D858F] text-[11px] font-semibold pr-1 shrink-0">Category:</span>
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[#F4F5F6] dark:border-white/10 text-xs">
+          <span className="text-[#8A9098] dark:text-white/60 text-[11px] font-semibold pr-1 shrink-0">Category:</span>
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase();
             return (
@@ -214,8 +214,8 @@ export default function EventsDirectoryClient({
                 onClick={() => setSelectedCategory(cat)}
                 className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-all shrink-0 ${
                   isSelected
-                    ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#17191C]"
-                    : "bg-[#F4F5F6] dark:bg-[#151719] text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                    ? "bg-[#25292F] dark:bg-white text-white dark:text-[#17191C]"
+                    : "bg-[#F4F5F6] dark:bg-[#181B1F] border border-transparent dark:border-[#363C46] text-[#5E646E] dark:text-white/70 hover:text-[#17191C] dark:hover:text-white"
                 }`}
               >
                 {cat === "all" ? "All Categories" : cat}
@@ -272,7 +272,7 @@ export default function EventsDirectoryClient({
               return (
                 <div
                   key={event.id}
-                  className="group flex flex-col justify-between overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none"
+                  className="group flex flex-col justify-between overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#48515E] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] motion-reduce:transition-none motion-reduce:transform-none"
                 >
                   {/* Poster / Artwork Header */}
                   <div className="relative h-44 w-full overflow-hidden bg-[#EAECEF] dark:bg-[#2A2F35]">
@@ -305,18 +305,18 @@ export default function EventsDirectoryClient({
 
                   {/* Body Details */}
                   <div className="flex flex-1 flex-col p-4">
-                    <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#5E646E] dark:text-white/75 line-clamp-2 leading-relaxed">
                       {event.shortDescription || event.description}
                     </p>
 
                     {/* Meta info */}
-                    <div className="mt-4 space-y-2 border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 text-xs text-[#656B73] dark:text-[#A6ADB5]">
+                    <div className="mt-4 space-y-2 border-t border-[#F4F5F6] dark:border-white/10 pt-3 text-xs text-[#5E646E] dark:text-white/70">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-3.5 w-3.5 text-[#8A9098] dark:text-[#7D858F]" />
+                        <Calendar className="h-3.5 w-3.5 text-[#8A9098] dark:text-white/60" />
                         <span>{formatDate(event.startDate)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-[#8A9098] dark:text-[#7D858F]" />
+                        <MapPin className="h-3.5 w-3.5 text-[#8A9098] dark:text-white/60" />
                         <span className="truncate">{event.venue}</span>
                       </div>
                     </div>
@@ -324,19 +324,19 @@ export default function EventsDirectoryClient({
                     {/* Capacity Progress Bar */}
                     <div className="mt-3 space-y-1">
                       <div className="flex justify-between text-[11px]">
-                        <span className="text-[#656B73] dark:text-[#A6ADB5] flex items-center gap-1">
-                          <Users className="h-3 w-3 text-[#8A9098] dark:text-[#7D858F]" />
-                          <strong className="text-[#17191C] dark:text-[#F1F2F3] font-semibold font-mono tabular-nums">{event.registeredCount}</strong> / <span className="font-mono tabular-nums">{event.capacity}</span>
+                        <span className="text-[#5E646E] dark:text-white/70 flex items-center gap-1">
+                          <Users className="h-3 w-3 text-[#8A9098] dark:text-white/60" />
+                          <strong className="text-[#17191C] dark:text-white font-semibold font-mono tabular-nums">{event.registeredCount}</strong> / <span className="font-mono tabular-nums">{event.capacity}</span>
                         </span>
-                        <span className="text-[#8A9098] dark:text-[#7D858F] font-medium font-mono tabular-nums">{percentFilled}% Filled</span>
+                        <span className="text-[#8A9098] dark:text-white/60 font-medium font-mono tabular-nums">{percentFilled}% Filled</span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F2] dark:bg-[#2A2F35]">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#EAECEF] dark:bg-white/10">
                         <div
                           style={{ width: `${percentFilled}%` }}
                           className={`h-full rounded-full transition-all duration-300 ${
                             percentFilled >= 90
-                              ? "bg-[#25292F] dark:bg-[#E8EAED]"
-                              : "bg-[#989EA7] dark:bg-[#7D858F]"
+                              ? "bg-[#25292F] dark:bg-white"
+                              : "bg-[#71767F] dark:bg-white/80"
                           }`}
                         />
                       </div>
@@ -344,18 +344,18 @@ export default function EventsDirectoryClient({
                   </div>
 
                   {/* Footer Actions */}
-                  <div className="flex items-center justify-between border-t border-[#F4F5F6] dark:border-[#262A2E] bg-[#F9FAFB] dark:bg-[#151719] px-4 py-2.5">
+                  <div className="flex items-center justify-between border-t border-[#F4F5F6] dark:border-white/10 bg-[#F9FAFB] dark:bg-[#181B1F] px-4 py-2.5">
                     {event.lifecycle === "published" || event.lifecycle === "live" ? (
                       <Link
                         href={`/e/${event.slug}`}
                         target="_blank"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] hover:underline"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#17191C] dark:text-white hover:underline"
                       >
                         <span>Public Page</span>
                         <ArrowUpRight className="h-3.5 w-3.5" />
                       </Link>
                     ) : (
-                      <span className="text-[11px] font-medium text-[#8A9098] dark:text-[#7D858F] italic">
+                      <span className="text-[11px] font-medium text-[#8A9098] dark:text-white/60 italic">
                         Draft (Unpublished)
                       </span>
                     )}
@@ -364,7 +364,7 @@ export default function EventsDirectoryClient({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 rounded-full border-[#E5E7EA] dark:border-[#30353A] px-3 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] hover:bg-white dark:hover:bg-[#25292F]"
+                        className="h-7 rounded-full border-[#E5E7EA] dark:border-[#363C46] px-3 text-xs font-semibold text-[#17191C] dark:text-white hover:bg-white dark:hover:bg-white/10 dark:hover:border-[#48515E]"
                       >
                         Manage
                       </Button>

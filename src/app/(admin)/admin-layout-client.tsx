@@ -9,22 +9,29 @@ import { AdminUser } from "@/types";
 export function AdminLayoutClient({
   children,
   user,
+  eventCount,
+  isPreview,
 }: {
   children: React.ReactNode;
   user: AdminUser | null;
+  eventCount?: number | null;
+  isPreview?: boolean;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-[#F4F5F6] dark:bg-[#111315] text-[#17191C] dark:text-[#F1F2F3] transition-colors duration-200">
       {/* Persistent Left Sidebar for Desktop */}
-      <Sidebar className="hidden lg:flex" />
+      <Sidebar className="hidden lg:flex" eventCount={eventCount} isPreview={isPreview} />
 
       {/* Mobile Drawer */}
       <MobileDrawer
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        eventCount={eventCount}
+        isPreview={isPreview}
       />
+
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-x-hidden">

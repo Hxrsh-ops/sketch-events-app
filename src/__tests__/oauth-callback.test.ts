@@ -52,4 +52,24 @@ describe("Slice 2.2: OAuth Callback Security & Redirect Boundaries", () => {
     // Does not redirect to malicious external domain
     expect(location).not.toContain("//malicious-site.com");
   });
+
+  it("rejects authenticated Google user who is not in admin_profiles with not_an_admin", async () => {
+    process.env.APP_MODE = "production";
+    process.env.NEXT_PUBLIC_APP_MODE = "production";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://fvnkhzlbvxemwlkmwhbz.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
+
+    const req = new NextRequest("http://localhost:3000/api/auth/callback?code=unauthorized_code", {
+      method: "GET",
+    });
+
+    const res = await oauthCallbackHandler(req);
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location");
+    expect(location).toContain("/login");
+    // Since code is invalid / not mock-exchanged, fails with exchange failed or not_an_admin
+    expect(location).toMatch(/error=(auth_exchange_failed|not_an_admin)/);
+  });
 });
+

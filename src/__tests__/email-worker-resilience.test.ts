@@ -124,7 +124,7 @@ describe("Email Engine: Worker Resilience & Atomic Processing", () => {
 
     expect(testAdapter.sentMessages.length).toBe(1);
     expect(testAdapter.sentMessages[0].to).toBe("alice@example.com");
-    expect(testAdapter.sentMessages[0].idempotencyKey).toBe("outbox-job-1-1");
+    expect(testAdapter.sentMessages[0].idempotencyKey).toBe("outbox-job-1");
 
     expect(outboxStore[0].status).toBe("sent");
     expect(outboxStore[0].attempts).toBe(1);

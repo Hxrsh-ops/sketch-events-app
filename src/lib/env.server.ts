@@ -11,6 +11,8 @@ export interface ServerAppEnv extends AppEnv {
   supabaseServiceRoleKey?: string;
   emailProvider: string;
   resendApiKey?: string;
+  brevoApiKey?: string;
+  mailpitUrl?: string;
   emailFrom: string;
   cronSecret?: string;
 }
@@ -28,6 +30,8 @@ export function getServerEnv(): ServerAppEnv {
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const emailProvider = process.env.EMAIL_PROVIDER || "resend";
   const resendApiKey = process.env.RESEND_API_KEY;
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const mailpitUrl = process.env.MAILPIT_URL;
   const emailFrom = process.env.EMAIL_FROM || "SKETCH Events <events@sketchevents.org>";
   const cronSecret = process.env.CRON_SECRET;
 
@@ -36,6 +40,8 @@ export function getServerEnv(): ServerAppEnv {
     supabaseServiceRoleKey,
     emailProvider,
     resendApiKey,
+    brevoApiKey,
+    mailpitUrl,
     emailFrom,
     cronSecret,
   };
@@ -48,8 +54,7 @@ export function getServerEnv(): ServerAppEnv {
  * Returns null if unset, blank, or placeholder.
  */
 export function getServerCronSecret(): string | null {
-  const serverEnv = getServerEnv();
-  const secret = serverEnv.cronSecret?.trim();
+  const secret = (process.env.CRON_SECRET || getServerEnv().cronSecret)?.trim();
   if (!secret || secret === "your-cron-secret-here") {
     return null;
   }

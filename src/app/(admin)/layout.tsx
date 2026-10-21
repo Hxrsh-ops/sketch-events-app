@@ -1,9 +1,7 @@
 import { verifyAdminSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
-import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { AuthProvider } from "@/lib/auth/auth-context";
+import { SketchRepository } from "@/lib/supabase/repository";
 import { AdminLayoutClient } from "./admin-layout-client";
 
 export default async function AdminLayout({
@@ -23,9 +21,25 @@ export default async function AdminLayout({
     redirect("/login?error=not_an_admin");
   }
 
+  const isPreview = SketchRepository.isPreview();
+  let eventCount: number | null = null;
+  try {
+    eventCount = await SketchRepository.getEventCount();
+  } catch (err) {
+    console.warn("[AdminLayout] Failed to load event count for sidebar badge:", err);
+    eventCount = null;
+  }
+
   return (
     <AuthProvider initialUser={sessionResult.user}>
-      <AdminLayoutClient user={sessionResult.user}>{children}</AdminLayoutClient>
+      <AdminLayoutClient
+        user={sessionResult.user}
+        eventCount={eventCount}
+        isPreview={isPreview}
+      >
+        {children}
+      </AdminLayoutClient>
     </AuthProvider>
   );
 }
+

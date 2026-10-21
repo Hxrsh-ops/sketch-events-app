@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Bell, Mail, Menu, Command, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { MOCK_ADMIN_USER } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth/auth-context";
+import { GlobalSearchDialog } from "@/components/layout/global-search-dialog";
+import { AdminUser } from "@/types";
+
+const DEFAULT_ADMIN_FALLBACK: AdminUser = {
+  id: "admin",
+  name: "Administrator",
+  email: "admin@sketchhub.internal",
+  role: "event_manager",
+};
 
 interface TopbarProps {
   onOpenMobileMenu?: () => void;
@@ -15,9 +23,20 @@ interface TopbarProps {
 
 export function Topbar({ onOpenMobileMenu }: TopbarProps) {
   const { user, signOut } = useAuth();
-  const currentUser = user || MOCK_ADMIN_USER;
-  const [searchQuery, setSearchQuery] = useState("");
+  const currentUser = user || DEFAULT_ADMIN_FALLBACK;
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const getInitials = (name: string) => {
     return name
@@ -51,24 +70,36 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
 
       {/* Global Search / Command Bar */}
       <div className="hidden sm:flex flex-1 max-w-md items-center">
-        <div className="relative w-full">
+        <button
+          type="button"
+          onClick={() => setIsSearchOpen(true)}
+          className="relative w-full text-left focus:outline-none"
+          aria-label="Open universal search dialog"
+        >
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098] dark:text-[#7D858F]" />
-          <input
-            type="text"
-            placeholder="Search events, participants, passes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] pl-9 pr-12 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] transition-all duration-150 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] focus:outline-none focus:ring-2 focus:ring-[#25292F] dark:focus:ring-[#E8EAED] focus:border-[#25292F] dark:focus:border-[#E8EAED] shadow-sm"
-          />
+          <div className="flex items-center h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] pl-9 pr-12 text-xs text-[#8A9098] dark:text-[#7D858F] transition-all duration-150 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] shadow-sm select-none">
+            Search events, participants, passes...
+          </div>
           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#22262A] px-1.5 py-0.5 text-[10px] font-medium text-[#8A9098] dark:text-[#7D858F] select-none">
             <Command className="h-2.5 w-2.5" />
             <span>K</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Right Global Utilities, Theme & Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Mobile Search Button */}
+        <button
+          type="button"
+          onClick={() => setIsSearchOpen(true)}
+          className="sm:hidden flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+          title="Search"
+          aria-label="Search"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+
         {/* Theme Toggle Button */}
         <ThemeToggle />
 
@@ -155,6 +186,9 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
           </button>
         </div>
       </div>
+
+      {/* Global Universal Search Dialog */}
+      <GlobalSearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>
   );
 }

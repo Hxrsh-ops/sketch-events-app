@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  registerForEventAction,
-  RegisterForEventInputSchema,
-} from "@/app/actions/registration-actions";
+import { registerForEventAction } from "@/app/actions/registration-actions";
+import { RegisterForEventInputSchema } from "@/lib/validations/registration-schemas";
+
 import { SketchRepository } from "@/lib/supabase/repository";
 import { resetAppEnvCache } from "@/lib/env";
 import {

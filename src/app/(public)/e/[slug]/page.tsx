@@ -13,10 +13,14 @@ export default async function PublicEventPage({ params }: PublicEventPageProps) 
   const isPreview = SketchRepository.isPreview();
 
   let event = null;
+  let rounds = null;
   let fetchError: string | null = null;
 
   try {
     event = await SketchRepository.getEventBySlug(slug);
+    if (event && event.hasRounds) {
+      rounds = await SketchRepository.listRounds(event.id);
+    }
   } catch (err: any) {
     // Transparently capture production repository failures
     fetchError = err.message || "Failed to load event.";
@@ -82,5 +86,5 @@ export default async function PublicEventPage({ params }: PublicEventPageProps) 
     );
   }
 
-  return <PublicEventClient event={event} isPreview={isPreview} />;
+  return <PublicEventClient event={event} rounds={rounds || undefined} isPreview={isPreview} />;
 }

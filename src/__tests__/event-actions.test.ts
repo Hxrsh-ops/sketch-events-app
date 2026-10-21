@@ -3,9 +3,12 @@ import {
   createEventAction,
   updateEventAction,
   setEventLifecycleAction,
+} from "@/app/actions/event-actions";
+import {
   CreateEventSchema,
   UpdateEventSchema,
-} from "@/app/actions/event-actions";
+} from "@/lib/validations/event-schemas";
+
 import * as sessionModule from "@/lib/auth/session";
 import { resetAppEnvCache } from "@/lib/env";
 import { getStoredEvents, saveEvent } from "@/lib/registration-store";

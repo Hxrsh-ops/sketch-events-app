@@ -29,7 +29,7 @@ interface AuditClientProps {
 
 export default function AuditClient({ initialLogs, isPreview }: AuditClientProps) {
   const [logs, setLogs] = useState<AuditLogEntry[]>(
-    initialLogs.length > 0 ? initialLogs : MOCK_RECENT_ACTIVITY
+    initialLogs.length > 0 ? initialLogs : (isPreview ? MOCK_RECENT_ACTIVITY : [])
   );
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,7 +72,10 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
   const handleExportAuditCsv = () => {
     const headers = ["Timestamp", "Administrator", "Email", "Action", "Target Entity", "Details"];
     const escapeCsv = (val: unknown) => {
-      const str = String(val ?? "");
+      let str = String(val ?? "");
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
       if (str.includes(",") || str.includes('"') || str.includes("\n")) {
         return `"${str.replace(/"/g, '""')}"`;
       }
@@ -109,8 +112,15 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
               Audit Trails & Records
             </h1>
-            <Badge variant="outline" className="text-[10px] uppercase font-semibold">
-              Preview Mode
+            <Badge
+              variant="outline"
+              className={`text-[10px] uppercase font-semibold ${
+                isPreview
+                  ? "border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5]"
+                  : "border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20"
+              }`}
+            >
+              {isPreview ? "Preview Mode" : "Production Live"}
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#8A9098]">

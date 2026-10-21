@@ -156,20 +156,48 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Reject GET requests to prevent accidental invocation via browser prefetching or URL crawling.
+ * GET /api/cron/process-outbox
+ *
+ * Supports schedulers that issue HTTP GET requests (such as Vercel Cron).
+ * Strictly requires valid CRON_SECRET authorization.
+ * Unauthenticated or crawler GET requests are rejected with 405 Method Not Allowed.
  */
-export async function GET() {
-  return NextResponse.json(
-    {
-      success: false,
-      error: "METHOD_NOT_ALLOWED",
-      message: "Only POST requests are permitted for outbox processing.",
-    },
-    {
-      status: 405,
-      headers: {
-        Allow: "POST",
+export async function GET(request?: NextRequest) {
+  if (!request) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "METHOD_NOT_ALLOWED",
+        message: "Only POST requests or authorized GET cron requests are permitted for outbox processing.",
       },
-    }
-  );
+      {
+        status: 405,
+        headers: {
+          Allow: "POST",
+        },
+      }
+    );
+  }
+
+  const expectedSecret = getServerCronSecret();
+  const providedSecret = extractProvidedSecret(request);
+
+  if (!expectedSecret || !providedSecret || !timingSafeSecretCheck(providedSecret, expectedSecret)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "METHOD_NOT_ALLOWED",
+        message: "Only POST requests are permitted for outbox processing unless authorized via CRON_SECRET.",
+      },
+      {
+        status: 405,
+        headers: {
+          Allow: "POST",
+        },
+      }
+    );
+  }
+
+  // Schedulers like Vercel Cron issue authenticated GET requests: delegate to POST execution logic
+  return POST(request);
 }

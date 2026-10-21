@@ -115,3 +115,64 @@ export async function enqueueDispatchAction(
     };
   }
 }
+
+/**
+ * Server Action: Retry an eligible failed email outbox job
+ *
+ * Enforces authenticated admin session and RBAC permission.
+ * Safe idempotency: only updates jobs in 'failed' or 'dead_letter' status.
+ */
+export async function retryFailedDispatchAction(
+  jobId: string
+): Promise<ActionResult<{ retried: boolean }>> {
+  try {
+    const session = await verifyAdminSession();
+    if (!session.isAuthenticated || !session.user) {
+      return {
+        success: false,
+        error: "UNAUTHORIZED",
+        message: "You must be signed in as an administrator to retry communications.",
+      };
+    }
+
+    if (!hasPermission(session.user.role, "communications:send")) {
+      return {
+        success: false,
+        error: "FORBIDDEN",
+        message: "You do not have permission to retry communications.",
+      };
+    }
+
+    if (!jobId || typeof jobId !== "string") {
+      return {
+        success: false,
+        error: "VALIDATION_FAILED",
+        message: "A valid communication job ID is required.",
+      };
+    }
+
+    const result = await SketchRepository.retryFailedCommunication(jobId);
+    if (!result.success) {
+      return {
+        success: false,
+        error: "RETRY_FAILED",
+        message: result.message || "Failed to retry delivery for this communication job.",
+      };
+    }
+
+    revalidatePath("/communications");
+
+    return {
+      success: true,
+      data: { retried: true },
+      message: "Communication queued for immediate retry.",
+    };
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Internal server error";
+    return {
+      success: false,
+      error: "INTERNAL_ERROR",
+      message: errorMessage || "Failed to retry communication.",
+    };
+  }
+}

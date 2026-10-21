@@ -11,8 +11,8 @@
 -- 6. PII isolation preventing public leakage of attendee records.
 -- ==============================================================================
 
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable UUID extension in extensions schema if not already enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
 -- ------------------------------------------------------------------------------
 -- 1. ENUMS & DOMAIN TYPES
@@ -167,7 +167,7 @@ $$;
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     slug TEXT NOT NULL UNIQUE,
     title TEXT NOT NULL,
     category TEXT NOT NULL,
@@ -210,7 +210,7 @@ CREATE INDEX IF NOT EXISTS idx_events_start_date ON public.events(start_date);
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.teams (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     captain_name TEXT NOT NULL,
@@ -231,7 +231,7 @@ CREATE INDEX IF NOT EXISTS idx_teams_event ON public.teams(event_id);
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     registration_id TEXT NOT NULL UNIQUE,
     event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
     team_id UUID REFERENCES public.teams(id) ON DELETE SET NULL,
@@ -262,7 +262,7 @@ CREATE INDEX IF NOT EXISTS idx_registrations_team ON public.registrations(team_i
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.attendance_records (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     registration_id UUID NOT NULL REFERENCES public.registrations(id) ON DELETE CASCADE,
     event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
     checked_in_by UUID REFERENCES public.admin_profiles(id) ON DELETE SET NULL,
@@ -279,7 +279,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_registration ON public.attendance_reco
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.rounds (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     round_order INTEGER NOT NULL DEFAULT 1,
@@ -299,7 +299,7 @@ CREATE INDEX IF NOT EXISTS idx_rounds_event ON public.rounds(event_id);
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.certificates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
     recipient_name TEXT NOT NULL,
     recipient_email TEXT NOT NULL,
@@ -318,7 +318,7 @@ CREATE INDEX IF NOT EXISTS idx_certificates_number ON public.certificates(certif
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.communications_outbox (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
     recipient_email TEXT NOT NULL,
     recipient_name TEXT NOT NULL,
@@ -341,7 +341,7 @@ CREATE INDEX IF NOT EXISTS idx_communications_event ON public.communications_out
 -- ------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     actor_id UUID REFERENCES public.admin_profiles(id) ON DELETE SET NULL,
     actor_name TEXT NOT NULL,
     actor_email TEXT NOT NULL,

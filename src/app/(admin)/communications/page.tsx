@@ -6,6 +6,7 @@ export default async function CommunicationsPage() {
   let jobs: CommunicationJob[] = [];
   let events: EventItem[] = [];
   let participants: Participant[] = [];
+  let fetchError: string | null = null;
   const isPreview = SketchRepository.isPreview();
 
   try {
@@ -17,8 +18,9 @@ export default async function CommunicationsPage() {
     jobs = fetchedJobs;
     events = fetchedEvents;
     participants = fetchedParticipants;
-  } catch (err: unknown) {
+  } catch (err: any) {
     console.error("[CommunicationsPage] Failed to load communications data:", err);
+    fetchError = err?.message || "Failed to load communications data from the database.";
   }
 
   return (
@@ -26,6 +28,7 @@ export default async function CommunicationsPage() {
       initialJobs={jobs}
       initialEvents={events}
       initialParticipants={participants}
+      initialError={fetchError}
       isPreview={isPreview}
     />
   );

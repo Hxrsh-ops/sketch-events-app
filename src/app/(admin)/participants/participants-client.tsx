@@ -132,7 +132,10 @@ export default function ParticipantsClient({
     ];
 
     const escapeCsv = (val: unknown) => {
-      const str = String(val ?? "");
+      let str = String(val ?? "");
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
       if (str.includes(",") || str.includes('"') || str.includes("\n")) {
         return `"${str.replace(/"/g, '""')}"`;
       }
@@ -275,26 +278,26 @@ export default function ParticipantsClient({
 
       {/* Metrics Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-sm flex items-center justify-between">
+        <div className="sketch-card-hero rounded-[20px] p-4 flex items-center justify-between select-none cursor-default">
           <div>
-            <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Total Registrations</span>
-            <div className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3] mt-1">{totalAttendees}</div>
+            <span className="text-xs font-semibold text-white/80">Total Registrations</span>
+            <div className="text-2xl font-extrabold text-white mt-1 tabular-nums">{totalAttendees}</div>
           </div>
-          <Users className="h-5 w-5 text-[#8A9098] dark:text-[#656B73]" />
+          <Users className="h-5 w-5 text-white/80" />
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-sm flex items-center justify-between">
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] flex items-center justify-between select-none cursor-default">
           <div>
-            <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Verified Checked-In</span>
-            <div className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3] mt-1">{checkedInTotal}</div>
+            <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Verified Checked-In</span>
+            <div className="text-2xl font-extrabold text-[#17191C] dark:text-white mt-1 tabular-nums">{checkedInTotal}</div>
           </div>
-          <CheckCircle2 className="h-5 w-5 text-[#17191C] dark:text-[#E8EAED]" />
+          <CheckCircle2 className="h-5 w-5 text-[#25292F] dark:text-white/90" />
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-sm flex items-center justify-between">
+        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] flex items-center justify-between select-none cursor-default">
           <div>
-            <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Pending Check-in</span>
-            <div className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3] mt-1">{pendingTotal}</div>
+            <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Pending Check-in</span>
+            <div className="text-2xl font-extrabold text-[#17191C] dark:text-white mt-1 tabular-nums">{pendingTotal}</div>
           </div>
-          <Clock className="h-5 w-5 text-[#8A9098] dark:text-[#656B73]" />
+          <Clock className="h-5 w-5 text-[#828892] dark:text-white/70" />
         </div>
       </div>
 

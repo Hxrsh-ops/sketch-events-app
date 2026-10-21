@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getAppEnv } from "@/lib/env";
 import { sanitizeInternalRedirect } from "@/lib/auth/redirect";
+import { AdminRole } from "@/types";
+
+const ALLOWED_ADMIN_ROLES: AdminRole[] = [
+  "master_admin",
+  "event_manager",
+  "attendance_staff",
+  "analyst",
+];
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -42,7 +50,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Exchange auth code for session
-  const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+  const { data: exchangeData, error: exchangeError } =
+    await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError || !exchangeData.user) {
     const errorUrl = new URL("/login", origin);
@@ -52,23 +61,57 @@ export async function GET(request: NextRequest) {
   }
 
   const userId = exchangeData.user.id;
+  const verifiedEmail = exchangeData.user.email?.trim().toLowerCase();
 
-  // Verify that the authenticated user actually has an authorized admin profile in PostgreSQL
-  const { data: profile, error: profileError } = await (supabase as any)
+  // 1. Primary Check: Lookup admin profile by authenticated user UUID
+  let { data: profile, error: profileError } = await (supabase as any)
     .from("admin_profiles")
     .select("id, role, full_name, email")
     .eq("id", userId)
     .single();
 
-  if (profileError || !profile) {
-    // Revoke the session immediately — authenticated user is NOT an admin
+  // 2. Identity Mapping: If not found by ID, but verified Google email matches an existing admin profile
+  // Securely update the admin profile ID to match the newly authenticated Supabase Auth UUID.
+  // STRICT INVARIANT: Only permitted using server-verified email from exchangeData (never client input).
+  if ((profileError || !profile) && verifiedEmail) {
+    const adminClient = createAdminClient();
+    if (adminClient) {
+      const { data: existingProfile } = await (adminClient as any)
+        .from("admin_profiles")
+        .select("id, role, full_name, email")
+        .ilike("email", verifiedEmail)
+        .single();
+
+      if (existingProfile) {
+        const { data: updatedProfile, error: linkError } = await (adminClient as any)
+          .from("admin_profiles")
+          .update({ id: userId, updated_at: new Date().toISOString() })
+          .eq("id", existingProfile.id)
+          .select("id, role, full_name, email")
+          .single();
+
+        if (!linkError && updatedProfile) {
+          profile = updatedProfile;
+          profileError = null;
+        }
+      }
+    }
+  }
+
+  // 3. Strict Authorization Verification: Profile must exist and possess an active admin role
+  if (
+    profileError ||
+    !profile ||
+    !ALLOWED_ADMIN_ROLES.includes(profile.role as AdminRole)
+  ) {
+    // Revoke the session immediately — authenticated user is NOT an authorized administrator
     await supabase.auth.signOut();
     const errorUrl = new URL("/login", origin);
     errorUrl.searchParams.set("error", "not_an_admin");
     return NextResponse.redirect(errorUrl);
   }
 
-  // User is a valid admin with verified profile. Redirect to destination!
+  // 4. Authorized Administrator Confirmed. Redirect to destination!
   const successUrl = new URL(redirectTarget, origin);
   return NextResponse.redirect(successUrl);
 }

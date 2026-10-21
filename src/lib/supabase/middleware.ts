@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { getAppEnv } from "@/lib/env";
-import { PREVIEW_SESSION_COOKIE } from "@/lib/auth/session";
+import { PREVIEW_SESSION_COOKIE } from "@/lib/auth/constants";
 
 /**
  * Validates that redirect destination is a relative path to prevent open redirects.

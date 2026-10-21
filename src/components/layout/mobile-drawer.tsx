@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 interface MobileDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  eventCount?: number | null;
+  isPreview?: boolean;
 }
 
-export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
+export function MobileDrawer({ isOpen, onClose, eventCount, isPreview }: MobileDrawerProps) {
   if (!isOpen) return null;
 
   return (
@@ -34,8 +36,9 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
             <X className="h-4 w-4 text-[#656B73] dark:text-[#A6ADB5]" />
           </Button>
         </div>
-        <Sidebar className="w-full border-r-0" onNavigate={onClose} />
+        <Sidebar className="w-full border-r-0" onNavigate={onClose} eventCount={eventCount} isPreview={isPreview} />
       </div>
     </div>
   );
 }
+

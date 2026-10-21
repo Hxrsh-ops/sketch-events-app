@@ -60,6 +60,10 @@ export const TicketPassPayloadSchema = z.object({
   venue: z.string().min(1, "Venue is required"),
   start_date: z.string().min(1, "Start date is required"),
   team_name: z.string().optional(),
+  bearer_token: z.string().optional(),
+  live_ticket_url: z.string().optional(),
+  ticket_number: z.string().optional(),
+  background_image_url: z.string().optional(),
 });
 
 export type TicketPassPayload = z.infer<typeof TicketPassPayloadSchema>;

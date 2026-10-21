@@ -27,13 +27,17 @@ import {
   getStoredEvents,
   getAllParticipants,
   getAllTeams,
+  getStoredCertificates,
+  getStoredAuditLogs,
 } from "@/lib/registration-store";
-import { EventItem, Participant, Team } from "@/types";
+import { EventItem, Participant, Team, CertificateRecord, AuditLogEntry } from "@/types";
 
 interface ExportsClientProps {
   initialEvents: EventItem[];
   initialParticipants: Participant[];
   initialTeams: Team[];
+  initialCertificates?: CertificateRecord[];
+  initialAuditLogs?: AuditLogEntry[];
   isPreview: boolean;
 }
 
@@ -41,6 +45,8 @@ export default function ExportsClient({
   initialEvents,
   initialParticipants,
   initialTeams,
+  initialCertificates = [],
+  initialAuditLogs = [],
   isPreview,
 }: ExportsClientProps) {
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
@@ -48,13 +54,19 @@ export default function ExportsClient({
 
   // Load live data from preview store or server props
   const [events, setEvents] = useState<EventItem[]>(
-    initialEvents.length > 0 ? initialEvents : MOCK_EVENTS
+    initialEvents.length > 0 ? initialEvents : (isPreview ? MOCK_EVENTS : [])
   );
   const [participants, setParticipants] = useState<Participant[]>(
-    initialParticipants.length > 0 ? initialParticipants : MOCK_PARTICIPANTS
+    initialParticipants.length > 0 ? initialParticipants : (isPreview ? MOCK_PARTICIPANTS : [])
   );
   const [teams, setTeams] = useState<Team[]>(
-    initialTeams.length > 0 ? initialTeams : MOCK_TEAMS
+    initialTeams.length > 0 ? initialTeams : (isPreview ? MOCK_TEAMS : [])
+  );
+  const [certificates, setCertificates] = useState<CertificateRecord[]>(
+    initialCertificates.length > 0 ? initialCertificates : (isPreview ? MOCK_CERTIFICATES : [])
+  );
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(
+    initialAuditLogs.length > 0 ? initialAuditLogs : (isPreview ? MOCK_RECENT_ACTIVITY : [])
   );
 
   useEffect(() => {
@@ -63,6 +75,8 @@ export default function ExportsClient({
         setEvents(getStoredEvents());
         setParticipants(getAllParticipants());
         setTeams(getAllTeams());
+        setCertificates(getStoredCertificates());
+        setAuditLogs(getStoredAuditLogs());
       };
       syncData();
 
@@ -84,10 +98,14 @@ export default function ExportsClient({
     URL.revokeObjectURL(url);
   };
 
-  // Helper to escape CSV cell
+  // Helper to escape CSV cell with spreadsheet formula injection protection
   const escapeCsv = (val: unknown): string => {
     if (val === null || val === undefined) return '""';
-    const str = typeof val === "object" ? JSON.stringify(val) : String(val);
+    let str = typeof val === "object" ? JSON.stringify(val) : String(val);
+    // Protect against Spreadsheet Formula Injection (OWASP CSV Injection)
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = `'${str}`;
+    }
     if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
       return `"${str.replace(/"/g, '""')}"`;
     }
@@ -295,8 +313,8 @@ export default function ExportsClient({
   const exportCertificates = () => {
     const certs =
       selectedEventId === "all"
-        ? MOCK_CERTIFICATES
-        : MOCK_CERTIFICATES.filter((c) => c.eventId === selectedEventId);
+        ? certificates
+        : certificates.filter((c) => c.eventId === selectedEventId);
 
     const headers = [
       "Certificate ID",
@@ -332,18 +350,18 @@ export default function ExportsClient({
       {
         exportMeta: {
           platform: "SketchHUB Event Operations Platform",
-          mode: "Client Preview Audit Trail",
+          mode: isPreview ? "Client Preview Audit Trail" : "Production Audit Trail",
           exportedAt: new Date().toISOString(),
-          recordCount: MOCK_RECENT_ACTIVITY.length,
+          recordCount: auditLogs.length,
         },
-        logs: MOCK_RECENT_ACTIVITY,
+        logs: auditLogs,
       },
       null,
       2
     );
     const filename = `sketch_audit_trail_${Date.now()}.json`;
     triggerDownload(jsonContent, filename, "application/json");
-    setLastExportMessage(`Successfully exported ${MOCK_RECENT_ACTIVITY.length} audit records to "${filename}".`);
+    setLastExportMessage(`Successfully exported ${auditLogs.length} audit records to "${filename}".`);
   };
 
   const eventOptions = [
@@ -361,11 +379,11 @@ export default function ExportsClient({
               Exports & Data Reports
             </h1>
             <Badge variant="outline" className="text-[10px] uppercase font-semibold">
-              Preview Mode
+              {isPreview ? "Preview Mode" : "Production Live"}
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#989EA7]">
-            Generate client-side CSV rosters, structured JSON archives, and compliance logs from current preview dataset.
+            Generate client-side CSV rosters, structured JSON archives, and compliance logs from current operational dataset.
           </p>
         </div>
 
@@ -554,7 +572,7 @@ export default function ExportsClient({
 
           <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
             <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
-              {MOCK_CERTIFICATES.length} issued credentials
+              {certificates.length} issued credentials
             </span>
             <Button
               variant="charcoal"
@@ -589,7 +607,7 @@ export default function ExportsClient({
 
           <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
             <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
-              {MOCK_RECENT_ACTIVITY.length} recent activity events
+              {auditLogs.length} recent activity events
             </span>
             <Button
               variant="charcoal"

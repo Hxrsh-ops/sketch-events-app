@@ -13,13 +13,21 @@ import { SketchRepository } from "@/lib/supabase/repository";
 export default async function AdminDashboardPage() {
   const isPreview = SketchRepository.isPreview();
   let metrics: DashboardKpiMetrics | undefined = undefined;
+  let events: any[] = [];
+  let participants: any[] = [];
+  let admins: any[] = [];
 
   try {
-    const [events, participants, certs] = await Promise.all([
+    const [fetchedEvents, fetchedParticipants, certs, fetchedAdmins] = await Promise.all([
       SketchRepository.listEvents(),
       SketchRepository.listParticipants(),
       SketchRepository.listCertificates(),
+      SketchRepository.listAdminProfiles(),
     ]);
+
+    events = fetchedEvents;
+    participants = fetchedParticipants;
+    admins = fetchedAdmins;
 
     const totalRegistrations =
       participants.length > 0
@@ -36,10 +44,10 @@ export default async function AdminDashboardPage() {
 
     metrics = {
       totalRegistrations,
-      totalCapacity: totalCapacity > 0 ? totalCapacity : 2200,
-      checkInConversion: totalRegistrations > 0 ? checkInConversion : 82.4,
-      activeEventsCount: activeEventsCount > 0 ? activeEventsCount : events.length,
-      certificatesIssued: certificatesIssued > 0 ? certificatesIssued : 620,
+      totalCapacity: totalCapacity > 0 ? totalCapacity : (isPreview ? 2200 : totalCapacity),
+      checkInConversion: totalRegistrations > 0 ? checkInConversion : (isPreview ? 82.4 : 0),
+      activeEventsCount: activeEventsCount > 0 ? activeEventsCount : (isPreview ? events.length : activeEventsCount),
+      certificatesIssued: certificatesIssued > 0 ? certificatesIssued : (isPreview ? 620 : 0),
     };
   } catch (err) {
     console.warn("[AdminDashboardPage] Metrics calculation fallback:", err);
@@ -78,21 +86,21 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Row 1: KPI Summary Row */}
-      <DashboardKpiRow metrics={metrics} />
+      <DashboardKpiRow metrics={metrics} isPreview={isPreview} />
 
       {/* Row 2: Balanced Asymmetric Main Grid */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 items-start">
         {/* Left / Main Section (7 cols): Analytics Trajectory & Active Events */}
         <div className="lg:col-span-7 flex flex-col space-y-5">
-          <RegistrationAnalytics />
-          <ActiveEventsOverview />
+          <RegistrationAnalytics participants={participants} isPreview={isPreview} />
+          <ActiveEventsOverview events={events} isPreview={isPreview} />
         </div>
 
         {/* Right / Operations Sidebar (5 cols): Dispatch Queue, Duty Leads & Desk Gateway */}
         <div className="lg:col-span-5 flex flex-col space-y-5">
-          <UpcomingOperations />
+          <UpcomingOperations events={events} isPreview={isPreview} />
           <DeskGatewayCard />
-          <OrganizerActivity />
+          <OrganizerActivity admins={admins} events={events} isPreview={isPreview} />
         </div>
       </div>
     </div>

@@ -90,6 +90,7 @@ export function hasPermission(role: AdminRole | null | undefined, permission: Pe
  */
 export function getRequiredPermissionForPath(pathname: string): Permission | null {
   if (pathname === "/settings") return "settings:manage";
+  if (pathname === "/studio" || pathname.startsWith("/studio")) return "events:edit";
   if (pathname === "/events/new") return "events:create";
   if (pathname === "/attendance") return "attendance:view";
   if (pathname === "/certificates") return "certificates:view";
