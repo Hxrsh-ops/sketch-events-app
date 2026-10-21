@@ -86,7 +86,8 @@ flowchart TD
 10. [**09-ROADMAP-AND-RELEASE-CHECKLIST.md**](./09-ROADMAP-AND-RELEASE-CHECKLIST.md): Prioritized P0–P3 roadmap and production staging checklist.
 11. [**10-TEAM-LEAD-OPERATING-GUIDE.md**](./10-TEAM-LEAD-OPERATING-GUIDE.md): Day-to-day lead operating guide, AI pair programming practices, and Antigravity master prompt.
 12. [**11-TRANSFER-AND-CUTOVER-CHECKLIST.md**](./11-TRANSFER-AND-CUTOVER-CHECKLIST.md): Sign-off checklist and final transition verification.
-13. [**HANDOVER-INDEX.md**](./HANDOVER-INDEX.md): Index summary, completion percentages, and outstanding verification gaps.
+13. [**12-ASSET-INVENTORY-AND-PORTABILITY.md**](./12-ASSET-INVENTORY-AND-PORTABILITY.md): Complete audit of brand logos, backgrounds, fonts, icons, Supabase Storage buckets, and cross-platform portability.
+14. [**HANDOVER-INDEX.md**](./HANDOVER-INDEX.md): Index summary, completion percentages, and outstanding verification gaps.
 
 ---
 

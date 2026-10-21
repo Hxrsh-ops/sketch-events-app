@@ -26,6 +26,7 @@ The handover documentation package comprises 13 dedicated, cross-referenced Mark
 | **09** | [**09-ROADMAP-AND-RELEASE-CHECKLIST.md**](./09-ROADMAP-AND-RELEASE-CHECKLIST.md) | Prioritized P0–P3 roadmap, staging release gates, and production checklist. | **Pre-Cutover** |
 | **10** | [**10-TEAM-LEAD-OPERATING-GUIDE.md**](./10-TEAM-LEAD-OPERATING-GUIDE.md) | PR reviews, Git branches, AI pair programming rules, Antigravity master prompt. | **Ongoing** |
 | **11** | [**11-TRANSFER-AND-CUTOVER-CHECKLIST.md**](./11-TRANSFER-AND-CUTOVER-CHECKLIST.md) | Step-by-step sequential cutover checklist, verification tests, and sign-off. | **Final Sign-Off** |
+| **12** | [**12-ASSET-INVENTORY-AND-PORTABILITY.md**](./12-ASSET-INVENTORY-AND-PORTABILITY.md) | Full asset audit: logos, backgrounds, fonts, icons, Supabase Storage buckets, and cross-platform portability. | **Pre-Cutover** |
 | **—** | [**HANDOVER-INDEX.md**](./HANDOVER-INDEX.md) *(This file)* | Master index, completion percentage analysis, and verification gap register. | **Reference** |
 
 ---
