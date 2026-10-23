@@ -88,40 +88,42 @@ export default function CertificatesClient({
     }
   };
 
-  // Download SVG Certificate Preview
-  const handleDownloadCertSvg = (cert: CertificateRecord) => {
-    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="100%" height="100%">
-  <rect width="1000" height="700" fill="#FFFFFF" stroke="#17191C" stroke-width="8"/>
-  <rect x="20" y="20" width="960" height="660" fill="none" stroke="#E5E7EA" stroke-width="2"/>
+  // Download a server-generated PDF for an issued certificate.
+  const handleDownloadCertPdf = async (cert: CertificateRecord) => {
+    setFeedbackMessage(null);
 
-  <text x="500" y="100" font-family="sans-serif" font-size="20" font-weight="bold" letter-spacing="4" fill="#8A9098" text-anchor="middle">SKETCH EVENT OPERATIONS PLATFORM</text>
-  <text x="500" y="160" font-family="sans-serif" font-size="36" font-weight="900" fill="#17191C" text-anchor="middle">CERTIFICATE OF PARTICIPATION</text>
-  <text x="500" y="220" font-family="sans-serif" font-size="16" fill="#656B73" text-anchor="middle">THIS IS OFFICIALLY PRESENTED TO</text>
+    try {
+      const response = await fetch(
+        `/api/certificates/${encodeURIComponent(cert.id)}/pdf`,
+        {
+          method: "GET",
+          credentials: "same-origin",
+        }
+      );
 
-  <text x="500" y="300" font-family="sans-serif" font-size="34" font-weight="bold" fill="#17191C" text-anchor="middle">${cert.recipientName}</text>
-  <line x1="300" y1="320" x2="700" y2="320" stroke="#17191C" stroke-width="1.5"/>
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || "Unable to download certificate PDF.");
+      }
 
-  <text x="500" y="370" font-family="sans-serif" font-size="16" fill="#656B73" text-anchor="middle">FOR SUCCESSFUL ATTENDANCE AND PARTICIPATION IN</text>
-  <text x="500" y="420" font-family="sans-serif" font-size="24" font-weight="bold" fill="#17191C" text-anchor="middle">${cert.eventTitle}</text>
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
 
-  <text x="250" y="550" font-family="sans-serif" font-size="14" fill="#8A9098" text-anchor="middle">ISSUED ON: ${new Date(cert.issuedAt).toLocaleDateString()}</text>
-  <text x="750" y="550" font-family="sans-serif" font-size="14" font-weight="bold" fill="#17191C" text-anchor="middle">SERIAL: ${cert.certificateNumber}</text>
-
-  <text x="500" y="640" font-family="sans-serif" font-size="12" fill="#8A9098" text-anchor="middle">AUTHENTICATED DIGITAL CREDENTIAL • CLIENT PREVIEW RUNTIME</text>
-</svg>`;
-
-    const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${cert.certificateNumber}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      link.href = url;
+      link.download = `${cert.certificateNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setFeedbackMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to download certificate PDF."
+      );
+    }
   };
-
   const filteredCerts = certificates.filter((c) => {
     const matchesEvent = selectedEventId === "all" || c.eventId === selectedEventId;
     const matchesSearch =
@@ -365,10 +367,10 @@ export default function CertificatesClient({
             <Button
               variant="charcoal"
               className="w-full rounded-full text-xs font-semibold gap-2 h-10 shadow-sm"
-              onClick={() => handleDownloadCertSvg(selectedCert)}
+              onClick={() => handleDownloadCertPdf(selectedCert)}
             >
               <Download className="h-4 w-4" />
-              <span>Download Printable Vector SVG</span>
+              <span>Download Certificate PDF</span>
             </Button>
           </div>
         )}
