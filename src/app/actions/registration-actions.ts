@@ -15,13 +15,15 @@ export type { RegistrationActionInput, RegistrationActionResult };
  * Resolves event by slug or id from database or fallback mock dataset
  */
 async function resolveEvent(slugOrId: string): Promise<EventItem | null> {
+  const normalized = slugOrId.trim().toLowerCase();
+  const cleanSlug = normalized.replace(/^sketch-/i, "");
   const supabase = await createClient();
   if (supabase) {
     try {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .or(`slug.eq.${slugOrId},id.eq.${slugOrId}`)
+        .or(`slug.eq.${normalized},slug.eq.${cleanSlug},id.eq.${slugOrId.trim()}`)
         .single();
       if (!error && data) {
         return data as unknown as EventItem;
@@ -32,9 +34,13 @@ async function resolveEvent(slugOrId: string): Promise<EventItem | null> {
   }
 
   // Check static mock events (for local preview)
-  const cleanSlug = slugOrId.replace(/^sketch-/, "");
+
   const found = MOCK_EVENTS.find(
-    (e) => e.slug === slugOrId || e.slug === cleanSlug || e.id === slugOrId
+    (e) => {
+      const s = e.slug.toLowerCase();
+      const id = e.id.toLowerCase();
+      return s === normalized || s === cleanSlug || id === normalized;
+    }
   );
   return found || null;
 }
@@ -148,7 +154,7 @@ export async function validateAndProcessRegistration(
 
     // Check remaining capacity accommodates entire team
     if (event.capacity > 0 && event.registeredCount + totalTeamSize > event.capacity) {
-      const remainingSlots = event.capacity - event.registeredCount;
+      const remainingSlots = Math.max(0, event.capacity - event.registeredCount);
       return {
         success: false,
         error: `Not enough remaining spots for this team. Only ${remainingSlots} slot(s) remain.`,
@@ -168,9 +174,9 @@ export async function validateAndProcessRegistration(
   // Full concurrency safety against simultaneous race conditions requires Harshanth's
   // PostgreSQL schema unique constraint: UNIQUE (event_id, lower(email)).
   const existingRosterEmails = customExistingRoster
-    ? customExistingRoster
+    ? new Set(Array.from(customExistingRoster).map((e) => e.toLowerCase().trim()))
     : new Set(
-        MOCK_PARTICIPANTS.filter((p) => p.eventId === event.id).map((p) =>
+        MOCK_PARTICIPANTS.filter((p) => p.eventId.toLowerCase() === event.id.toLowerCase()).map((p) =>
           p.email.toLowerCase().trim()
         )
       );
@@ -199,7 +205,7 @@ export async function validateAndProcessRegistration(
   const registeredAt = new Date().toISOString();
 
   // 7. Persistence Boundary Check
-  const supabase = customEventResolver ? null : await createClient();
+  const supabase = await createClient();
   if (supabase) {
     // If Supabase is configured, check if authoritative tables exist
     // As established in the audit, migrations are pending authoring by Project Lead (Harshanth).
@@ -217,7 +223,7 @@ export async function validateAndProcessRegistration(
     qrCredentialId,
     registeredAt,
     attendeeName: data.attendeeName,
-    email: data.email,
+    email: data.email.toLowerCase().trim(),
     teamName: data.mode === "team" ? data.teamName : undefined,
     isMockPreview: true,
   };
