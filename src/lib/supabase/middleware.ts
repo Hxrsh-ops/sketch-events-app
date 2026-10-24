@@ -47,8 +47,13 @@ export async function updateSession(request: NextRequest) {
       return redirectResponse;
     }
 
-    // If already authenticated in preview and visiting login page, redirect to dashboard
-    if (hasPreviewSession && isLoginPage) {
+    // If already authenticated in preview and visiting login page without errors, redirect to dashboard
+    const hasErrorParam =
+      request.nextUrl.searchParams.has("error") ||
+      request.nextUrl.searchParams.has("details") ||
+      request.nextUrl.searchParams.has("signed_out");
+
+    if (hasPreviewSession && isLoginPage && !hasErrorParam) {
       const redirectParam = sanitizeRedirect(request.nextUrl.searchParams.get("redirect"));
       const dashUrl = request.nextUrl.clone();
       dashUrl.pathname = redirectParam;
@@ -107,13 +112,30 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse;
   }
 
-  // If already authenticated and visiting login page, redirect to dashboard
-  if (user && isLoginPage) {
-    const redirectParam = sanitizeRedirect(request.nextUrl.searchParams.get("redirect"));
-    const dashUrl = request.nextUrl.clone();
-    dashUrl.pathname = redirectParam;
-    dashUrl.searchParams.delete("redirect");
-    return NextResponse.redirect(dashUrl);
+  // If already authenticated and visiting login page without errors:
+  const hasErrorParam =
+    request.nextUrl.searchParams.has("error") ||
+    request.nextUrl.searchParams.has("details") ||
+    request.nextUrl.searchParams.has("signed_out");
+
+  if (user && isLoginPage && !hasErrorParam) {
+    try {
+      const { data: profile } = await (supabase as any)
+        .from("admin_profiles")
+        .select("id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile && profile.role) {
+        const redirectParam = sanitizeRedirect(request.nextUrl.searchParams.get("redirect"));
+        const dashUrl = request.nextUrl.clone();
+        dashUrl.pathname = redirectParam;
+        dashUrl.searchParams.delete("redirect");
+        return NextResponse.redirect(dashUrl);
+      }
+    } catch {
+      // If error or not an admin, stay on /login
+    }
   }
 
   // For protected admin routes, add no-store cache controls

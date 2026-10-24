@@ -72,18 +72,43 @@ function LoginForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(
     getAuthErrorMessage(urlError, urlDetails)
   );
+
+  useEffect(() => {
+    if (urlError) {
+      setErrorMessage(getAuthErrorMessage(urlError, urlDetails));
+    }
+  }, [urlError, urlDetails]);
+
   // Genuine session check on initial mount
   useEffect(() => {
     let mounted = true;
 
     async function checkExistingAuth() {
+      // If URL already contains an error (e.g. not_an_admin), do NOT redirect away
+      if (urlError) {
+        if (mounted) setCheckingExistingSession(false);
+        return;
+      }
+
       try {
         const supabase = createClient();
         if (supabase) {
           const { data: { user } } = await supabase.auth.getUser();
           if (user && mounted) {
-            router.replace(redirectTarget);
-            return;
+            // Verify admin profile exists before auto-redirecting to dashboard
+            const { data: profile } = await (supabase as any)
+              .from("admin_profiles")
+              .select("id, role")
+              .eq("id", user.id)
+              .maybeSingle();
+
+            if (profile?.role && mounted) {
+              router.replace(redirectTarget);
+              return;
+            } else if (mounted) {
+              // User has an auth session but no admin profile. Clear session so they stay on /login.
+              await supabase.auth.signOut();
+            }
           }
         }
       } catch {
@@ -97,7 +122,7 @@ function LoginForm() {
     return () => {
       mounted = false;
     };
-  }, [redirectTarget, router]);
+  }, [redirectTarget, router, urlError]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

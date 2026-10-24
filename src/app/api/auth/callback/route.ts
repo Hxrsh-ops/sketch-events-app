@@ -108,7 +108,21 @@ export async function GET(request: NextRequest) {
     await supabase.auth.signOut();
     const errorUrl = new URL("/login", origin);
     errorUrl.searchParams.set("error", "not_an_admin");
-    return NextResponse.redirect(errorUrl);
+    const redirectRes = NextResponse.redirect(errorUrl);
+
+    // Delete Supabase Auth cookies from response so unauthorized sessions are completely cleared
+    const cookiesToClear = request.cookies.getAll();
+    cookiesToClear.forEach((cookie) => {
+      if (
+        cookie.name.startsWith("sb-") ||
+        cookie.name.includes("auth-token") ||
+        cookie.name.includes("supabase")
+      ) {
+        redirectRes.cookies.delete(cookie.name);
+      }
+    });
+
+    return redirectRes;
   }
 
   // 4. Authorized Administrator Confirmed. Redirect to destination!
