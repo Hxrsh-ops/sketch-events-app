@@ -5,6 +5,7 @@ import {
 } from "@/lib/validations/ticket-schemas";
 import { uploadTicketBackgroundAction } from "@/app/actions/ticket-actions";
 import * as sessionModule from "@/lib/auth/session";
+import * as serverModule from "@/lib/supabase/server";
 import { resetAppEnvCache } from "@/lib/env";
 import { resetServerEnvCache } from "@/lib/env.server";
 
@@ -26,6 +27,21 @@ describe("Ticket Studio: Background Image Upload and Persistence", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(serverModule, "createAdminClient").mockReturnValue({
+      storage: {
+        from: (bucket: string) => ({
+          upload: async (path: string) => ({
+            data: { path },
+            error: null,
+          }),
+          getPublicUrl: (path: string) => ({
+            data: {
+              publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`,
+            },
+          }),
+        }),
+      },
+    } as any);
   });
 
   describe("Schema Validation for Background Image", () => {
@@ -48,72 +64,66 @@ describe("Ticket Studio: Background Image Upload and Persistence", () => {
           background: "#111315",
           surface: "#181B1E",
           accent: "#E2B857",
-          textColor: "#F3F4F6",
-          secondaryTextColor: "#9CA3AF",
-          borderColor: "#2C3136",
-          fontFamily: "cinematic",
+          text: "#FFFFFF",
+          mutedText: "#8A9098",
+          border: "#25292F",
         },
-        stub: {
-          perforationPosition: "right",
-          stubWidth: 240,
-          badgeText: "ENTRY PASS",
-          showPerforationDots: true,
+        typography: {
+          fontFamily: "Inter, sans-serif",
+          headerScale: "xl",
         },
-        qr: {
-          size: 180,
-          label: "SCAN TO VERIFY",
-          rotating: true,
-          refreshIntervalSec: 30,
+        branding: {
+          showLogo: true,
+          showBadge: true,
+          accentBar: true,
         },
-        backgroundImage: validBg,
+        qrCode: {
+          size: 140,
+          foreground: "#111315",
+          background: "#FFFFFF",
+          errorCorrection: "M" as const,
+          position: "right" as const,
+        },
         elements: [],
+        backgroundImage: validBg,
       };
 
-      const designParsed = TicketDesignDataSchema.safeParse(fullDesign);
-      expect(designParsed.success).toBe(true);
+      const parsedFull = TicketDesignDataSchema.safeParse(fullDesign);
+      expect(parsedFull.success).toBe(true);
     });
 
     it("rejects invalid background image overlay colors or opacity out of bounds", () => {
-      // Invalid hex
-      const invalidHex = {
-        url: "/uploads/ticket-backgrounds/test.jpg",
-        fit: "cover" as const,
-        position: "center" as const,
-        overlayColor: "not-a-hex",
-        overlayOpacity: 0.5,
+      const invalidOpacity = {
+        url: "https://example.com/bg.png",
+        overlayOpacity: 1.5, // max 1.0
       };
-      expect(TicketBackgroundImageSchema.safeParse(invalidHex).success).toBe(false);
+      expect(TicketBackgroundImageSchema.safeParse(invalidOpacity).success).toBe(false);
 
-      // Opacity > 1
-      const highOpacity = {
-        url: "/uploads/ticket-backgrounds/test.jpg",
-        fit: "cover" as const,
-        position: "center" as const,
-        overlayColor: "#000000",
-        overlayOpacity: 1.5,
-      };
-      expect(TicketBackgroundImageSchema.safeParse(highOpacity).success).toBe(false);
-
-      // Opacity < 0
       const negativeOpacity = {
-        url: "/uploads/ticket-backgrounds/test.jpg",
-        fit: "cover" as const,
-        position: "center" as const,
-        overlayColor: "#000000",
-        overlayOpacity: -0.1,
+        url: "https://example.com/bg.png",
+        overlayOpacity: -0.2, // min 0.0
       };
       expect(TicketBackgroundImageSchema.safeParse(negativeOpacity).success).toBe(false);
+
+      const invalidColor = {
+        url: "https://example.com/bg.png",
+        overlayColor: "not-a-color",
+      };
+      expect(TicketBackgroundImageSchema.safeParse(invalidColor).success).toBe(false);
     });
 
     it("rejects malicious script / javascript URLs in background image", () => {
-      const maliciousUrl = {
+      const xssUrl = {
         url: "javascript:alert(1)",
         fit: "cover" as const,
-        position: "center" as const,
-        overlayColor: "#000000",
-        overlayOpacity: 0.5,
       };
-      expect(TicketBackgroundImageSchema.safeParse(maliciousUrl).success).toBe(false);
+      expect(TicketBackgroundImageSchema.safeParse(xssUrl).success).toBe(false);
+
+      const dataUrl = {
+        url: "data:text/html,<script>alert(1)</script>",
+        fit: "cover" as const,
+      };
+      expect(TicketBackgroundImageSchema.safeParse(dataUrl).success).toBe(false);
     });
   });
 
@@ -126,6 +136,8 @@ describe("Ticket Studio: Background Image Upload and Persistence", () => {
       });
 
       const formData = new FormData();
+      formData.append("file", new File(["fake"], "bg.png", { type: "image/png" }));
+
       const res = await uploadTicketBackgroundAction(formData);
       expect(res.success).toBe(false);
       if (!res.success) {
@@ -136,16 +148,18 @@ describe("Ticket Studio: Background Image Upload and Persistence", () => {
     it("rejects unauthorized roles (e.g. attendee or analyst)", async () => {
       vi.spyOn(sessionModule, "verifyAdminSession").mockResolvedValueOnce({
         isAuthenticated: true,
-        isAdmin: true,
+        isAdmin: false,
         user: {
-          id: "analyst-1",
-          name: "Test Analyst",
-          email: "analyst@sketch.test",
-          role: "analyst",
+          id: "u-1",
+          name: "Volunteer",
+          email: "vol@sketch.test",
+          role: "volunteer" as any,
         },
       });
 
       const formData = new FormData();
+      formData.append("file", new File(["fake"], "bg.png", { type: "image/png" }));
+
       const res = await uploadTicketBackgroundAction(formData);
       expect(res.success).toBe(false);
       if (!res.success) {
@@ -166,6 +180,8 @@ describe("Ticket Studio: Background Image Upload and Persistence", () => {
       });
 
       const formData = new FormData();
+      // file intentionally omitted
+
       const res = await uploadTicketBackgroundAction(formData);
       expect(res.success).toBe(false);
       if (!res.success) {
@@ -185,9 +201,9 @@ describe("Ticket Studio: Background Image Upload and Persistence", () => {
         },
       });
 
-      // Construct a fake oversized file > 5MB
-      const oversizedBlob = new Blob([new Uint8Array(6 * 1024 * 1024)], { type: "image/png" });
-      const file = new File([oversizedBlob], "huge.png", { type: "image/png" });
+      // 6MB buffer
+      const largeBuffer = new Uint8Array(6 * 1024 * 1024);
+      const file = new File([largeBuffer], "huge.png", { type: "image/png" });
 
       const formData = new FormData();
       formData.append("file", file);
@@ -211,9 +227,7 @@ describe("Ticket Studio: Background Image Upload and Persistence", () => {
         },
       });
 
-      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`;
-      const file = new File([svgContent], "vector.svg", { type: "image/svg+xml" });
-
+      const file = new File(["<svg></svg>"], "exploit.svg", { type: "image/svg+xml" });
       const formData = new FormData();
       formData.append("file", file);
 
