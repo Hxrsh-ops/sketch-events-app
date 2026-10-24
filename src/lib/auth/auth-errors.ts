@@ -25,6 +25,9 @@ export function getAuthErrorMessage(
       return "Authentication error: Missing verification code in authorization callback.";
 
     case "auth_exchange_failed":
+      if (details?.toLowerCase().includes("invalid api key")) {
+        return "Failed to verify authorization token: Invalid API key. The configured NEXT_PUBLIC_SUPABASE_ANON_KEY was rejected by the Supabase project gateway. Please check that NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local belong to the same project (Project Settings > API in Supabase Dashboard).";
+      }
       return details
         ? `Failed to verify authorization token: ${details}`
         : "Failed to exchange authorization token with Supabase Auth.";

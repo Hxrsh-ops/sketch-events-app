@@ -49,11 +49,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl);
   }
 
+  // Safe diagnostic: log endpoint origin, key prefix and presence of code (NO secrets/tokens logged)
+  if (process.env.NODE_ENV !== "production" || process.env.DEBUG_AUTH) {
+    console.info("[OAuth Callback] Exchanging code for session...", {
+      endpoint: env.supabaseUrl ? new URL(env.supabaseUrl).origin : "missing",
+      hasCode: !!code,
+      keyPrefix: env.supabaseAnonKey ? env.supabaseAnonKey.slice(0, 15) : "missing",
+      keyLength: env.supabaseAnonKey?.length ?? 0,
+    });
+  }
+
   // Exchange auth code for session
   const { data: exchangeData, error: exchangeError } =
     await supabase.auth.exchangeCodeForSession(code);
 
-  if (exchangeError || !exchangeData.user) {
+  if (exchangeError || !exchangeData?.user) {
+    console.error("[OAuth Callback] Session exchange failed:", {
+      status: (exchangeError as any)?.status,
+      code: (exchangeError as any)?.code,
+      message: exchangeError?.message || "User object missing from session",
+      endpoint: env.supabaseUrl ? new URL(env.supabaseUrl).origin : "missing",
+      keyPrefix: env.supabaseAnonKey ? env.supabaseAnonKey.slice(0, 15) : "missing",
+    });
+
     const errorUrl = new URL("/login", origin);
     errorUrl.searchParams.set("error", "auth_exchange_failed");
     errorUrl.searchParams.set("details", exchangeError?.message || "Exchange failed");

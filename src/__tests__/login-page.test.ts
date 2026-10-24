@@ -95,6 +95,10 @@ describe("Slice 2.3 & Commit 10: Administrator Login & Security Boundaries", () 
     it("maps 'auth_exchange_failed' with details when Supabase exchange fails", () => {
       const msg = getAuthErrorMessage("auth_exchange_failed", "Bad grant");
       expect(msg).toContain("Failed to verify authorization token: Bad grant");
+
+      const apiKeyMsg = getAuthErrorMessage("auth_exchange_failed", "Invalid API key");
+      expect(apiKeyMsg).toContain("Failed to verify authorization token: Invalid API key");
+      expect(apiKeyMsg).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY was rejected");
     });
 
     it("maps 'preview_oauth_unsupported' when OAuth is invoked without remote credentials", () => {

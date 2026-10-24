@@ -183,6 +183,12 @@ export function getAppEnv(): AppEnv {
             `[SKETCH CONFIG WARNING] NEXT_PUBLIC_SUPABASE_ANON_KEY belongs to project "${payload.ref}", but NEXT_PUBLIC_SUPABASE_URL points to "${urlMatch[1]}". This mismatch will cause "Invalid API key" errors.`
           );
         }
+      } else if (!payload && supabaseAnonKey && !supabaseAnonKey.startsWith("test-") && supabaseAnonKey !== "your-anon-key-here") {
+        if (supabaseAnonKey.startsWith("sb_publishable_")) {
+          console.info(
+            `[SKETCH CONFIG INFO] NEXT_PUBLIC_SUPABASE_ANON_KEY is formatted as a Supabase publishable key (sb_publishable_...). Ensure this key belongs to the active project configured in NEXT_PUBLIC_SUPABASE_URL.`
+          );
+        }
       }
     }
   }
