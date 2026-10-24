@@ -588,6 +588,8 @@ export async function registerForEventAction(
       message: "An unexpected error occurred while processing registration. Please try again.",
     };
   }
+}
+
 // -----------------------------------------------------------------------------
 // STANDALONE / SPRINT REGISTRATION ACTION SUITE
 // -----------------------------------------------------------------------------
