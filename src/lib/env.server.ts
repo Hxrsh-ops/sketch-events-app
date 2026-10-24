@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AppEnv, getAppEnv } from "@/lib/env";
+import { AppEnv, getAppEnv, sanitizeSupabaseKey, decodeJwtPayload } from "@/lib/env";
 
 /**
  * Server-only environment contract.
@@ -27,13 +27,32 @@ export function getServerEnv(): ServerAppEnv {
   if (cachedServerEnv) return cachedServerEnv;
 
   const base = getAppEnv();
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceRoleKey = rawServiceKey ? sanitizeSupabaseKey(rawServiceKey) : undefined;
   const emailProvider = process.env.EMAIL_PROVIDER || "resend";
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const brevoApiKey = process.env.BREVO_API_KEY;
-  const mailpitUrl = process.env.MAILPIT_URL;
-  const emailFrom = process.env.EMAIL_FROM || "SKETCH Events <events@sketchevents.org>";
-  const cronSecret = process.env.CRON_SECRET;
+  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
+  const mailpitUrl = process.env.MAILPIT_URL?.trim();
+  const emailFrom = process.env.EMAIL_FROM?.trim() || "SKETCH Events <events@sketchevents.org>";
+  const cronSecret = process.env.CRON_SECRET?.trim();
+
+  // Validate service-role key sanity in production
+  if (base.mode === "production" && supabaseServiceRoleKey) {
+    const payload = decodeJwtPayload(supabaseServiceRoleKey);
+    if (payload && payload.role === "anon") {
+      console.warn(
+        `[SKETCH CONFIG WARNING] SUPABASE_SERVICE_ROLE_KEY appears to have role "anon" instead of "service_role". Privileged database operations (outbox worker, admin checks) will fail RLS policies.`
+      );
+    }
+    if (payload && payload.ref && base.supabaseUrl) {
+      const urlMatch = base.supabaseUrl.match(/^https?:\/\/([^.]+)\.supabase\.co/);
+      if (urlMatch && urlMatch[1] && urlMatch[1] !== payload.ref) {
+        console.warn(
+          `[SKETCH CONFIG WARNING] SUPABASE_SERVICE_ROLE_KEY belongs to project "${payload.ref}", but NEXT_PUBLIC_SUPABASE_URL points to "${urlMatch[1]}". This will cause "Invalid API key" errors.`
+        );
+      }
+    }
+  }
 
   cachedServerEnv = {
     ...base,

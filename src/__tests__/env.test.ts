@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   getAppEnv,
   resetAppEnvCache,
   isPreviewMode,
+  sanitizeSupabaseUrl,
+  sanitizeSupabaseKey,
+  decodeJwtPayload,
 } from "@/lib/env";
 import {
   getServerEnv,
@@ -17,12 +20,14 @@ describe("Environment & Security Configuration Guard", () => {
     resetAppEnvCache();
     resetServerEnvCache();
     process.env = { ...originalEnv };
+    vi.restoreAllMocks();
   });
 
   it("defaults to preview mode when Supabase variables are absent", () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     delete process.env.APP_MODE;
+    delete process.env.NEXT_PUBLIC_APP_MODE;
 
     const env = getAppEnv();
     expect(env.mode).toBe("preview");
@@ -111,5 +116,59 @@ describe("Environment & Security Configuration Guard", () => {
 
     const key = requireServerServiceRoleKey();
     expect(key).toBe("valid_service_role_key_prod");
+  });
+
+  describe("URL & Key Normalization & Security Invariants", () => {
+    it("strips mistakenly appended /rest/v1 or /auth/v1 subpaths and trailing slashes", () => {
+      expect(sanitizeSupabaseUrl("https://fvnkhzlbvxemwlkmwhbz.supabase.co/rest/v1/")).toBe(
+        "https://fvnkhzlbvxemwlkmwhbz.supabase.co"
+      );
+      expect(sanitizeSupabaseUrl("https://fvnkhzlbvxemwlkmwhbz.supabase.co/rest/v1")).toBe(
+        "https://fvnkhzlbvxemwlkmwhbz.supabase.co"
+      );
+      expect(sanitizeSupabaseUrl("https://fvnkhzlbvxemwlkmwhbz.supabase.co/auth/v1")).toBe(
+        "https://fvnkhzlbvxemwlkmwhbz.supabase.co"
+      );
+      expect(sanitizeSupabaseUrl("https://fvnkhzlbvxemwlkmwhbz.supabase.co///")).toBe(
+        "https://fvnkhzlbvxemwlkmwhbz.supabase.co"
+      );
+    });
+
+    it("automatically adds https:// when protocol is omitted", () => {
+      expect(sanitizeSupabaseUrl("fvnkhzlbvxemwlkmwhbz.supabase.co")).toBe(
+        "https://fvnkhzlbvxemwlkmwhbz.supabase.co"
+      );
+      expect(sanitizeSupabaseUrl("localhost:54321")).toBe("http://localhost:54321");
+    });
+
+    it("strips wrapping quotes from URL and keys", () => {
+      expect(sanitizeSupabaseUrl('"https://fvnkhzlbvxemwlkmwhbz.supabase.co"')).toBe(
+        "https://fvnkhzlbvxemwlkmwhbz.supabase.co"
+      );
+      expect(sanitizeSupabaseKey(' "eyJhbGciOiJIUzI1NiJ9..." ')).toBe("eyJhbGciOiJIUzI1NiJ9...");
+    });
+
+    it("harmonizes conflicting APP_MODE and NEXT_PUBLIC_APP_MODE gracefully", () => {
+      process.env.APP_MODE = "preview";
+      process.env.NEXT_PUBLIC_APP_MODE = "production";
+      process.env.NEXT_PUBLIC_SUPABASE_URL = "https://sketch-actual.supabase.co";
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "valid_anon_token";
+
+      const env = getAppEnv();
+      expect(env.mode).toBe("production");
+    });
+
+    it("strictly blocks service_role keys from being exposed as NEXT_PUBLIC_SUPABASE_ANON_KEY", () => {
+      process.env.APP_MODE = "production";
+      process.env.NEXT_PUBLIC_SUPABASE_URL = "https://sketch-actual.supabase.co";
+
+      // JWT with payload { "role": "service_role" }
+      const serviceRolePayload = Buffer.from(JSON.stringify({ role: "service_role" })).toString("base64");
+      const fakeServiceRoleJwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${serviceRolePayload}.signature`;
+
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = fakeServiceRoleJwt;
+
+      expect(() => getAppEnv()).toThrowError(/NEXT_PUBLIC_SUPABASE_ANON_KEY contains a privileged service_role key/);
+    });
   });
 });
