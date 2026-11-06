@@ -107,13 +107,36 @@ export async function verifyAdminSession(): Promise<SessionVerificationResult> {
     };
   }
 
-  // Always use getUser() on server (safe cryptographic JWT re-validation)
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
+  let authUser: any = null;
+  try {
+    // Always use getUser() on server (safe cryptographic JWT re-validation)
+    const { data, error: authError } = await supabase.auth.getUser();
 
-  if (authError || !authUser) {
+    if (authError) {
+      const isDown =
+        authError.message?.toLowerCase().includes("fetch failed") ||
+        (authError as any)?.status === 502 ||
+        (authError as any)?.status === 503;
+
+      return {
+        isAuthenticated: false,
+        isAdmin: false,
+        user: null,
+        error: isDown ? "BACKEND_UNAVAILABLE" : "UNAUTHENTICATED",
+      };
+    }
+
+    authUser = data?.user || null;
+  } catch (err: any) {
+    return {
+      isAuthenticated: false,
+      isAdmin: false,
+      user: null,
+      error: "BACKEND_UNAVAILABLE",
+    };
+  }
+
+  if (!authUser) {
     return {
       isAuthenticated: false,
       isAdmin: false,
@@ -123,31 +146,72 @@ export async function verifyAdminSession(): Promise<SessionVerificationResult> {
   }
 
   // 3. Verify user has an admin_profiles entry in PostgreSQL
-  const { data: profile, error: profileError } = await (supabase as any)
-    .from("admin_profiles")
-    .select("id, email, full_name, role, avatar_url")
-    .eq("id", authUser.id)
-    .single();
+  try {
+    const { data: profile, error: profileError } = await (supabase as any)
+      .from("admin_profiles")
+      .select("id, email, full_name, role, avatar_url")
+      .eq("id", authUser.id)
+      .single();
 
-  if (profileError || !profile) {
+    if (profileError) {
+      const isConnectionError =
+        profileError.code === "PGRST000" ||
+        profileError.code === "08000" ||
+        profileError.code === "08003" ||
+        profileError.code === "08006" ||
+        profileError.code === "503" ||
+        profileError.message?.toLowerCase().includes("fetch failed") ||
+        profileError.message?.toLowerCase().includes("network") ||
+        profileError.message?.toLowerCase().includes("connection") ||
+        profileError.message?.toLowerCase().includes("timeout") ||
+        profileError.message?.toLowerCase().includes("paused");
+
+      if (isConnectionError) {
+        console.error("[verifyAdminSession] Database connection error querying admin_profiles:", profileError.message || profileError);
+        return {
+          isAuthenticated: true,
+          isAdmin: false,
+          user: null,
+          error: "BACKEND_UNAVAILABLE",
+        };
+      }
+
+      return {
+        isAuthenticated: true,
+        isAdmin: false,
+        user: null,
+        error: "NOT_AN_ADMIN",
+      };
+    }
+
+    if (!profile) {
+      return {
+        isAuthenticated: true,
+        isAdmin: false,
+        user: null,
+        error: "NOT_AN_ADMIN",
+      };
+    }
+
+    return {
+      isAuthenticated: true,
+      isAdmin: true,
+      user: {
+        id: profile.id,
+        name: profile.full_name,
+        email: profile.email,
+        role: profile.role as AdminRole,
+        avatarUrl: profile.avatar_url || undefined,
+      },
+      isPreview: false,
+    };
+  } catch (err: any) {
+    console.error("[verifyAdminSession] Database exception querying admin_profiles:", err);
     return {
       isAuthenticated: true,
       isAdmin: false,
       user: null,
-      error: "NOT_AN_ADMIN",
+      error: "BACKEND_UNAVAILABLE",
     };
   }
-
-  return {
-    isAuthenticated: true,
-    isAdmin: true,
-    user: {
-      id: profile.id,
-      name: profile.full_name,
-      email: profile.email,
-      role: profile.role as AdminRole,
-      avatarUrl: profile.avatar_url || undefined,
-    },
-    isPreview: false,
-  };
 }

@@ -50,7 +50,7 @@ function LoginForm() {
   const rawRedirect = searchParams.get("redirect");
   const redirectTarget = sanitizeInternalRedirect(rawRedirect, "/");
   const urlError = searchParams.get("error");
-  const urlDetails = searchParams.get("details");
+  const urlDetails = searchParams.get("details") || searchParams.get("error_description");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -93,10 +93,15 @@ function LoginForm() {
       try {
         const supabase = createClient();
         if (supabase) {
-          const { data: { user } } = await supabase.auth.getUser();
+          const { data, error } = await supabase.auth.getUser();
+          if (error || !data?.user) {
+            if (mounted) setCheckingExistingSession(false);
+            return;
+          }
+          const user = data.user;
           if (user && mounted) {
             // Verify admin profile exists before auto-redirecting to dashboard
-            const { data: profile } = await (supabase as any)
+            const { data: profile, error: profileErr } = await (supabase as any)
               .from("admin_profiles")
               .select("id, role")
               .eq("id", user.id)
@@ -105,8 +110,8 @@ function LoginForm() {
             if (profile?.role && mounted) {
               router.replace(redirectTarget);
               return;
-            } else if (mounted) {
-              // User has an auth session but no admin profile. Clear session so they stay on /login.
+            } else if (!profileErr && mounted) {
+              // User has an auth session but confirmed no admin profile. Clear session so they stay on /login.
               await supabase.auth.signOut();
             }
           }
@@ -178,6 +183,13 @@ function LoginForm() {
           .single();
 
         if (profileErr || !profile) {
+          if (profileErr && profileErr.code !== "PGRST116") {
+            setErrorMessage(
+              `Backend Connection Failure: Unable to verify administrator status (${profileErr.message}). Supabase may be paused or unreachable.`
+            );
+            setEmailLoading(false);
+            return;
+          }
           await supabase.auth.signOut();
           setErrorMessage(
             "Access Denied: This account is not registered in the SketchHUB administrator roster."
@@ -224,9 +236,22 @@ function LoginForm() {
       });
 
       if (error) {
-        setErrorMessage(
-          `Google OAuth initialization failed: ${error.message}. Ensure Google provider is enabled in the Supabase Dashboard.`
-        );
+        const errorMsg = error.message || "";
+        const isBackendDown =
+          errorMsg.toLowerCase().includes("fetch failed") ||
+          errorMsg.toLowerCase().includes("paused") ||
+          errorMsg.toLowerCase().includes("network") ||
+          errorMsg.toLowerCase().includes("503");
+
+        if (isBackendDown) {
+          setErrorMessage(
+            "Backend Service Unavailable: Unable to reach Supabase to initiate Google OAuth. The project may be paused or offline."
+          );
+        } else {
+          setErrorMessage(
+            `Google OAuth initialization failed: ${error.message}. Ensure Google provider is enabled in the Supabase Dashboard.`
+          );
+        }
         setGoogleLoading(false);
         return;
       }

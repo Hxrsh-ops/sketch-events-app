@@ -13,11 +13,17 @@ export default async function AdminLayout({
 
   // If unauthenticated (in either production or preview mode without active session), redirect to login
   if (!sessionResult.isAuthenticated) {
+    if (sessionResult.error === "BACKEND_UNAVAILABLE") {
+      redirect("/login?error=backend_unavailable");
+    }
     redirect("/login");
   }
 
   // If authenticated in Supabase but lacks admin_profiles entry in database
   if (!sessionResult.isAdmin) {
+    if (sessionResult.error === "BACKEND_UNAVAILABLE") {
+      redirect("/login?error=backend_unavailable");
+    }
     redirect("/login?error=not_an_admin");
   }
 
@@ -42,4 +48,3 @@ export default async function AdminLayout({
     </AuthProvider>
   );
 }
-

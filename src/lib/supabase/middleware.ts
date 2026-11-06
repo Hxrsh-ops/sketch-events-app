@@ -97,10 +97,16 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // Always re-validate the auth token cryptographically on server
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Safely re-validate the auth token cryptographically on server
+  let user: any = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data?.user) {
+      user = data.user;
+    }
+  } catch (authErr) {
+    console.warn("[Middleware] Supabase auth.getUser() connectivity failure:", authErr);
+  }
 
   // If unauthenticated in production and accessing admin route, redirect to login
   if (!user && !isLoginPage && !isPublicRoute) {

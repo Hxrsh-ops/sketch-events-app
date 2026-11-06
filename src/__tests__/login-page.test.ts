@@ -111,6 +111,32 @@ describe("Slice 2.3 & Commit 10: Administrator Login & Security Boundaries", () 
       expect(msg).toContain("Authentication service is currently unavailable");
     });
 
+    it("maps 'backend_unavailable' when Supabase project is paused, unreachable, or DNS fails", () => {
+      const msg = getAuthErrorMessage("backend_unavailable");
+      expect(msg).toContain("Backend Service Unavailable");
+      expect(msg).toContain("paused or unreachable");
+
+      const msgWithDetails = getAuthErrorMessage("backend_unavailable", "DNS resolution failed");
+      expect(msgWithDetails).toContain("DNS resolution failed");
+      expect(msgWithDetails).toContain("paused, undergoing maintenance, or unreachable");
+    });
+
+    it("maps 'auth_exchange_failed' with fetch failed or paused backend correctly", () => {
+      const msg = getAuthErrorMessage("auth_exchange_failed", "fetch failed");
+      expect(msg).toContain("Backend Connection Failure");
+      expect(msg).toContain("paused or unreachable");
+    });
+
+    it("maps 'expired_session' and 'session_expired'", () => {
+      expect(getAuthErrorMessage("expired_session")).toContain("session has expired");
+      expect(getAuthErrorMessage("session_expired")).toContain("session has expired");
+    });
+
+    it("maps 'access_denied' and 'server_error'", () => {
+      expect(getAuthErrorMessage("access_denied")).toContain("access was denied");
+      expect(getAuthErrorMessage("server_error")).toContain("temporarily unavailable");
+    });
+
     it("maps unknown error codes to a safe, generic fallback message", () => {
       const msg = getAuthErrorMessage("unrecognized_internal_error");
       expect(msg).toContain("An unexpected authentication error occurred");
