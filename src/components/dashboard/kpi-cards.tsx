@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { Users, CalendarDays, UserCheck, QrCode, FileBadge } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KpiCardProps {
@@ -11,6 +11,8 @@ interface KpiCardProps {
   isFeatured?: boolean;
   progressPercent?: number;
   capacity?: number;
+  icon?: React.ComponentType<{ className?: string }>;
+  isConnected?: boolean;
 }
 
 export function KpiCard({
@@ -21,123 +23,81 @@ export function KpiCard({
   isFeatured = false,
   progressPercent,
   capacity,
+  icon: Icon,
+  isConnected = true,
 }: KpiCardProps) {
+  const displayValue = !isConnected ? "—" : value;
+  const displayBadge = !isConnected ? "Not connected" : badge;
+
   return (
     <div
       tabIndex={0}
       role="region"
-      aria-label={`${title}: ${value}`}
+      aria-label={`${title}: ${displayValue}`}
       className={cn(
-        "group relative flex flex-col justify-between overflow-hidden rounded-[20px] p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 focus-visible:-translate-y-0.5 motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default focus-visible:outline-none",
+        "group relative flex flex-col justify-between overflow-hidden rounded-xl p-4 transition-all duration-150 motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#858B93]",
         isFeatured
-          ? "sketch-card-hero text-white focus-visible:ring-2 focus-visible:ring-[#E8EAED]"
-          : "border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:via-[#1F2329] dark:to-[#171A1E] text-[#17191C] dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
+          ? "sketch-card-hero text-white focus-visible:ring-1 focus-visible:ring-[#858B93]"
+          : "border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:from-[#282D34] text-[#34383D] shadow-xs hover:-translate-y-0.5 hover:border-[#D9DCE0] dark:hover:border-[#48515E]"
       )}
     >
       <div>
-        <div className="flex items-center justify-between">
-          <span
-            className={cn(
-              "text-[11px] font-semibold tracking-wider transition-colors duration-200",
-              isFeatured
-                ? "text-white/80"
-                : "text-[#5E646E] dark:text-white/80"
-            )}
-          >
-            {title}
-          </span>
-          {badge && (
+        {/* Top Header: Label & Icon or Status Badge */}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1.5">
+            {Icon && <Icon className="h-3.5 w-3.5 text-[#777E86]" />}
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-[#858B93]">
+              {title}
+            </span>
+          </div>
+          {displayBadge && (
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm transition-colors duration-200",
-                isFeatured
-                  ? "bg-white/10 border border-white/15 text-white/90"
-                  : "bg-[#F0F1F2] dark:bg-white/10 border border-[#E5E7EA] dark:border-white/15 text-[#25292F] dark:text-white/90"
+                "rounded px-1.5 py-0.5 text-[9px] font-medium border tabular-nums",
+                !isConnected
+                  ? "bg-[#F6F7F8] border-[#E5E7E9] text-[#858B93]"
+                  : "bg-[#F6F7F8] border-[#E5E7E9] text-[#34383D]"
               )}
             >
-              {badge}
+              {displayBadge}
             </span>
           )}
         </div>
 
-        <div className="mt-2.5 flex items-baseline gap-1.5">
-          <span
-            className={cn(
-              "text-3xl font-bold tracking-tight tabular-nums transition-colors duration-200",
-              isFeatured ? "text-white" : "text-[#17191C] dark:text-white"
-            )}
-          >
-            {value}
+        {/* Dynamic Statistic */}
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-2xl font-bold tracking-tight text-[#34383D] tabular-nums">
+            {displayValue}
           </span>
-          {capacity !== undefined && (
-            <span
-              className={cn(
-                "text-xs font-normal tabular-nums",
-                isFeatured ? "text-white/60" : "text-[#828892] dark:text-white/60"
-              )}
-            >
-              / {capacity > 0 ? `${capacity.toLocaleString()} cap` : "0 cap"}
+          {capacity !== undefined && isConnected && (
+            <span className="text-[11px] font-normal text-[#858B93] tabular-nums">
+              / {capacity.toLocaleString()} cap
             </span>
           )}
         </div>
       </div>
 
-      {/* Progress Bar & Subtext */}
-      {progressPercent !== undefined ? (
-        <div
-          className={cn(
-            "mt-4 space-y-1.5 border-t pt-3",
-            isFeatured ? "border-white/10" : "border-[#F4F5F6] dark:border-white/10"
-          )}
-        >
-          <div
-            className={cn(
-              "h-1.5 w-full overflow-hidden rounded-full",
-              isFeatured
-                ? "bg-white/10 border border-white/5"
-                : "bg-[#EAECEF] dark:bg-white/10 dark:border dark:border-white/5"
-            )}
-          >
+      {/* Progress or Contextual Description */}
+      {progressPercent !== undefined && isConnected ? (
+        <div className="mt-3 space-y-1 border-t border-[#E5E7E9] pt-2">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-[#EAECEF]">
             <div
               style={{ width: `${progressPercent}%` }}
-              className={cn(
-                "h-full rounded-full transition-all duration-500",
-                isFeatured ? "bg-white" : "bg-[#25292F] dark:bg-white"
-              )}
+              className="h-full rounded-full bg-[#34383D] transition-all duration-300"
             />
           </div>
           {subtext && (
-            <div
-              className={cn(
-                "flex items-center justify-between text-[11px]",
-                isFeatured ? "text-white/65" : "text-[#828892] dark:text-white/65"
-              )}
-            >
+            <div className="flex items-center justify-between text-[10px] text-[#858B93]">
               <span>{subtext}</span>
-              <span
-                className={cn(
-                  "tabular-nums font-semibold",
-                  isFeatured ? "text-white" : "text-[#17191C] dark:text-white"
-                )}
-              >
+              <span className="tabular-nums font-medium text-[#34383D]">
                 {progressPercent}%
               </span>
             </div>
           )}
         </div>
       ) : subtext ? (
-        <div
-          className={cn(
-            "mt-4 border-t pt-2.5 transition-colors duration-200",
-            isFeatured ? "border-white/10" : "border-[#F4F5F6] dark:border-white/10"
-          )}
-        >
-          <span
-            className={cn(
-              "text-[11px] transition-colors duration-200",
-              isFeatured ? "text-white/65" : "text-[#828892] dark:text-white/65"
-            )}
-          >
+        <div className="mt-3 border-t border-[#E5E7E9] pt-2">
+          <span className="text-[10px] text-[#858B93] line-clamp-1">
             {subtext}
           </span>
         </div>
@@ -152,6 +112,10 @@ export interface DashboardKpiMetrics {
   checkInConversion?: number;
   activeEventsCount?: number;
   certificatesIssued?: number;
+  participantsCount?: number;
+  attendanceCount?: number;
+  upcomingEventsCount?: number;
+  isConnected?: boolean;
 }
 
 export function DashboardKpiRow({
@@ -161,45 +125,68 @@ export function DashboardKpiRow({
   metrics?: DashboardKpiMetrics;
   isPreview?: boolean;
 } = {}) {
+  const isConnected = metrics?.isConnected !== false;
+
   const totalReg = metrics?.totalRegistrations ?? (isPreview ? 1842 : 0);
   const totalCap = metrics?.totalCapacity ?? (isPreview ? 2200 : 0);
   const progressPercent = totalCap > 0 ? Math.min(100, Math.round((totalReg / totalCap) * 100)) : 0;
-  const conversionRate =
-    metrics?.checkInConversion !== undefined
-      ? `${metrics.checkInConversion}%`
-      : isPreview
-      ? "82.4%"
-      : "0%";
-  const activeEvents = metrics?.activeEventsCount ?? (isPreview ? 4 : 0);
+  const participants = metrics?.participantsCount ?? totalReg;
+  const upcomingEvents = metrics?.upcomingEventsCount ?? metrics?.activeEventsCount ?? (isPreview ? 4 : 0);
+  const attendance = metrics?.attendanceCount ?? (metrics?.checkInConversion !== undefined ? `${metrics.checkInConversion}%` : isPreview ? "82.4%" : "0%");
   const certsIssued = metrics?.certificatesIssued ?? (isPreview ? 620 : 0);
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* 1. Participants */}
       <KpiCard
-        title="Total Registrations"
+        title="Participants"
+        value={participants.toLocaleString()}
+        subtext="Enrolled students & guests"
+        icon={Users}
+        badge={isConnected && participants > 0 ? "Roster" : undefined}
+        isConnected={isConnected}
+      />
+
+      {/* 2. Upcoming Events */}
+      <KpiCard
+        title="Upcoming Events"
+        value={upcomingEvents.toLocaleString()}
+        subtext="Active Events schedule"
+        icon={CalendarDays}
+        badge={isConnected && upcomingEvents > 0 ? "Published" : undefined}
+        isConnected={isConnected}
+      />
+
+      {/* 3. Registrations (with compatibility for Total Registrations & isFeatured) */}
+      <KpiCard
+        title="Registrations"
         value={totalReg.toLocaleString()}
-        subtext="Campus capacity fill"
-        badge={totalReg > 0 ? "Live" : undefined}
-        isFeatured
-        progressPercent={progressPercent}
+        subtext="Total Registrations capacity"
+        icon={UserCheck}
+        isFeatured={true}
+        progressPercent={isConnected && progressPercent > 0 ? progressPercent : undefined}
         capacity={totalCap}
+        isConnected={isConnected}
       />
+
+      {/* 4. Attendance (with compatibility for Check-in Conversion) */}
       <KpiCard
-        title="Check-in Conversion"
-        value={conversionRate}
-        subtext="Across active sessions"
-        badge={metrics?.checkInConversion !== undefined && metrics.checkInConversion > 0 ? "Verified" : undefined}
+        title="Attendance"
+        value={typeof attendance === "number" ? attendance.toLocaleString() : attendance}
+        subtext="Check-in Conversion rate"
+        icon={QrCode}
+        badge={isConnected && (typeof attendance === "number" ? attendance > 0 : attendance !== "0%") ? "Verified" : undefined}
+        isConnected={isConnected}
       />
+
+      {/* 5. Certificates (with compatibility for Certificates Issued) */}
       <KpiCard
-        title="Active Events"
-        value={activeEvents.toLocaleString()}
-        subtext="Published & in-progress"
-      />
-      <KpiCard
-        title="Certificates Issued"
+        title="Certificates"
         value={certsIssued.toLocaleString()}
-        subtext="Cryptographically verified"
-        badge={certsIssued > 0 ? "Ready" : undefined}
+        subtext="Certificates Issued ledger"
+        icon={FileBadge}
+        badge={isConnected && certsIssued > 0 ? "Issued" : undefined}
+        isConnected={isConnected}
       />
     </div>
   );

@@ -8,9 +8,13 @@ describe("Slice 2: Server-Side Authorization & Role-Based Access Control", () =>
     expect(hasPermission("master_admin", "settings:manage")).toBe(true);
     expect(hasPermission("master_admin", "events:delete")).toBe(true);
     expect(hasPermission("master_admin", "events:create")).toBe(true);
+    expect(hasPermission("master_admin", "events:edit")).toBe(true);
+    expect(hasPermission("master_admin", "rounds:manage")).toBe(true);
 
     // 2. event_manager has operations and communications, but NOT settings:manage or events:delete
     expect(hasPermission("event_manager", "events:create")).toBe(true);
+    expect(hasPermission("event_manager", "events:edit")).toBe(true);
+    expect(hasPermission("event_manager", "rounds:manage")).toBe(true);
     expect(hasPermission("event_manager", "certificates:issue")).toBe(true);
     expect(hasPermission("event_manager", "settings:manage")).toBe(false);
     expect(hasPermission("event_manager", "events:delete")).toBe(false);
@@ -19,6 +23,8 @@ describe("Slice 2: Server-Side Authorization & Role-Based Access Control", () =>
     expect(hasPermission("attendance_staff", "attendance:scan")).toBe(true);
     expect(hasPermission("attendance_staff", "attendance:override")).toBe(true);
     expect(hasPermission("attendance_staff", "events:create")).toBe(false);
+    expect(hasPermission("attendance_staff", "events:edit")).toBe(false);
+    expect(hasPermission("attendance_staff", "rounds:manage")).toBe(false);
     expect(hasPermission("attendance_staff", "analytics:view")).toBe(false);
     expect(hasPermission("attendance_staff", "certificates:issue")).toBe(false);
 
@@ -28,6 +34,7 @@ describe("Slice 2: Server-Side Authorization & Role-Based Access Control", () =>
     expect(hasPermission("analyst", "attendance:scan")).toBe(false);
     expect(hasPermission("analyst", "events:create")).toBe(false);
     expect(hasPermission("analyst", "events:edit")).toBe(false);
+    expect(hasPermission("analyst", "rounds:manage")).toBe(false);
   });
 
   it("denies all permissions when role is null or undefined", () => {
@@ -43,5 +50,7 @@ describe("Slice 2: Server-Side Authorization & Role-Based Access Control", () =>
     expect(getRequiredPermissionForPath("/analytics")).toBe("analytics:view");
     expect(getRequiredPermissionForPath("/exports")).toBe("exports:download");
     expect(getRequiredPermissionForPath("/audit")).toBe("audit:view");
+    expect(getRequiredPermissionForPath("/studio")).toBe("events:edit");
+    expect(getRequiredPermissionForPath("/rounds")).toBe("rounds:manage");
   });
 });

@@ -77,49 +77,49 @@ export function OrganizerActivity({
   }
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
+    <div className="flex h-full flex-col justify-between rounded-xl border border-[#E5E7E9] bg-white p-5 shadow-xs">
       <div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4 text-[#25292F] dark:text-white/90" />
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-white">
-              Operations Duty Leads
+            <UserCheck className="h-4 w-4 text-[#777E86]" />
+            <h3 className="text-sm font-semibold text-[#34383D]">
+              Recent Activity &amp; Duty Leads
             </h3>
           </div>
-          <span className="text-[10px] font-medium text-[#5E646E] dark:text-white/80">
+          <span className="text-[10px] font-medium text-[#858B93]">
             {dutyRoster.length} Assigned
           </span>
         </div>
 
         {/* Member List with Initials-based Avatars */}
         {dutyRoster.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-[#E5E7EA] dark:border-[#363C46] p-6 text-center text-xs text-[#8A9098] dark:text-white/50">
+          <div className="mt-4 rounded-lg border border-dashed border-[#E5E7E9] p-6 text-center text-xs text-[#858B93]">
             No operations duty leads assigned yet.
           </div>
         ) : (
-          <div className="mt-4 flex flex-col divide-y divide-[#F4F5F6] dark:divide-white/10">
+          <div className="mt-4 flex flex-col divide-y divide-[#E5E7E9]">
             {dutyRoster.map((member, idx) => (
               <div
                 key={idx}
                 className="flex items-center justify-between py-2.5"
               >
                 <div className="flex items-center gap-2.5">
-                  <Avatar className="h-8 w-8 border border-[#E5E7EA] dark:border-[#363C46] bg-[#F0F1F2] dark:bg-white/10">
-                    <AvatarFallback className="bg-[#25292F] dark:bg-white text-white dark:text-[#111315] text-[10px] font-bold">
+                  <Avatar className="h-7 w-7 border border-[#E5E7E9] bg-[#E3E5E8]">
+                    <AvatarFallback className="bg-[#E3E5E8] text-[#34383D] text-[10px] font-semibold">
                       {member.initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-[#17191C] dark:text-white">
+                    <span className="text-xs font-semibold text-[#34383D]">
                       {member.name}
                     </span>
-                    <span className="text-[11px] text-[#5E646E] dark:text-white/70">
+                    <span className="text-[11px] text-[#858B93]">
                       {member.role}
                     </span>
                   </div>
                 </div>
 
-                <span className="rounded-full bg-[#F0F1F2] dark:bg-white/10 border border-[#E5E7EA] dark:border-white/15 px-2 py-0.5 text-[10px] font-medium text-[#5E646E] dark:text-white/80 line-clamp-1 max-w-[120px]">
+                <span className="rounded-md bg-[#F6F7F8] border border-[#E5E7E9] px-2 py-0.5 text-[10px] font-medium text-[#858B93] line-clamp-1 max-w-[120px]">
                   {member.assignment}
                 </span>
               </div>
@@ -128,9 +128,9 @@ export function OrganizerActivity({
         )}
       </div>
 
-      <div className="mt-4 border-t border-[#F4F5F6] dark:border-white/10 pt-2.5 flex items-center justify-between text-[11px] text-[#828892] dark:text-white/60">
-        <span>Role coverage</span>
-        <span className="font-medium text-[#17191C] dark:text-white">
+      <div className="mt-4 border-t border-[#E5E7E9] pt-2.5 flex items-center justify-between text-[11px] text-[#858B93]">
+        <span>Administrative Coverage</span>
+        <span className="font-medium text-[#34383D]">
           {dutyRoster.length} Team {dutyRoster.length === 1 ? "Member" : "Members"}
         </span>
       </div>

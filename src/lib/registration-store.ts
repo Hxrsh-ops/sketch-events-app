@@ -166,6 +166,54 @@ export function saveSubmission(submission: RegistrationSubmission): void {
   notifySubscribers();
 }
 
+export function removeStoredEvent(eventId: string): void {
+  const currentEvents = getStoredEvents();
+  const nextEvents = currentEvents.filter((e) => e.id !== eventId);
+  const mockIdx = MOCK_EVENTS.findIndex((e) => e.id === eventId);
+  if (mockIdx >= 0) {
+    MOCK_EVENTS.splice(mockIdx, 1);
+  }
+  memoryEvents = nextEvents;
+  writeStorage(STORAGE_KEY_EVENTS, nextEvents);
+  notifySubscribers();
+}
+
+export function cancelStoredRegistration(registrationId: string): boolean {
+  const current = getStoredSubmissions();
+  const subIdx = current.findIndex((s) => s.registrationId === registrationId);
+  if (subIdx >= 0) {
+    const sub = current[subIdx];
+    if (sub.status !== "cancelled") {
+      sub.status = "cancelled";
+      writeStorage(STORAGE_KEY_SUBMISSIONS, current);
+
+      // Decrement event registeredCount
+      const allEvents = getStoredEvents();
+      const targetEvent = allEvents.find((e) => e.id === sub.eventId);
+      if (targetEvent) {
+        const decrementBy = sub.teamMembers ? sub.teamMembers.length + 1 : 1;
+        const updatedEvent: EventItem = {
+          ...targetEvent,
+          registeredCount: Math.max(0, (targetEvent.registeredCount || 0) - decrementBy),
+        };
+        saveEvent(updatedEvent);
+      }
+      notifySubscribers();
+      return true;
+    }
+  }
+
+  // Also check MOCK_PARTICIPANTS
+  const mockPart = MOCK_PARTICIPANTS.find((p) => p.registrationId === registrationId || p.id === registrationId);
+  if (mockPart) {
+    mockPart.status = "cancelled";
+    notifySubscribers();
+    return true;
+  }
+
+  return false;
+}
+
 // ==========================================
 // PARTICIPANTS REPOSITORY (MOCK + DYNAMIC)
 // ==========================================

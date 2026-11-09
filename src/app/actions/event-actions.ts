@@ -389,3 +389,72 @@ export async function setEventLifecycleAction(
     };
   }
 }
+
+const DeleteEventSchema = z.object({
+  id: z.string().trim().min(1, "Event identifier is required"),
+});
+
+/**
+ * Permanently delete an event and its cascaded records (Master Admin only)
+ */
+export async function deleteEventAction(
+  rawData: unknown
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const session = await verifyAdminSession();
+    if (!session.isAuthenticated || !session.user) {
+      return {
+        success: false,
+        error: "UNAUTHORIZED",
+        message: "You must be signed in as an administrator to delete events.",
+      };
+    }
+
+    if (!hasPermission(session.user.role, "events:delete")) {
+      return {
+        success: false,
+        error: "FORBIDDEN",
+        message: `Role "${session.user.role}" does not have permission to delete events. Master Admin authorization required.`,
+      };
+    }
+
+    const parseResult = DeleteEventSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return {
+        success: false,
+        error: "VALIDATION_FAILED",
+        message: parseResult.error.issues[0]?.message || "Invalid event ID for deletion.",
+      };
+    }
+
+    const { id } = parseResult.data;
+
+    // Execute deletion via repository
+    await SketchRepository.deleteEvent(id);
+
+    // Record audit trail
+    await SketchRepository.logAudit({
+      actorName: session.user.name,
+      actorEmail: session.user.email,
+      action: "EVENT_DELETED",
+      target: id,
+      details: { deletedEventId: id },
+    });
+
+    revalidatePath("/events");
+    revalidatePath("/");
+    revalidatePath("/rounds");
+
+    return {
+      success: true,
+      data: { id },
+      message: "Event and associated records have been permanently removed.",
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: "DELETE_FAILED",
+      message: err.message || "Failed to delete event.",
+    };
+  }
+}

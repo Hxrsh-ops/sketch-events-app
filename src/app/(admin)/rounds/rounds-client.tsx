@@ -270,7 +270,7 @@ export default function RoundsClient({
   if (initialError) {
     return (
       <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto min-w-0">
-        <div className="rounded-[20px] border border-red-200 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/20 p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
+        <div className="rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/20 p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-7 w-7" />
           </div>
@@ -304,23 +304,26 @@ export default function RoundsClient({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
-              Rounds & Progression
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / ROUNDS &amp; STAGES
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C]">
+              Rounds &amp; Progression
             </h1>
             <Badge variant="outline" className="text-[10px] uppercase font-semibold">
               {isPreview ? "Preview Mode" : "PostgreSQL Live"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#989EA7]">
+          <p className="mt-1 text-xs sm:text-sm text-[#777E86]">
             Multi-stage competition pipelines, jury evaluations, qualifying thresholds, and stage progression.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Button
-            variant="charcoal"
-            className="rounded-full gap-2 text-xs sm:text-sm font-semibold shadow-sm h-9 sm:h-10 px-4 sm:px-5"
+            variant="default"
+            className="rounded-full gap-2 text-xs sm:text-sm font-semibold shadow-sm h-9 sm:h-10 px-4 sm:px-5 bg-[#17191C] text-white hover:bg-[#25292F]"
             onClick={handleOpenAddStage}
           >
             <Plus className="h-4 w-4" />
@@ -330,9 +333,9 @@ export default function RoundsClient({
       </div>
 
       {/* Scope Selector Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm gap-3">
-        <div className="flex items-center gap-2 text-xs text-[#17191C] dark:text-[#F1F2F3] font-semibold">
-          <Layers className="h-4 w-4 text-[#8A9098] dark:text-[#656B73]" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-[#E5E7E9]  bg-white p-3.5 shadow-sm gap-3">
+        <div className="flex items-center gap-2 text-xs text-[#34383D]  font-semibold">
+          <Layers className="h-4 w-4 text-[#858B93] " />
           <span>Competition Scope:</span>
         </div>
         <div className="w-full sm:w-80">
@@ -350,15 +353,15 @@ export default function RoundsClient({
 
       {/* Feedback Banner */}
       {feedbackMessage && (
-        <div className="rounded-2xl border border-[#17191C] dark:border-[#30353A] bg-[#17191C] dark:bg-[#22262A] text-white p-4 text-xs flex items-center justify-between shadow-sm">
+        <div className="rounded-xl border border-[#E5E7E9] bg-[#F6F7F8] text-[#17191C] p-4 text-xs flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-white" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#17191C]" />
             <span className="font-medium">{feedbackMessage}</span>
           </div>
           <button
             type="button"
             onClick={() => setFeedbackMessage(null)}
-            className="text-[11px] text-white/60 hover:text-white underline ml-3"
+            className="text-[11px] text-[#777E86] hover:text-[#17191C] underline ml-3"
           >
             Dismiss
           </button>
@@ -367,7 +370,7 @@ export default function RoundsClient({
 
       {/* Error Alert */}
       {actionError && (
-        <div className="rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 p-4 text-xs flex items-center justify-between shadow-sm">
+        <div className="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-200 p-4 text-xs flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span className="font-medium">{actionError}</span>
@@ -384,15 +387,15 @@ export default function RoundsClient({
 
       {/* Single-Stage / No-Rounds Informative State */}
       {eventRounds.length === 0 ? (
-        <div className="rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-8 text-center shadow-sm space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-8 text-center shadow-sm space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
             <GitBranch className="h-6 w-6" />
           </div>
           <div className="max-w-md mx-auto">
-            <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">
+            <h2 className="text-base font-bold text-[#34383D] ">
               Single-Stage Event — {selectedEvent?.title}
             </h2>
-            <p className="mt-1 text-xs text-[#656B73] dark:text-[#989EA7] leading-relaxed">
+            <p className="mt-1 text-xs text-[#858B93]  leading-relaxed">
               This event is configured as a single open session without elimination stages. All registered and checked-in attendees participate directly in the main activity.
             </p>
           </div>
@@ -400,20 +403,20 @@ export default function RoundsClient({
             variant="outline"
             size="sm"
             onClick={handleOpenAddStage}
-            className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold"
+            className="rounded-full border-[#E5E7E9]  text-xs font-semibold"
           >
             Configure Multi-Stage Pipeline
           </Button>
         </div>
       ) : (
         /* Multi-Stage Progression Pipeline */
-        <div className="rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-4">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-4">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#858B93] ">
                 Active Competition Pipeline
               </span>
-              <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">
+              <h2 className="text-base font-bold text-[#34383D] ">
                 {selectedEvent?.title} — {eventRounds.length}-Stage Progression
               </h2>
             </div>
@@ -431,16 +434,16 @@ export default function RoundsClient({
               return (
                 <div
                   key={round.id}
-                  className={`rounded-2xl border p-5 flex flex-col justify-between transition-all duration-200 ${
+                  className={`rounded-xl border p-5 flex flex-col justify-between transition-all duration-200 ${
                     isActive
-                      ? "border-[#25292F] dark:border-[#E8EAED] bg-[#F9FAFB] dark:bg-[#151719] ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
-                      : "border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]"
+                      ? "border-[#25292F] dark:border-[#E8EAED] bg-[#F9FAFB]  ring-1 ring-[#25292F] dark:ring-[#E8EAED]"
+                      : "border-[#E5E7E9]  bg-white"
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white dark:text-[#F1F2F3] text-xs font-bold">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white  text-xs font-bold">
                           {round.order}
                         </span>
                         {/* Reordering Controls */}
@@ -450,7 +453,7 @@ export default function RoundsClient({
                             disabled={index === 0 || isSubmitting}
                             onClick={() => handleMoveStage(round, "up")}
                             title="Move up"
-                            className="p-1 rounded text-[#8A9098] hover:text-[#17191C] dark:hover:text-white disabled:opacity-30"
+                            className="p-1 rounded text-[#858B93] hover:text-[#34383D] dark:hover:text-white disabled:opacity-30"
                           >
                             <ArrowUp className="h-3 w-3" />
                           </button>
@@ -459,7 +462,7 @@ export default function RoundsClient({
                             disabled={index === eventRounds.length - 1 || isSubmitting}
                             onClick={() => handleMoveStage(round, "down")}
                             title="Move down"
-                            className="p-1 rounded text-[#8A9098] hover:text-[#17191C] dark:hover:text-white disabled:opacity-30"
+                            className="p-1 rounded text-[#858B93] hover:text-[#34383D] dark:hover:text-white disabled:opacity-30"
                           >
                             <ArrowDown className="h-3 w-3" />
                           </button>
@@ -476,36 +479,36 @@ export default function RoundsClient({
                       </div>
                     </div>
 
-                    <h3 className="mt-3 text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                    <h3 className="mt-3 text-sm font-bold text-[#34383D] ">
                       {round.name}
                     </h3>
 
-                    <div className="mt-3 space-y-1.5 text-xs text-[#656B73] dark:text-[#989EA7]">
+                    <div className="mt-3 space-y-1.5 text-xs text-[#858B93] ">
                       <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-[#8A9098] dark:text-[#656B73]" />
+                        <MapPin className="h-3.5 w-3.5 text-[#858B93] " />
                         <span>{round.venue}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-[#8A9098] dark:text-[#656B73]" />
+                        <Users className="h-3.5 w-3.5 text-[#858B93] " />
                         <span>
-                          <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.eligibleCount}</strong> Eligible
+                          <strong className="text-[#34383D] ">{round.eligibleCount}</strong> Eligible
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Trophy className="h-3.5 w-3.5 text-[#8A9098] dark:text-[#656B73]" />
+                        <Trophy className="h-3.5 w-3.5 text-[#858B93] " />
                         <span>
-                          <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.advancedCount || 0}</strong> Advanced
+                          <strong className="text-[#34383D] ">{round.advancedCount || 0}</strong> Advanced
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-[#E5E7EA] dark:border-[#262A2E] flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-[#E5E7E9]  flex items-center justify-between">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedRound(round)}
-                      className="text-xs font-semibold h-8 px-2.5 gap-1.5 text-[#17191C] dark:text-[#F1F2F3]"
+                      className="text-xs font-semibold h-8 px-2.5 gap-1.5 text-[#34383D] "
                     >
                       <span>Stage Details</span>
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -532,7 +535,7 @@ export default function RoundsClient({
                           setSelectedRound(round);
                           handleOpenEditStage(round);
                         }}
-                        className="h-7 w-7 p-0 text-[#8A9098] hover:text-[#17191C] dark:hover:text-white"
+                        className="h-7 w-7 p-0 text-[#858B93] hover:text-[#34383D] dark:hover:text-white"
                         title="Edit Stage"
                       >
                         <Edit2 className="h-3.5 w-3.5" />
@@ -566,34 +569,34 @@ export default function RoundsClient({
       >
         {selectedRound && (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2 text-xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+            <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-2 text-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#858B93] ">
                 Stage Evaluation Details
               </span>
-              <p className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3] capitalize">
+              <p className="text-sm font-bold text-[#34383D]  capitalize">
                 {selectedRound.status.replace("_", " ")} Evaluation
               </p>
-              <div className="grid grid-cols-2 gap-2 pt-2 text-[#656B73] dark:text-[#989EA7]">
+              <div className="grid grid-cols-2 gap-2 pt-2 text-[#858B93] ">
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-[#8A9098]">Venue</span>
-                  <strong className="text-[#17191C] dark:text-[#F1F2F3]">{selectedRound.venue}</strong>
+                  <span className="block text-[10px] uppercase font-bold text-[#858B93]">Venue</span>
+                  <strong className="text-[#34383D] ">{selectedRound.venue}</strong>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-[#8A9098]">Sequence</span>
-                  <strong className="text-[#17191C] dark:text-[#F1F2F3]">Round {selectedRound.order}</strong>
+                  <span className="block text-[10px] uppercase font-bold text-[#858B93]">Sequence</span>
+                  <strong className="text-[#34383D] ">Round {selectedRound.order}</strong>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-[#8A9098]">Eligible Participants</span>
-                  <strong className="text-[#17191C] dark:text-[#F1F2F3]">{selectedRound.eligibleCount}</strong>
+                  <span className="block text-[10px] uppercase font-bold text-[#858B93]">Eligible Participants</span>
+                  <strong className="text-[#34383D] ">{selectedRound.eligibleCount}</strong>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-bold text-[#8A9098]">Advanced to Next Round</span>
-                  <strong className="text-[#17191C] dark:text-[#F1F2F3]">{selectedRound.advancedCount || 0}</strong>
+                  <span className="block text-[10px] uppercase font-bold text-[#858B93]">Advanced to Next Round</span>
+                  <strong className="text-[#34383D] ">{selectedRound.advancedCount || 0}</strong>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-4 border-t border-[#E5E7EA] dark:border-[#30353A]">
+            <div className="flex items-center gap-3 pt-4 border-t border-[#E5E7E9] ">
               <Button
                 variant="charcoal"
                 className="flex-1 rounded-full text-xs font-semibold h-10 shadow-sm"
@@ -628,7 +631,7 @@ export default function RoundsClient({
       >
         <form onSubmit={handleCreateStage} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+            <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
               Stage Name *
             </label>
             <Input
@@ -641,7 +644,7 @@ export default function RoundsClient({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+            <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
               Stage Venue
             </label>
             <Input
@@ -654,7 +657,7 @@ export default function RoundsClient({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+              <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
                 Eligible Count
               </label>
               <Input
@@ -667,7 +670,7 @@ export default function RoundsClient({
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+              <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
                 Advanced Quota
               </label>
               <Input
@@ -681,7 +684,7 @@ export default function RoundsClient({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#E5E7EA] dark:border-[#30353A] flex items-center gap-3">
+          <div className="pt-4 border-t border-[#E5E7E9]  flex items-center gap-3">
             <Button
               type="submit"
               variant="charcoal"
@@ -712,7 +715,7 @@ export default function RoundsClient({
       >
         <form onSubmit={handleUpdateStage} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+            <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
               Stage Name *
             </label>
             <Input
@@ -725,7 +728,7 @@ export default function RoundsClient({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+            <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
               Stage Venue
             </label>
             <Input
@@ -738,7 +741,7 @@ export default function RoundsClient({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+              <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
                 Eligible Count
               </label>
               <Input
@@ -750,7 +753,7 @@ export default function RoundsClient({
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1.5">
+              <label className="text-xs font-semibold text-[#34383D]  block mb-1.5">
                 Advanced Quota
               </label>
               <Input
@@ -763,7 +766,7 @@ export default function RoundsClient({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#E5E7EA] dark:border-[#30353A] flex items-center gap-3">
+          <div className="pt-4 border-t border-[#E5E7E9]  flex items-center gap-3">
             <Button
               type="submit"
               variant="charcoal"

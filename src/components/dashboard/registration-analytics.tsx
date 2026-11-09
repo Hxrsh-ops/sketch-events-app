@@ -115,19 +115,19 @@ export function RegistrationAnalytics({
   const totalInSeries = activeSeries.reduce((acc, curr) => acc + curr.count, 0);
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
+    <div className="flex h-full flex-col justify-between rounded-xl border border-[#E5E7E9] bg-white p-5 shadow-xs">
       {/* Header with Title and Mode Switcher */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-white">
-              Registration &amp; Check-in Trajectory
+            <h3 className="text-sm font-semibold text-[#34383D]">
+              Registration Trends
             </h3>
-            <span className="rounded-full bg-[#F0F1F2] dark:bg-white/10 border border-[#E5E7EA] dark:border-white/15 px-2 py-0.5 text-[10px] font-medium text-[#5E646E] dark:text-white/80">
+            <span className="rounded-md bg-[#F6F7F8] border border-[#E5E7E9] px-2 py-0.5 text-[10px] font-medium text-[#858B93]">
               {isPreview ? "Preview Data" : "Live Trajectory"}
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-[#5E646E] dark:text-white/70">
+          <p className="mt-0.5 text-xs text-[#858B93]">
             {totalInSeries.toLocaleString()} total{" "}
             {activeTab === "registrations" ? "registrations" : "check-ins"}{" "}
             across 7 days
@@ -135,14 +135,14 @@ export function RegistrationAnalytics({
         </div>
 
         {/* Compact Tab Switcher */}
-        <div className="flex items-center rounded-full bg-[#F4F5F6] dark:bg-[#181B1F] p-0.5 border border-[#E5E7EA] dark:border-[#363C46] self-start sm:self-auto select-none">
+        <div className="flex items-center rounded-lg bg-[#F6F7F8] p-0.5 border border-[#E5E7E9] self-start sm:self-auto select-none">
           <button
             type="button"
             onClick={() => setActiveTab("registrations")}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#858B93] ${
               activeTab === "registrations"
-                ? "bg-[#25292F] dark:bg-white text-white dark:text-[#111315] shadow-sm"
-                : "text-[#656B73] dark:text-white/70 hover:text-[#17191C] dark:hover:text-white"
+                ? "bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] shadow-xs"
+                : "text-[#858B93] hover:text-[#34383D]"
             }`}
           >
             <Users className="h-3 w-3" />
@@ -151,10 +151,10 @@ export function RegistrationAnalytics({
           <button
             type="button"
             onClick={() => setActiveTab("checkins")}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#858B93] ${
               activeTab === "checkins"
-                ? "bg-[#25292F] dark:bg-white text-white dark:text-[#111315] shadow-sm"
-                : "text-[#656B73] dark:text-white/70 hover:text-[#17191C] dark:hover:text-white"
+                ? "bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] shadow-xs"
+                : "text-[#858B93] hover:text-[#34383D]"
             }`}
           >
             <QrCode className="h-3 w-3" />
@@ -165,7 +165,7 @@ export function RegistrationAnalytics({
 
       {/* Proportional Monochrome Pill Bar Chart */}
       <div className="mt-5">
-        <div className="relative flex h-32 items-end justify-between gap-2 border-b border-[#E5E7EA] dark:border-[#363C46] pb-2 px-2 sm:px-4">
+        <div className="relative flex h-32 items-end justify-between gap-2 border-b border-[#E5E7E9] pb-2 px-2 sm:px-4">
           {activeSeries.map((bar, idx) => (
             <div
               key={`${activeTab}-${bar.day}`}
@@ -178,11 +178,11 @@ export function RegistrationAnalytics({
               onMouseLeave={() => setHoveredIdx(null)}
               onFocus={() => setHoveredIdx(idx)}
               onBlur={() => setHoveredIdx(null)}
-              className="group relative flex flex-1 flex-col items-center justify-end h-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] rounded-t-xl"
+              className="group relative flex flex-1 flex-col items-center justify-end h-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#858B93] rounded-t-md"
             >
               {/* Tooltip on hover/focus */}
               {hoveredIdx === idx && (
-                <div className="absolute -top-8 z-20 whitespace-nowrap rounded-full bg-[#17191C] dark:bg-[#E8EAED] px-2.5 py-0.5 text-[10px] font-semibold text-white dark:text-[#111315] shadow-sm pointer-events-none select-none">
+                <div className="absolute -top-8 z-20 whitespace-nowrap rounded-md bg-[#34383D] px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-xs pointer-events-none select-none">
                   {bar.count}{" "}
                   {activeTab === "registrations" ? "registered" : "checked in"}
                 </div>
@@ -191,13 +191,13 @@ export function RegistrationAnalytics({
               {/* Pill Shaped Bar */}
               <div
                 style={{ height: `${bar.heightPercent}%` }}
-                className={`w-full max-w-[28px] rounded-full transition-all duration-300 cursor-pointer ${
+                className={`w-full max-w-[24px] rounded-t-md transition-all duration-200 cursor-pointer ${
                   bar.isPeak
-                    ? "bg-[#25292F] dark:bg-[#E8EAED]"
-                    : "bg-[#989EA7]/70 dark:bg-[#7D858F]/50 hover:bg-[#25292F]/80 dark:hover:bg-[#E8EAED]/80"
+                    ? "bg-[#34383D]"
+                    : "bg-[#E5E7E9] hover:bg-[#858B93]"
                 } ${
                   hoveredIdx === idx
-                    ? "opacity-100 ring-2 ring-black/10 dark:ring-white/20"
+                    ? "ring-2 ring-[#34383D]/20"
                     : ""
                 }`}
               />
@@ -212,8 +212,8 @@ export function RegistrationAnalytics({
               <span
                 className={`text-[11px] font-medium transition-colors ${
                   hoveredIdx === idx
-                    ? "text-[#17191C] dark:text-[#F1F2F3] font-semibold"
-                    : "text-[#8A9098] dark:text-[#7D858F]"
+                    ? "text-[#34383D] font-semibold"
+                    : "text-[#858B93]"
                 }`}
               >
                 {bar.day}

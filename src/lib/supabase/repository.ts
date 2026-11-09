@@ -44,6 +44,8 @@ import {
   getAllParticipants,
   getAllTeams,
   updateParticipantAttendance,
+  removeStoredEvent,
+  cancelStoredRegistration,
 } from "@/lib/registration-store";
 
 export interface RegisterResult {
@@ -183,13 +185,16 @@ export class SketchRepository {
   /**
    * Fetch an event by slug (Public view - restricted to published/live)
    */
-  static async getEventBySlug(slug: string): Promise<EventItem | null> {
+  static async getEventBySlug(slugOrId: string): Promise<EventItem | null> {
+    const cleanIdentifier = (slugOrId || "").trim();
+    if (!cleanIdentifier) return null;
+
     if (this.isPreview()) {
       const events = getStoredEvents();
       return (
         events.find(
           (e) =>
-            e.slug === slug &&
+            (e.slug === cleanIdentifier || e.id === cleanIdentifier) &&
             (e.lifecycle === "published" || e.lifecycle === "live")
         ) || null
       );
@@ -200,14 +205,27 @@ export class SketchRepository {
       throw new Error("Database client is unavailable in production mode.");
     }
 
-    const { data, error } = await supabase
+    // Attempt lookup by slug first
+    let { data, error } = await supabase
       .from("events")
       .select("*")
-      .eq("slug", slug)
+      .eq("slug", cleanIdentifier)
       .in("lifecycle", ["published", "live"])
-      .single();
+      .maybeSingle();
 
-    if (error || !data) return null;
+    // Fallback: If not found by slug and identifier is a valid UUID, lookup by ID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(cleanIdentifier);
+    if (!data && isUuid) {
+      const idRes = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", cleanIdentifier)
+        .in("lifecycle", ["published", "live"])
+        .maybeSingle();
+      data = idRes.data;
+    }
+
+    if (!data) return null;
 
     return this.mapEventRowToEventItem(data);
   }
@@ -550,6 +568,107 @@ export class SketchRepository {
       attendanceStatus: "not_checked_in",
       message: "Unexpected response from attendance service.",
       error: "UNKNOWN_RESPONSE",
+    };
+  }
+
+  /**
+   * Cancel an attendee registration
+   * Updates registration status to 'cancelled', updates tickets to 'cancelled',
+   * decrements event registered_count, and logs audit record.
+   */
+  static async cancelRegistration(params: {
+    registrationIdOrUid: string;
+    eventId?: string;
+    reason?: string;
+    actorId?: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<{ success: boolean; message: string }> {
+    if (this.isPreview()) {
+      const ok = cancelStoredRegistration(params.registrationIdOrUid);
+      return {
+        success: ok,
+        message: ok ? "Registration cancelled successfully in preview store." : "Registration record not found.",
+      };
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    // 1. Fetch registration
+    const { data: reg, error: fetchErr } = await supabase
+      .from("registrations")
+      .select("id, registration_id, event_id, status, attendee_name, email")
+      .or(`id.eq.${params.registrationIdOrUid},registration_id.eq.${params.registrationIdOrUid}`)
+      .maybeSingle();
+
+    if (fetchErr || !reg) {
+      return { success: false, message: "Registration not found." };
+    }
+
+    if (reg.status === "cancelled") {
+      return { success: true, message: "Registration is already cancelled." };
+    }
+
+    const now = new Date().toISOString();
+
+    // 2. Mark registration as cancelled
+    const { error: updateErr } = await supabase
+      .from("registrations")
+      .update({
+        status: "cancelled",
+        updated_at: now,
+      })
+      .eq("id", reg.id);
+
+    if (updateErr) {
+      return { success: false, message: `Failed to cancel registration: ${updateErr.message}` };
+    }
+
+    // 3. Mark any associated tickets as cancelled
+    await supabase
+      .from("tickets")
+      .update({
+        status: "cancelled",
+        updated_at: now,
+      })
+      .eq("registration_id", reg.id);
+
+    // 4. Decrement event registered_count
+    const { data: eventData } = await supabase
+      .from("events")
+      .select("registered_count")
+      .eq("id", reg.event_id)
+      .single();
+
+    if (eventData) {
+      const newCount = Math.max(0, (eventData.registered_count || 1) - 1);
+      await supabase
+        .from("events")
+        .update({ registered_count: newCount, updated_at: now })
+        .eq("id", reg.event_id);
+    }
+
+    // 5. Audit Log
+    await this.logAudit({
+      actorName: params.actorName || "Admin",
+      actorEmail: params.actorEmail || "admin@sketch.org",
+      action: "REGISTRATION_CANCELLED",
+      target: reg.registration_id,
+      details: {
+        registrationId: reg.id,
+        eventId: reg.event_id,
+        attendeeName: reg.attendee_name,
+        email: reg.email,
+        reason: params.reason || "Cancelled by administrator",
+      },
+    });
+
+    return {
+      success: true,
+      message: `Registration for ${reg.attendee_name} (${reg.registration_id}) was cancelled.`,
     };
   }
 
@@ -1289,6 +1408,32 @@ export class SketchRepository {
   }
 
   /**
+   * Delete an event and all associated records (Admin operation)
+   */
+  static async deleteEvent(id: string): Promise<boolean> {
+    if (this.isPreview()) {
+      removeStoredEvent(id);
+      return true;
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+    if (!supabase) {
+      throw new Error("Database client is unavailable in production mode.");
+    }
+
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      throw new Error(`Failed to delete event: ${error.message}`);
+    }
+
+    return true;
+  }
+
+  /**
    * Check capacity and eligibility for an event before submission
    */
   static async checkEventRegistrationCapacity(
@@ -1585,11 +1730,11 @@ export class SketchRepository {
     if (this.isPreview()) {
       const all = getStoredCertificates();
       const found = all.find(
-        (c) => c.certificateNumber.toLowerCase() === cleanCertNumber.toLowerCase() && c.status === "issued"
+        (c) => c.certificateNumber.toLowerCase() === cleanCertNumber.toLowerCase()
       );
       if (!found) return null;
       return {
-        isValid: true,
+        isValid: found.status === "issued",
         certificateNumber: found.certificateNumber,
         eventTitle: found.eventTitle,
         recipientName: found.recipientName,
@@ -1606,23 +1751,141 @@ export class SketchRepository {
         p_certificate_number: cleanCertNumber,
       });
 
-      if (error || !data || data.length === 0) {
-        return null;
+      if (!error && data && data.length > 0) {
+        const row = data[0];
+        return {
+          isValid: Boolean(row.is_valid),
+          certificateNumber: row.certificate_number,
+          eventTitle: row.event_title,
+          recipientName: row.recipient_name,
+          issuedAt: row.issued_at,
+          status: row.status,
+        };
       }
 
-      const row = data[0];
-      return {
-        isValid: Boolean(row.is_valid),
-        certificateNumber: row.certificate_number,
-        eventTitle: row.event_title,
-        recipientName: row.recipient_name,
-        issuedAt: row.issued_at,
-        status: row.status,
-      };
+      // If RPC returned empty, check adminClient to see if it exists with revoked status
+      const adminClient = createAdminClient();
+      if (adminClient) {
+        const { data: certRow } = await (adminClient as any)
+          .from("certificates")
+          .select("certificate_number, recipient_name, issued_at, status, events(title)")
+          .eq("certificate_number", cleanCertNumber)
+          .maybeSingle();
+
+        if (certRow) {
+          return {
+            isValid: certRow.status === "issued",
+            certificateNumber: certRow.certificate_number,
+            eventTitle: certRow.events?.title || "Sketch Event",
+            recipientName: certRow.recipient_name,
+            issuedAt: certRow.issued_at,
+            status: certRow.status,
+          };
+        }
+      }
+
+      return null;
     } catch (err) {
       console.error("[SketchRepository.verifyCertificate] Exception:", err);
       return null;
     }
+  }
+
+  /**
+   * Issue a single certificate for an eligible checked-in attendee
+   */
+  static async issueIndividualCertificate(params: {
+    participantId: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<CertificateRecord> {
+    const isPreviewMode = this.isPreview();
+
+    // 1. Fetch attendee
+    const allParticipants = await this.listParticipants();
+    const attendee = allParticipants.find((p) => p.id === params.participantId);
+    if (!attendee) {
+      throw new Error("Attendee record not found.");
+    }
+
+    if (attendee.attendanceStatus !== "checked_in") {
+      throw new Error("Certificates can only be issued to checked-in attendees. Attendee has not checked in.");
+    }
+
+    // 2. Check if already issued
+    const existingCerts = await this.listCertificates(attendee.eventId);
+    const alreadyIssued = existingCerts.find(
+      (c) => c.recipientEmail.toLowerCase() === attendee.email.toLowerCase() && c.status === "issued"
+    );
+    if (alreadyIssued) {
+      throw new Error(`Certificate already issued for this attendee (${alreadyIssued.certificateNumber}).`);
+    }
+
+    const event = await this.getEventById(attendee.eventId);
+    const eventTitle = event?.title || attendee.eventTitle || "Sketch Event";
+
+    const newCert: CertificateRecord = {
+      id: isPreviewMode ? `cert-${Date.now()}` : crypto.randomUUID(),
+      eventId: attendee.eventId,
+      eventTitle,
+      recipientName: attendee.name,
+      recipientEmail: attendee.email,
+      certificateNumber: `SKETCH-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      issuedAt: new Date().toISOString(),
+      status: "issued" as const,
+    };
+
+    if (isPreviewMode) {
+      saveCertificates([newCert]);
+    } else {
+      const supabase = createAdminClient() || (await createClient());
+      if (supabase) {
+        const { error: insertErr } = await (supabase as any).from("certificates").insert({
+          id: newCert.id,
+          event_id: newCert.eventId,
+          recipient_name: newCert.recipientName,
+          recipient_email: newCert.recipientEmail,
+          certificate_number: newCert.certificateNumber,
+          status: newCert.status,
+          issued_at: newCert.issuedAt,
+        });
+
+        if (insertErr) {
+          throw new Error(`Failed to store certificate: ${insertErr.message}`);
+        }
+
+        // Enqueue outbox notification
+        await (supabase as any).from("communications_outbox").insert({
+          event_id: newCert.eventId,
+          recipient_email: newCert.recipientEmail,
+          recipient_name: newCert.recipientName,
+          subject: `Certificate of Participation — ${newCert.eventTitle}`,
+          template_type: "certificate",
+          payload: {
+            certificateNumber: newCert.certificateNumber,
+            recipientName: newCert.recipientName,
+            eventTitle: newCert.eventTitle,
+            issuedAt: newCert.issuedAt,
+          },
+          status: "queued",
+        });
+      }
+    }
+
+    // Audit log
+    await this.logAudit({
+      actorName: params.actorName || "Administrator",
+      actorEmail: params.actorEmail || "admin@sketch.org",
+      action: "Issued Individual Certificate",
+      target: `${attendee.name} (${newCert.certificateNumber})`,
+      details: {
+        certificateNumber: newCert.certificateNumber,
+        recipientEmail: newCert.recipientEmail,
+        eventId: newCert.eventId,
+      },
+    });
+
+    return newCert;
   }
 
   /**
@@ -2097,18 +2360,26 @@ export class SketchRepository {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("[SketchRepository.listTicketTemplates] Database query failed:", {
-        code: error.code,
-        message: error.message,
-        hint: error.hint,
-        details: error.details,
-      });
-      if (error.code === "PGRST205" || error.code === "42P01") {
+      const errCode = error?.code || (error as any)?.status || "UNKNOWN";
+      const errMsg = error?.message || (typeof error === "string" ? error : "Unknown error");
+      const errHint = error?.hint || null;
+      const errDetails = error?.details || null;
+
+      console.error(
+        `[SketchRepository.listTicketTemplates] Database query failed: [${errCode}] ${errMsg}${errHint ? ` (hint: ${errHint})` : ""}${errDetails ? ` (details: ${errDetails})` : ""}`,
+        {
+          code: errCode,
+          message: errMsg,
+          hint: errHint,
+          details: errDetails,
+        }
+      );
+      if (errCode === "PGRST205" || errCode === "42P01") {
         throw new Error(
           "Table 'ticket_templates' was not found in the connected database. Migration 00007 must be applied to the target database."
         );
       }
-      throw new Error(error.message || "Failed to load ticket templates from database.");
+      throw new Error(errMsg || "Failed to load ticket templates from database.");
     }
 
     if (!data) return [];
@@ -2193,7 +2464,39 @@ export class SketchRepository {
         .order("version_number", { ascending: false }),
     ]);
 
-    if (tplRes.error || !tplRes.data) return { template: null, versions: [] };
+    if (tplRes.error) {
+      const errCode = tplRes.error?.code || (tplRes.error as any)?.status || "UNKNOWN";
+      const errMsg = tplRes.error?.message || String(tplRes.error);
+      const errHint = tplRes.error?.hint || null;
+      const errDetails = tplRes.error?.details || null;
+      console.error(
+        `[SketchRepository.getTicketTemplateById] Database query failed: [${errCode}] ${errMsg}${errHint ? ` (hint: ${errHint})` : ""}${errDetails ? ` (details: ${errDetails})` : ""}`,
+        { code: errCode, message: errMsg, hint: errHint, details: errDetails }
+      );
+      if (errCode === "PGRST205" || errCode === "42P01") {
+        throw new Error(
+          "Table 'ticket_templates' was not found in the connected database. Migration 00007 must be applied to the target database."
+        );
+      }
+      return { template: null, versions: [] };
+    }
+    if (!tplRes.data) return { template: null, versions: [] };
+
+    if (verRes.error) {
+      const errCode = verRes.error?.code || (verRes.error as any)?.status || "UNKNOWN";
+      const errMsg = verRes.error?.message || String(verRes.error);
+      const errHint = verRes.error?.hint || null;
+      const errDetails = verRes.error?.details || null;
+      console.error(
+        `[SketchRepository.getTicketTemplateById] Versions query failed: [${errCode}] ${errMsg}${errHint ? ` (hint: ${errHint})` : ""}${errDetails ? ` (details: ${errDetails})` : ""}`,
+        { code: errCode, message: errMsg, hint: errHint, details: errDetails }
+      );
+      if (errCode === "PGRST205" || errCode === "42P01") {
+        throw new Error(
+          "Table 'ticket_template_versions' was not found in the connected database. Migration 00007 must be applied to the target database."
+        );
+      }
+    }
 
     const t = tplRes.data;
     const template: TicketTemplate = {
@@ -2263,7 +2566,20 @@ export class SketchRepository {
       .single();
 
     if (tplErr || !tpl) {
-      throw new Error(tplErr?.message || "Failed to create ticket template");
+      const errCode = tplErr?.code || (tplErr as any)?.status || "UNKNOWN";
+      const errMsg = tplErr?.message || "Failed to create ticket template";
+      const errHint = tplErr?.hint || null;
+      const errDetails = tplErr?.details || null;
+      console.error(
+        `[SketchRepository.createTicketTemplate] Database insert failed: [${errCode}] ${errMsg}${errHint ? ` (hint: ${errHint})` : ""}${errDetails ? ` (details: ${errDetails})` : ""}`,
+        { code: errCode, message: errMsg, hint: errHint, details: errDetails }
+      );
+      if (errCode === "PGRST205" || errCode === "42P01") {
+        throw new Error(
+          "Table 'ticket_templates' was not found in the connected database. Migration 00007 must be applied to the target database."
+        );
+      }
+      throw new Error(errMsg);
     }
 
     const { data: ver, error: verErr } = await (supabase as any)
@@ -2279,7 +2595,20 @@ export class SketchRepository {
       .single();
 
     if (verErr || !ver) {
-      throw new Error(verErr?.message || "Failed to create initial template version");
+      const errCode = verErr?.code || (verErr as any)?.status || "UNKNOWN";
+      const errMsg = verErr?.message || "Failed to create initial template version";
+      const errHint = verErr?.hint || null;
+      const errDetails = verErr?.details || null;
+      console.error(
+        `[SketchRepository.createTicketTemplate] Version insert failed: [${errCode}] ${errMsg}${errHint ? ` (hint: ${errHint})` : ""}${errDetails ? ` (details: ${errDetails})` : ""}`,
+        { code: errCode, message: errMsg, hint: errHint, details: errDetails }
+      );
+      if (errCode === "PGRST205" || errCode === "42P01") {
+        throw new Error(
+          "Table 'ticket_template_versions' was not found in the connected database. Migration 00007 must be applied to the target database."
+        );
+      }
+      throw new Error(errMsg);
     }
 
     return { templateId: tpl.id, versionId: ver.id };
@@ -2375,7 +2704,20 @@ export class SketchRepository {
       .single();
 
     if (error || !data) {
-      throw new Error(error?.message || "Failed to publish template version");
+      const errCode = error?.code || (error as any)?.status || "UNKNOWN";
+      const errMsg = error?.message || "Failed to publish template version";
+      const errHint = error?.hint || null;
+      const errDetails = error?.details || null;
+      console.error(
+        `[SketchRepository.publishTemplateVersion] Database insert failed: [${errCode}] ${errMsg}${errHint ? ` (hint: ${errHint})` : ""}${errDetails ? ` (details: ${errDetails})` : ""}`,
+        { code: errCode, message: errMsg, hint: errHint, details: errDetails }
+      );
+      if (errCode === "PGRST205" || errCode === "42P01") {
+        throw new Error(
+          "Table 'ticket_template_versions' was not found in the connected database. Migration 00007 must be applied to the target database."
+        );
+      }
+      throw new Error(errMsg);
     }
 
     return { versionId: data.id, versionNumber: data.version_number };
@@ -2401,7 +2743,14 @@ export class SketchRepository {
       .eq("id", params.eventId);
 
     if (error) {
-      console.error("[SketchRepository.assignEventTicketTemplate] Error:", error);
+      const errCode = error?.code || (error as any)?.status || "UNKNOWN";
+      const errMsg = error?.message || String(error);
+      const errHint = error?.hint || null;
+      const errDetails = error?.details || null;
+      console.error(
+        `[SketchRepository.assignEventTicketTemplate] Assignment update failed: [${errCode}] ${errMsg}${errHint ? ` (hint: ${errHint})` : ""}${errDetails ? ` (details: ${errDetails})` : ""}`,
+        { code: errCode, message: errMsg, hint: errHint, details: errDetails }
+      );
       return false;
     }
 
@@ -2571,6 +2920,7 @@ export class SketchRepository {
     recipientEmail: string;
     liveTicketUrl: string;
     ticketNumber?: string;
+    qrCodeDataUrl?: string;
   }): Promise<boolean> {
     if (this.isPreview()) return true;
 
@@ -2595,6 +2945,7 @@ export class SketchRepository {
         : {}),
       live_ticket_url: params.liveTicketUrl,
       ...(params.ticketNumber ? { ticket_number: params.ticketNumber } : {}),
+      ...(params.qrCodeDataUrl ? { qr_code_data_url: params.qrCodeDataUrl } : {}),
     };
 
     const { error: updateErr } = await supabase

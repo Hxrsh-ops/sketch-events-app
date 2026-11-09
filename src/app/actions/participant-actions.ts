@@ -103,3 +103,91 @@ export async function toggleAttendanceAction(
     };
   }
 }
+
+const CancelRegistrationSchema = z.object({
+  registrationId: z.string().trim().min(1, "Registration identifier is required"),
+  eventId: z.string().trim().optional(),
+  reason: z.string().trim().optional(),
+});
+
+export type CancelRegistrationInput = z.infer<typeof CancelRegistrationSchema>;
+
+/**
+ * Server Action: Cancel participant registration
+ *
+ * Enforces authenticated admin session with 'registrations:modify' permission.
+ * Marks registration and tickets as cancelled, frees event capacity, and records audit log.
+ */
+export async function cancelRegistrationAction(
+  rawData: unknown
+): Promise<ActionResult<{ registrationId: string; status: "cancelled" }>> {
+  try {
+    const session = await verifyAdminSession();
+    if (!session.isAuthenticated || !session.user) {
+      return {
+        success: false,
+        error: "UNAUTHORIZED",
+        message: "You must be signed in as an administrator to cancel registrations.",
+      };
+    }
+
+    if (!hasPermission(session.user.role, "registrations:modify")) {
+      return {
+        success: false,
+        error: "FORBIDDEN",
+        message: `Role "${session.user.role}" does not have permission to modify registrations.`,
+      };
+    }
+
+    const parseResult = CancelRegistrationSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return {
+        success: false,
+        error: "VALIDATION_FAILED",
+        message: parseResult.error.issues[0]?.message || "Invalid cancellation parameters.",
+      };
+    }
+
+    const { registrationId, eventId, reason } = parseResult.data;
+
+    const result = await SketchRepository.cancelRegistration({
+      registrationIdOrUid: registrationId,
+      eventId,
+      reason,
+      actorId: session.user.id,
+      actorName: session.user.name,
+      actorEmail: session.user.email,
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: "CANCELLATION_FAILED",
+        message: result.message,
+      };
+    }
+
+    revalidatePath("/participants");
+    revalidatePath("/teams");
+    revalidatePath("/attendance");
+    if (eventId) {
+      revalidatePath(`/events/${eventId}`);
+    }
+
+    return {
+      success: true,
+      data: {
+        registrationId,
+        status: "cancelled",
+      },
+      message: result.message,
+    };
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Internal server error";
+    return {
+      success: false,
+      error: "INTERNAL_ERROR",
+      message: errorMessage || "An unexpected error occurred while cancelling the registration.",
+    };
+  }
+}

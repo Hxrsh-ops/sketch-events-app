@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SketchRepository } from "@/lib/supabase/repository";
 import { verifyAdminSession } from "@/lib/auth/session";
+import { AccessDenied } from "@/components/auth/access-denied";
 import EventDetailClient from "./event-detail-client";
 
 interface EventDetailPageProps {
@@ -14,6 +15,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const { id } = await params;
   const isPreview = SketchRepository.isPreview();
   const session = await verifyAdminSession();
+
+  // Strict RBAC: Event detail is restricted to master_admin and event_manager
+  if (session.user?.role !== "master_admin" && session.user?.role !== "event_manager") {
+    return (
+      <AccessDenied
+        currentRole={session.user?.role}
+        requiredRoles={["master_admin", "event_manager"]}
+        moduleName="Event Operations & Capacity Management"
+      />
+    );
+  }
 
   let event = null;
   let attendees: any[] = [];
@@ -40,13 +52,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto min-w-0">
         <Link
           href="/events"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3] transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Event Directory</span>
         </Link>
 
-        <div className="rounded-[20px] border border-red-200 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/20 p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
+        <div className="rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/20 p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-7 w-7" />
           </div>
@@ -65,7 +77,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-white/80 dark:bg-[#111315]/80 p-3 text-xs font-mono text-red-800 dark:text-red-300 text-left overflow-x-auto">
               {fetchError}
             </div>
-            <p className="text-[11px] text-[#656B73] dark:text-[#A6ADB5] pt-1">
+            <p className="text-[11px] text-[#858B93]  pt-1">
               This is an infrastructure or repository failure, not a confirmation that event &quot;{id}&quot; does not exist.
             </p>
           </div>
@@ -94,24 +106,24 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto min-w-0">
         <Link
           href="/events"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3] transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Event Directory</span>
         </Link>
 
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
-          <CalendarX2 className="mx-auto h-12 w-12 text-[#8A9098] dark:text-[#7D858F] opacity-50" />
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
+          <CalendarX2 className="mx-auto h-12 w-12 text-[#858B93]  opacity-50" />
           <div className="space-y-1.5">
             <div className="flex items-center justify-center gap-2">
-              <h1 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">
+              <h1 className="text-lg font-bold text-[#34383D] ">
                 Event Not Found
               </h1>
               <Badge variant="outline" className="text-[10px] uppercase font-semibold">
                 {isPreview ? "Preview Store" : "Production DB"}
               </Badge>
             </div>
-            <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] leading-relaxed">
+            <p className="text-xs text-[#858B93]  leading-relaxed">
               We could not locate any event with identifier &quot;{id}&quot;. It may have been archived, renamed, or never created.
             </p>
           </div>

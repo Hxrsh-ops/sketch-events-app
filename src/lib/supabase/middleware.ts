@@ -20,6 +20,9 @@ export async function updateSession(request: NextRequest) {
   const isLoginPage = pathname === "/login";
   const isPublicRoute =
     pathname.startsWith("/e/") ||
+    pathname.startsWith("/tickets/") ||
+    pathname.startsWith("/certificates/verify") ||
+    pathname.startsWith("/verify") ||
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/_next") ||
@@ -36,6 +39,14 @@ export async function updateSession(request: NextRequest) {
   if (env.mode === "preview" || !env.supabaseUrl || !env.supabaseAnonKey) {
     const previewCookie = request.cookies.get(PREVIEW_SESSION_COOKIE);
     const hasPreviewSession = Boolean(previewCookie && previewCookie.value);
+
+    // If unauthenticated public attendee accesses /events/[slug] (not /events or /events/new), redirect to public event page /e/[slug]
+    const eventsMatch = pathname.match(/^\/events\/([^/]+)$/);
+    if (!hasPreviewSession && eventsMatch && eventsMatch[1] !== "new") {
+      const publicUrl = request.nextUrl.clone();
+      publicUrl.pathname = `/e/${eventsMatch[1]}`;
+      return NextResponse.redirect(publicUrl);
+    }
 
     // If unauthenticated in preview and trying to access an admin route, redirect to login
     if (!hasPreviewSession && !isLoginPage && !isPublicRoute) {
@@ -106,6 +117,14 @@ export async function updateSession(request: NextRequest) {
     }
   } catch (authErr) {
     console.warn("[Middleware] Supabase auth.getUser() connectivity failure:", authErr);
+  }
+
+  // If unauthenticated public attendee accesses /events/[slug] (not /events or /events/new), redirect to public event page /e/[slug]
+  const prodEventsMatch = pathname.match(/^\/events\/([^/]+)$/);
+  if (!user && prodEventsMatch && prodEventsMatch[1] !== "new") {
+    const publicUrl = request.nextUrl.clone();
+    publicUrl.pathname = `/e/${prodEventsMatch[1]}`;
+    return NextResponse.redirect(publicUrl);
   }
 
   // If unauthenticated in production and accessing admin route, redirect to login

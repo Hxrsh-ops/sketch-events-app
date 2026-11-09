@@ -47,6 +47,7 @@ import {
 import { MOCK_EVENTS, MOCK_PARTICIPANTS } from "@/lib/mock-data";
 import { Participant, EventItem } from "@/types";
 import { toggleAttendanceAction } from "@/app/actions/participant-actions";
+import { verifyRotatingQrAction } from "@/app/actions/ticket-actions";
 
 interface ScanOutcome {
   status: "idle" | "accepted" | "already_checked_in" | "not_found";
@@ -309,8 +310,111 @@ export default function AttendanceClient({
     code: string,
     method: "camera" | "manual" | "simulation" = "manual"
   ) => {
-    const cleanCode = code.trim().toLowerCase();
-    if (!cleanCode) return;
+    const trimmedCode = code.trim();
+    if (!trimmedCode) return;
+
+    // 1. Check if scanned code is a Rotating Live QR Pass (format: <serializedPayload>.<signature>)
+    const isRotatingToken =
+      trimmedCode.includes(".") &&
+      trimmedCode.split(".").length === 2 &&
+      trimmedCode.length > 30;
+
+    if (isRotatingToken) {
+      const qrRes = await verifyRotatingQrAction({
+        token: trimmedCode,
+        eventId: selectedEventId,
+        method: method === "simulation" ? "camera" : method,
+      });
+
+      if (!qrRes.success) {
+        if (qrRes.error === "ALREADY_CHECKED_IN") {
+          playDeskBeep("warning");
+          setScanOutcome({
+            status: "already_checked_in",
+            message: qrRes.message || "Ticket has already been used for check-in.",
+            method,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          });
+        } else {
+          playDeskBeep("error");
+          setScanOutcome({
+            status: "not_found",
+            message: qrRes.message || "Invalid or unverified QR token.",
+            method,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          });
+        }
+        return;
+      }
+
+      // Successful rotating QR pass verification
+      playDeskBeep("success");
+      if (
+        typeof window !== "undefined" &&
+        localStorage.getItem("sketch_attendance_auto_advance") === "false" &&
+        method === "camera"
+      ) {
+        stopCameraStream();
+      }
+
+      const attendeeName = qrRes.data?.attendeeName || "Attendee";
+      const ticketNumber = qrRes.data?.ticketNumber || "";
+      const nowIso = qrRes.data?.checkedInAt || new Date().toISOString();
+
+      // Find matching participant in state to update local roster
+      const matched = participants.find(
+        (p) =>
+          p.eventId === selectedEventId &&
+          (p.registrationId.toLowerCase() === ticketNumber.toLowerCase() ||
+            p.name.toLowerCase() === attendeeName.toLowerCase())
+      );
+
+      if (matched) {
+        updateParticipantAttendance(matched.id, "checked_in");
+        const updatedParticipant: Participant = {
+          ...matched,
+          attendanceStatus: "checked_in",
+          checkedInAt: nowIso,
+        };
+        setParticipants((prev) =>
+          prev.map((p) => (p.id === matched.id ? updatedParticipant : p))
+        );
+        setScanOutcome({
+          status: "accepted",
+          message: `Access Granted! Rotating live QR pass verified for ${attendeeName}.`,
+          participant: updatedParticipant,
+          method,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        });
+      } else {
+        setScanOutcome({
+          status: "accepted",
+          message: `Access Granted! Rotating live QR pass verified for ${attendeeName} (${ticketNumber}).`,
+          method,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        });
+      }
+
+      // Add audit log entry
+      const newLogEntry: CheckInLogEntry = {
+        id: `log-${Date.now()}`,
+        participantId: matched?.id || ticketNumber,
+        participantName: attendeeName,
+        registrationId: ticketNumber,
+        eventId: selectedEventId,
+        timestamp: "Just now",
+        method,
+      };
+      setCheckInLog((prev) => {
+        const updated = [newLogEntry, ...prev.slice(0, 19)];
+        saveCheckInLog(updated);
+        return updated;
+      });
+      return;
+    }
+
+    // 2. Fallback to standard manual identifier / badge lookup (Registration ID, Email, Name)
+    const cleanCode = trimmedCode.toLowerCase();
 
     // Find participant matching registration ID, email, qrCredentialId, or name
     const found = participants.find(
@@ -578,29 +682,32 @@ export default function AttendanceClient({
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / ATTENDANCE
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17191C]">
               Live Attendance Desk
             </h1>
             <Badge
               variant="outline"
               className={`text-[10px] uppercase tracking-wider font-semibold ${
                 isPreview
-                  ? "border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5]"
-                  : "border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20"
+                  ? "border-[#E5E7E9] text-[#858B93]"
+                  : "border-emerald-300 text-emerald-700 bg-emerald-50/50"
               }`}
             >
               {isPreview ? "Preview Mode" : "Production Live"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#65666B] dark:text-[#989EA7]">
+          <p className="mt-1 text-xs sm:text-sm text-[#777E86]">
             High-speed camera QR scanner, pass verification inspector, and audited manual fallback ledger.
           </p>
         </div>
 
         {/* Event Scope Switcher */}
         <div className="w-full sm:w-80">
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73] mb-1">
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#858B93]  mb-1">
             Active Event Scope
           </label>
           <CustomSelect
@@ -622,7 +729,7 @@ export default function AttendanceClient({
       {error && (
         <div
           role="alert"
-          className="rounded-[20px] border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 p-5 shadow-sm text-rose-900 dark:text-rose-200"
+          className="rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 p-5 shadow-sm text-rose-900 dark:text-rose-200"
         >
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
@@ -650,10 +757,10 @@ export default function AttendanceClient({
 
       {/* Empty State Banner when no events exist and no error */}
       {!error && events.length === 0 && (
-        <div className="rounded-[20px] border border-dashed border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-8 text-center shadow-sm space-y-3">
-          <Users className="mx-auto h-8 w-8 text-[#8A9098] dark:text-[#656B73] opacity-60" />
-          <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">No Active Events Found</h3>
-          <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] max-w-md mx-auto">
+        <div className="rounded-xl border border-dashed border-[#E5E7E9]  bg-white p-8 text-center shadow-sm space-y-3">
+          <Users className="mx-auto h-8 w-8 text-[#858B93]  opacity-60" />
+          <h3 className="text-sm font-bold text-[#34383D] ">No Active Events Found</h3>
+          <p className="text-xs text-[#858B93] dark:text-[#A6ADB5] max-w-md mx-auto">
             Attendance check-in requires at least one active event. Create an event to begin check-in operations.
           </p>
           <Link href="/events/new">
@@ -668,69 +775,69 @@ export default function AttendanceClient({
       {/* Operational Attendance Metrics Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {/* Metric 1: Total Expected */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Total Expected</span>
-            <Users className="h-4 w-4 text-[#8A9098] dark:text-[#656B73]" />
+            <span className="text-xs font-semibold text-[#858B93] ">Total Expected</span>
+            <Users className="h-4 w-4 text-[#858B93] " />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+            <span className="text-2xl font-extrabold text-[#34383D] ">
               {totalEligible}
             </span>
-            <span className="text-xs text-[#8A9098] dark:text-[#656B73]">Registered</span>
+            <span className="text-xs text-[#858B93] ">Registered</span>
           </div>
           {selectedEvent ? (
-            <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73] truncate">{selectedEvent.title}</p>
+            <p className="mt-1 text-[11px] text-[#858B93]  truncate">{selectedEvent.title}</p>
           ) : (
-            <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73] italic">No event selected</p>
+            <p className="mt-1 text-[11px] text-[#858B93]  italic">No event selected</p>
           )}
         </div>
 
         {/* Metric 2: Checked In */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Checked In</span>
-            <UserCheck className="h-4 w-4 text-[#17191C] dark:text-[#E8EAED]" />
+            <span className="text-xs font-semibold text-[#858B93] ">Checked In</span>
+            <UserCheck className="h-4 w-4 text-[#34383D] " />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+            <span className="text-2xl font-extrabold text-[#34383D] ">
               {checkedInCount}
             </span>
-            <span className="text-xs font-medium text-[#656B73] dark:text-[#989EA7]">passes</span>
+            <span className="text-xs font-medium text-[#858B93] ">passes</span>
           </div>
-          <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73]">
+          <p className="mt-1 text-[11px] text-[#858B93] ">
             Verified at terminal
           </p>
         </div>
 
         {/* Metric 3: Remaining */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Pending Arrival</span>
-            <Clock className="h-4 w-4 text-[#8A9098] dark:text-[#656B73]" />
+            <span className="text-xs font-semibold text-[#858B93] ">Pending Arrival</span>
+            <Clock className="h-4 w-4 text-[#858B93] " />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+            <span className="text-2xl font-extrabold text-[#34383D] ">
               {remainingCount}
             </span>
-            <span className="text-xs text-[#8A9098] dark:text-[#656B73]">remaining</span>
+            <span className="text-xs text-[#858B93] ">remaining</span>
           </div>
-          <p className="mt-1 text-[11px] text-[#8A9098] dark:text-[#656B73]">Awaiting scan / lookup</p>
+          <p className="mt-1 text-[11px] text-[#858B93] ">Awaiting scan / lookup</p>
         </div>
 
         {/* Metric 4: Turnout Rate */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656B73] dark:text-[#989EA7]">Attendance Rate</span>
-            <ShieldCheck className="h-4 w-4 text-[#17191C] dark:text-[#E8EAED]" />
+            <span className="text-xs font-semibold text-[#858B93] ">Attendance Rate</span>
+            <ShieldCheck className="h-4 w-4 text-[#34383D] " />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+            <span className="text-2xl font-extrabold text-[#34383D] ">
               {attendanceRate}%
             </span>
-            <span className="text-xs text-[#8A9098] dark:text-[#656B73]">turnout</span>
+            <span className="text-xs text-[#858B93] ">turnout</span>
           </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F2] dark:bg-[#151719]">
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#EAECEF] ">
             <div
               className="h-full bg-[#25292F] dark:bg-[#E8EAED] transition-all duration-500 rounded-full"
               style={{ width: `${attendanceRate}%` }}
@@ -744,14 +851,14 @@ export default function AttendanceClient({
         {/* Left Column: Camera Scanner & Verification Outcome (7 cols) */}
         <div className="lg:col-span-6 flex flex-col space-y-6">
           {/* Scanner Card */}
-          <div className="rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#E5E7EA] dark:border-[#30353A]">
+          <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#E5E7E9] ">
               <div>
-                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-2">
+                <h2 className="text-base font-bold text-[#34383D]  flex items-center gap-2">
                   <Camera className="h-4 w-4" />
                   Camera QR Scanner
                 </h2>
-                <p className="text-xs text-[#656B73] dark:text-[#989EA7]">
+                <p className="text-xs text-[#858B93] ">
                   Point device camera at participant mobile pass or printed QR badge.
                 </p>
               </div>
@@ -764,7 +871,7 @@ export default function AttendanceClient({
                     variant="outline"
                     size="sm"
                     onClick={stopCameraStream}
-                    className="rounded-full text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] border-[#E5E7EA] dark:border-[#30353A] hover:bg-[#F4F5F6] dark:hover:bg-[#151719]"
+                    className="rounded-full text-xs font-semibold text-[#34383D]  border-[#E5E7E9]  hover:bg-[#F6F7F8] dark:hover:bg-[#151719]"
                   >
                     <VideoOff className="h-3.5 w-3.5 mr-1.5" />
                     Stop Camera
@@ -798,7 +905,7 @@ export default function AttendanceClient({
             </div>
 
             {/* Video Viewfinder Area */}
-            <div className="relative my-4 flex flex-col items-center justify-center rounded-2xl bg-[#17191C] text-white min-h-[320px] sm:min-h-[360px] overflow-hidden">
+            <div className="relative my-4 flex flex-col items-center justify-center rounded-xl bg-[#17191C] text-white min-h-[320px] sm:min-h-[360px] overflow-hidden">
               {/* Background ambient texture */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_70%)] pointer-events-none" />
 
@@ -814,7 +921,7 @@ export default function AttendanceClient({
               />
 
               {/* Viewfinder Target Reticle HUD */}
-              <div className="relative z-10 flex h-56 w-56 sm:h-64 sm:w-64 items-center justify-center rounded-3xl border border-white/20 bg-black/30 backdrop-blur-[2px] p-4">
+              <div className="relative z-10 flex h-56 w-56 sm:h-64 sm:w-64 items-center justify-center rounded-xl border border-white/20 bg-black/30 backdrop-blur-[2px] p-4">
                 {/* Corner Accents */}
                 <div className="absolute top-0 left-0 h-6 w-6 border-t-2 border-l-2 border-white rounded-tl-xl" />
                 <div className="absolute top-0 right-0 h-6 w-6 border-t-2 border-r-2 border-white rounded-tr-xl" />
@@ -856,7 +963,7 @@ export default function AttendanceClient({
             </div>
 
             {/* Camera Settings / Switcher Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#656B73] dark:text-[#989EA7] pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#858B93]  pt-2">
               <div className="flex items-center gap-2 w-full sm:w-64">
                 <span className="shrink-0 font-medium">Device:</span>
                 <CustomSelect
@@ -878,7 +985,7 @@ export default function AttendanceClient({
                     startCamera(selectedDeviceId);
                   }
                 }}
-                className="inline-flex items-center gap-1.5 font-semibold text-[#17191C] dark:text-[#F1F2F3] hover:underline"
+                className="inline-flex items-center gap-1.5 font-semibold text-[#34383D]  hover:underline"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>Cycle Camera Device</span>
@@ -886,9 +993,9 @@ export default function AttendanceClient({
             </div>
 
             {/* Quick Test Simulation Pass Scans (For Testing without physical barcode prints) */}
-            <div className="mt-5 pt-4 border-t border-[#E5E7EA] dark:border-[#30353A]">
+            <div className="mt-5 pt-4 border-t border-[#E5E7E9] ">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73] flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#858B93]  flex items-center gap-1">
                   <Sparkles className="h-3 w-3" />
                   Simulate QR Pass Scan (Testing Action)
                 </span>
@@ -899,16 +1006,16 @@ export default function AttendanceClient({
                     key={p.id}
                     type="button"
                     onClick={() => handleCodeDetected(p.registrationId, "simulation")}
-                    className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] px-3 py-1 text-xs font-medium text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#EAECEF] dark:hover:bg-[#22262A] transition-colors"
+                    className="inline-flex items-center gap-1 rounded-full border border-[#E5E7E9]  bg-[#F6F7F8]  px-3 py-1 text-xs font-medium text-[#34383D]  hover:bg-[#EAECEF] dark:hover:bg-[#22262A] transition-colors"
                   >
                     <span>{p.name.split(" ")[0]}</span>
-                    <span className="font-mono text-[10px] text-[#8A9098] dark:text-[#656B73]">({p.registrationId.replace("REG-2026-", "")})</span>
+                    <span className="font-mono text-[10px] text-[#858B93] ">({p.registrationId.replace("REG-2026-", "")})</span>
                   </button>
                 ))}
                 <button
                   type="button"
                   onClick={() => handleCodeDetected("REG-INVALID-9999", "simulation")}
-                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#D4D7DC] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] px-3 py-1 text-xs font-medium text-[#656B73] dark:text-[#989EA7] hover:bg-[#F4F5F6] dark:hover:bg-[#151719] transition-colors"
+                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#D4D7DC]  bg-white px-3 py-1 text-xs font-medium text-[#858B93]  hover:bg-[#F6F7F8] dark:hover:bg-[#151719] transition-colors"
                 >
                   <span>Test Invalid Ticket</span>
                 </button>
@@ -917,13 +1024,13 @@ export default function AttendanceClient({
           </div>
 
           {/* Real-time Verification Outcome Card */}
-          <div className="rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EA] dark:border-[#30353A]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+          <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7E9] ">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#858B93] ">
                 Credential Verification Outcome
               </h3>
               {scanOutcome.timestamp && (
-                <span className="text-[11px] font-mono text-[#8A9098] dark:text-[#656B73]">
+                <span className="text-[11px] font-mono text-[#858B93] ">
                   Scanned at {scanOutcome.timestamp}
                 </span>
               )}
@@ -932,53 +1039,53 @@ export default function AttendanceClient({
             <div className="mt-4">
               {/* Outcome: ACCEPTED */}
               {scanOutcome.status === "accepted" && scanOutcome.participant && (
-                <div className="rounded-2xl border border-[#17191C] dark:border-[#30353A] bg-[#17191C] dark:bg-[#151719] text-white p-5 space-y-4">
+                <div className="rounded-xl border border-[#E5E7E9] bg-white text-[#17191C] p-5 space-y-4 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-[#E8EAED] text-[#17191C]">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#17191C] text-white">
                         <Check className="h-5 w-5 stroke-[3]" />
                       </div>
                       <div>
-                        <div className="text-sm font-extrabold uppercase tracking-wide">
+                        <div className="text-sm font-extrabold uppercase tracking-wide text-[#17191C]">
                           Access Granted • Valid Ticket
                         </div>
-                        <div className="text-xs text-white/70">
+                        <div className="text-xs text-[#777E86]">
                           {scanOutcome.message}
                         </div>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="bg-white/10 text-white border-white/20 text-[10px]">
+                    <Badge variant="secondary" className="bg-[#F6F7F8] text-[#17191C] border-[#E5E7E9] text-[10px]">
                       {scanOutcome.method?.toUpperCase()}
                     </Badge>
                   </div>
 
                   {/* Attendee Details Grid */}
-                  <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-3 text-xs">
+                  <div className="grid grid-cols-2 gap-3 border-t border-[#E5E7E9] pt-3 text-xs">
                     <div>
-                      <span className="text-white/50 text-[10px] uppercase font-mono">Attendee Name</span>
-                      <strong className="text-sm text-white font-bold block">{scanOutcome.participant.name}</strong>
+                      <span className="text-[#858B93] text-[10px] uppercase font-mono">Attendee Name</span>
+                      <strong className="text-sm text-[#17191C] font-bold block">{scanOutcome.participant.name}</strong>
                     </div>
                     <div>
-                      <span className="text-white/50 text-[10px] uppercase font-mono">Registration ID</span>
-                      <strong className="font-mono text-white text-xs block">{scanOutcome.participant.registrationId}</strong>
+                      <span className="text-[#858B93] text-[10px] uppercase font-mono">Registration ID</span>
+                      <strong className="font-mono text-[#17191C] text-xs block">{scanOutcome.participant.registrationId}</strong>
                     </div>
                     <div>
-                      <span className="text-white/50 text-[10px] uppercase font-mono">Team / Affiliation</span>
-                      <span className="text-white/90 block">{scanOutcome.participant.teamName || "Individual Participant"}</span>
+                      <span className="text-[#858B93] text-[10px] uppercase font-mono">Team / Affiliation</span>
+                      <span className="text-[#17191C] block">{scanOutcome.participant.teamName || "Individual Participant"}</span>
                     </div>
                     <div>
-                      <span className="text-white/50 text-[10px] uppercase font-mono">Department</span>
-                      <span className="text-white/90 block">{scanOutcome.participant.department || "General"}</span>
+                      <span className="text-[#858B93] text-[10px] uppercase font-mono">Department</span>
+                      <span className="text-[#17191C] block">{scanOutcome.participant.department || "General"}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                  <div className="flex items-center justify-between border-t border-[#E5E7E9] pt-3">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setInspectorParticipant(scanOutcome.participant || null)}
-                      className="rounded-full bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs"
+                      className="rounded-full bg-white hover:bg-[#F6F7F8] text-[#17191C] border-[#E5E7E9] text-xs font-semibold"
                     >
                       <Eye className="h-3.5 w-3.5 mr-1.5" />
                       Inspect Full Pass
@@ -986,7 +1093,7 @@ export default function AttendanceClient({
                     <button
                       type="button"
                       onClick={() => handleUndoCheckIn(scanOutcome.participant!.id)}
-                      className="text-xs text-white/60 hover:text-white underline inline-flex items-center gap-1"
+                      className="text-xs text-[#777E86] hover:text-[#17191C] underline inline-flex items-center gap-1 font-medium"
                     >
                       <Undo2 className="h-3 w-3" />
                       Undo Check-in
@@ -997,16 +1104,16 @@ export default function AttendanceClient({
 
               {/* Outcome: ALREADY CHECKED IN */}
               {scanOutcome.status === "already_checked_in" && scanOutcome.participant && (
-                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] p-5 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-sm text-[#17191C] dark:text-[#F1F2F3]">
-                    <AlertCircle className="h-5 w-5 text-[#17191C] dark:text-[#E8EAED]" />
+                <div className="rounded-xl border border-[#E5E7E9]  bg-[#F6F7F8]  p-5 space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-sm text-[#34383D] ">
+                    <AlertCircle className="h-5 w-5 text-[#34383D] " />
                     <span>Already Checked In</span>
                   </div>
-                  <p className="text-xs text-[#656B73] dark:text-[#989EA7]">{scanOutcome.message}</p>
-                  <div className="text-xs border-t border-[#E5E7EA] dark:border-[#262A2E] pt-3 flex items-center justify-between">
+                  <p className="text-xs text-[#858B93] ">{scanOutcome.message}</p>
+                  <div className="text-xs border-t border-[#E5E7E9] dark:border-[#262A2E] pt-3 flex items-center justify-between">
                     <div>
-                      <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">{scanOutcome.participant.name}</span>
-                      <span className="font-mono text-[#8A9098] dark:text-[#656B73] ml-2">({scanOutcome.participant.registrationId})</span>
+                      <span className="font-semibold text-[#34383D] ">{scanOutcome.participant.name}</span>
+                      <span className="font-mono text-[#858B93]  ml-2">({scanOutcome.participant.registrationId})</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -1014,7 +1121,7 @@ export default function AttendanceClient({
                         variant="outline"
                         size="sm"
                         onClick={() => setInspectorParticipant(scanOutcome.participant || null)}
-                        className="rounded-full text-xs h-7 border-[#E5E7EA] dark:border-[#30353A]"
+                        className="rounded-full text-xs h-7 border-[#E5E7E9] "
                       >
                         Inspect
                       </Button>
@@ -1023,7 +1130,7 @@ export default function AttendanceClient({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleUndoCheckIn(scanOutcome.participant!.id)}
-                        className="text-xs h-7 text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                        className="text-xs h-7 text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                       >
                         Reset Status
                       </Button>
@@ -1034,13 +1141,13 @@ export default function AttendanceClient({
 
               {/* Outcome: NOT FOUND */}
               {scanOutcome.status === "not_found" && (
-                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] p-5 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-sm text-[#17191C] dark:text-[#F1F2F3]">
-                    <AlertCircle className="h-5 w-5 text-[#17191C] dark:text-[#E8EAED]" />
+                <div className="rounded-xl border border-[#E5E7E9]  bg-[#F6F7F8]  p-5 space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-sm text-[#34383D] ">
+                    <AlertCircle className="h-5 w-5 text-[#34383D] " />
                     <span>Verification Failed / Pass Not Found</span>
                   </div>
-                  <p className="text-xs text-[#656B73] dark:text-[#989EA7]">{scanOutcome.message}</p>
-                  <p className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+                  <p className="text-xs text-[#858B93] ">{scanOutcome.message}</p>
+                  <p className="text-[11px] text-[#858B93] ">
                     Tip: Search participant by full student name or university email address in the manual roster on the right.
                   </p>
                 </div>
@@ -1048,10 +1155,10 @@ export default function AttendanceClient({
 
               {/* Outcome: IDLE */}
               {scanOutcome.status === "idle" && (
-                <div className="rounded-2xl bg-[#F4F5F6] dark:bg-[#151719] border border-transparent dark:border-[#30353A] p-8 text-center text-xs text-[#8A9098] dark:text-[#656B73] flex flex-col items-center justify-center">
+                <div className="rounded-xl bg-[#F6F7F8]  border border-transparent  p-8 text-center text-xs text-[#858B93]  flex flex-col items-center justify-center">
                   <Clock className="h-8 w-8 text-[#D4D7DC] dark:text-[#30353A] mb-2" />
-                  <span className="font-medium text-[#656B73] dark:text-[#989EA7]">{scanOutcome.message}</span>
-                  <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] mt-1">
+                  <span className="font-medium text-[#858B93] ">{scanOutcome.message}</span>
+                  <span className="text-[11px] text-[#858B93]  mt-1">
                     Terminal ready for next incoming participant.
                   </span>
                 </div>
@@ -1063,18 +1170,18 @@ export default function AttendanceClient({
         {/* Right Column: Manual Roster Lookup & Live Audit Ledger (5 cols) */}
         <div className="lg:col-span-6 flex flex-col space-y-6">
           {/* Manual Attendee Search & Roster Desk */}
-          <div className="rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[#E5E7EA] dark:border-[#30353A]">
+          <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[#E5E7E9] ">
               <div>
-                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-2">
+                <h2 className="text-base font-bold text-[#34383D]  flex items-center gap-2">
                   <Search className="h-4 w-4" />
                   Manual Registration Lookup Desk
                 </h2>
-                <p className="text-[13px] text-[#656B73] dark:text-[#989EA7] mt-0.5">
+                <p className="text-[13px] text-[#858B93]  mt-0.5">
                   Search and verify attendees by Name, Email, or Registration ID.
                 </p>
               </div>
-              <span className="text-xs font-mono font-medium text-[#7D858F] dark:text-[#8D949E]">
+              <span className="text-xs font-mono font-medium text-[#858B93] ">
                 {filteredRoster.length} matches
               </span>
             </div>
@@ -1082,7 +1189,7 @@ export default function AttendanceClient({
             {/* Search Input Bar */}
             <form onSubmit={handleManualSearchSubmit} className="mt-4 flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8A9098] dark:text-[#656B73]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#858B93] " />
                 <Input
                   placeholder="Search by Name, Reg ID (e.g. REG-2026-8812), Email..."
                   value={manualQuery}
@@ -1112,7 +1219,7 @@ export default function AttendanceClient({
             {/* Attendee Roster Table / List */}
             <div className="mt-4 max-h-[380px] overflow-y-auto space-y-2 pr-1 divide-y divide-[#F0F1F2] dark:divide-[#262A2E]">
               {filteredRoster.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[#8A9098] dark:text-[#656B73]">
+                <div className="py-12 text-center text-xs text-[#858B93] ">
                   No registered attendees match &ldquo;{manualQuery}&rdquo; under this filter.
                 </div>
               ) : (
@@ -1121,7 +1228,7 @@ export default function AttendanceClient({
                   return (
                     <div
                       key={participant.id}
-                      className="pt-2.5 pb-2.5 flex items-center justify-between gap-3 hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] px-2.5 rounded-xl transition-colors duration-150 ease-out"
+                      className="pt-2.5 pb-2.5 flex items-center justify-between gap-3 hover:bg-[#F6F7F8] dark:hover:bg-[#25292F] px-2.5 rounded-xl transition-colors duration-150 ease-out"
                     >
                       {/* Left: Avatar & Info */}
                       <div className="flex items-center gap-3 min-w-0">
@@ -1129,7 +1236,7 @@ export default function AttendanceClient({
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                             isChecked
                               ? "bg-[#17191C] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                              : "bg-[#F0F1F2] dark:bg-[#151719] text-[#17191C] dark:text-[#F1F2F3] border border-[#E5E7EA] dark:border-[#30353A]"
+                              : "bg-[#EAECEF]  text-[#34383D]  border border-[#E5E7E9] "
                           }`}
                         >
                           {isChecked ? <Check className="h-4 w-4" /> : participant.name.charAt(0)}
@@ -1138,11 +1245,11 @@ export default function AttendanceClient({
                         <div className="min-w-0 flex-1 py-0.5">
                           {/* Primary Line: Attendee Name + Inline Team Affiliation (separated by spacing) */}
                           <div className="flex items-baseline gap-2.5 min-w-0">
-                            <span className="text-[15px] font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate tracking-[-0.01em] leading-snug">
+                            <span className="text-[15px] font-semibold text-[#34383D]  truncate tracking-[-0.01em] leading-snug">
                               {participant.name}
                             </span>
                             {participant.teamName && (
-                              <span className="text-[12.5px] font-normal text-[#656B73] dark:text-[#989EA7] truncate shrink-0">
+                              <span className="text-[12.5px] font-normal text-[#858B93]  truncate shrink-0">
                                 {participant.teamName}
                               </span>
                             )}
@@ -1150,12 +1257,12 @@ export default function AttendanceClient({
 
                           {/* Secondary Line: Machine ID + Subtle Divider + Email */}
                           <div className="flex items-center gap-2 text-xs leading-tight mt-0.5 min-w-0">
-                            <span className="font-mono text-[11px] tabular-nums tracking-tight text-[#7D858F] dark:text-[#8D949E] shrink-0 select-all font-medium">
+                            <span className="font-mono text-[11px] tabular-nums tracking-tight text-[#858B93]  shrink-0 select-all font-medium">
                               {participant.registrationId}
                             </span>
                             <span className="text-[#C5C9D0] dark:text-[#424850] select-none text-[10px]">•</span>
                             <span
-                              className="font-sans text-[12.5px] font-normal text-[#656B73] dark:text-[#989EA7] truncate"
+                              className="font-sans text-[12.5px] font-normal text-[#858B93]  truncate"
                               title={participant.email}
                             >
                               {participant.email}
@@ -1171,7 +1278,7 @@ export default function AttendanceClient({
                           variant="ghost"
                           size="sm"
                           onClick={() => setInspectorParticipant(participant)}
-                          className="h-8 w-8 p-0 rounded-full text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-[#F0F1F2] dark:hover:bg-[#151719]"
+                          className="h-8 w-8 p-0 rounded-full text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3] hover:bg-[#EAECEF] dark:hover:bg-[#151719]"
                           aria-label={`Inspect pass for ${participant.name}`}
                         >
                           <Eye className="h-4 w-4" />
@@ -1184,7 +1291,7 @@ export default function AttendanceClient({
                           onClick={() => toggleParticipantCheckIn(participant)}
                           className={`rounded-full text-xs h-8 px-3.5 font-semibold ${
                             isChecked
-                              ? "border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#151719]"
+                              ? "border-[#E5E7E9]  text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3] hover:bg-[#F6F7F8] dark:hover:bg-[#151719]"
                               : ""
                           }`}
                         >
@@ -1199,44 +1306,44 @@ export default function AttendanceClient({
           </div>
 
           {/* Live Recent Check-ins Ledger (Audit Log) */}
-          <div className="rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EA] dark:border-[#30353A]">
+          <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7E9] ">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[#17191C] dark:text-[#E8EAED]" />
-                <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                <Clock className="h-4 w-4 text-[#34383D] " />
+                <h3 className="text-sm font-bold text-[#34383D] ">
                   Terminal Check-in Ledger
                 </h3>
               </div>
-              <span className="text-xs text-[#7D858F] dark:text-[#8D949E]">
+              <span className="text-xs text-[#858B93] ">
                 Session Audit Log ({checkInLog.length})
               </span>
             </div>
 
             <div className="mt-3 divide-y divide-[#F0F1F2] dark:divide-[#262A2E] max-h-[220px] overflow-y-auto pr-1">
               {checkInLog.length === 0 ? (
-                <div className="py-6 text-center text-xs text-[#8A9098] dark:text-[#656B73]">
+                <div className="py-6 text-center text-xs text-[#858B93] ">
                   No check-ins recorded in this active terminal session yet.
                 </div>
               ) : (
                 checkInLog.map((log) => (
                   <div
                     key={log.id}
-                    className="py-2.5 flex items-center justify-between text-xs gap-2 hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] px-2 rounded-lg transition-colors duration-150 ease-out"
+                    className="py-2.5 flex items-center justify-between text-xs gap-2 hover:bg-[#F6F7F8] dark:hover:bg-[#25292F] px-2 rounded-lg transition-colors duration-150 ease-out"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="h-2 w-2 rounded-full bg-[#17191C] dark:bg-[#E8EAED]" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-[15px] font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate tracking-[-0.01em] leading-snug">
+                        <div className="text-[15px] font-semibold text-[#34383D]  truncate tracking-[-0.01em] leading-snug">
                           {log.participantName}
                         </div>
-                        <div className="text-xs leading-tight text-[#656B73] dark:text-[#989EA7] flex items-center gap-2 mt-0.5 min-w-0">
-                          <span className="font-mono text-[11px] tabular-nums tracking-tight text-[#7D858F] dark:text-[#8D949E] select-all font-medium shrink-0">
+                        <div className="text-xs leading-tight text-[#858B93]  flex items-center gap-2 mt-0.5 min-w-0">
+                          <span className="font-mono text-[11px] tabular-nums tracking-tight text-[#858B93]  select-all font-medium shrink-0">
                             {log.registrationId}
                           </span>
                           <span className="text-[#C5C9D0] dark:text-[#424850] select-none text-[10px]">•</span>
-                          <span className="capitalize text-[12.5px] font-normal text-[#656B73] dark:text-[#989EA7]">{log.method}</span>
+                          <span className="capitalize text-[12.5px] font-normal text-[#858B93] ">{log.method}</span>
                           <span className="text-[#C5C9D0] dark:text-[#424850] select-none text-[10px]">•</span>
-                          <span className="font-mono text-[11px] tabular-nums tracking-tight text-[#7D858F] dark:text-[#8D949E]">{log.timestamp}</span>
+                          <span className="font-mono text-[11px] tabular-nums tracking-tight text-[#858B93] ">{log.timestamp}</span>
                         </div>
                       </div>
                     </div>
@@ -1244,7 +1351,7 @@ export default function AttendanceClient({
                     <button
                       type="button"
                       onClick={() => handleUndoCheckIn(log.participantId)}
-                      className="text-xs text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3] underline font-medium shrink-0"
+                      className="text-xs text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3] underline font-medium shrink-0"
                     >
                       Undo
                     </button>
@@ -1267,7 +1374,7 @@ export default function AttendanceClient({
         {inspectorParticipant && (
           <div className="flex flex-col space-y-6">
             {/* Visual Pass Badge */}
-            <div className="rounded-3xl border border-[#17191C] dark:border-[#30353A] bg-[#17191C] text-white p-6 shadow-xl relative overflow-hidden">
+            <div className="rounded-xl border border-[#17191C]  bg-[#17191C] text-white p-6 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_70%)] pointer-events-none" />
 
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -1283,7 +1390,7 @@ export default function AttendanceClient({
                   variant="secondary"
                   className={
                     inspectorParticipant.attendanceStatus === "checked_in"
-                      ? "bg-white text-[#17191C] font-bold"
+                      ? "bg-white text-[#34383D] font-bold"
                       : "bg-white/10 text-white border-white/20"
                   }
                 >
@@ -1292,7 +1399,7 @@ export default function AttendanceClient({
               </div>
 
               {/* QR Code Simulation Graphic */}
-              <div className="my-6 flex flex-col items-center justify-center p-4 rounded-2xl bg-white text-[#17191C]">
+              <div className="my-6 flex flex-col items-center justify-center p-4 rounded-xl bg-white text-[#34383D]">
                 {/* Clean Vector QR Representation */}
                 <div className="relative p-2 bg-white rounded-xl">
                   <div className="w-40 h-40 border-4 border-[#17191C] p-2 flex flex-col justify-between">
@@ -1311,10 +1418,10 @@ export default function AttendanceClient({
                     </div>
                   </div>
                 </div>
-                <span className="mt-2 font-mono text-xs font-bold tracking-wider text-[#17191C]">
+                <span className="mt-2 font-mono text-xs font-bold tracking-wider text-[#34383D]">
                   {inspectorParticipant.registrationId}
                 </span>
-                <span className="text-[10px] text-[#8A9098]">
+                <span className="text-[10px] text-[#858B93]">
                   Credential Hash: {inspectorParticipant.qrCredentialId}
                 </span>
               </div>
@@ -1341,30 +1448,30 @@ export default function AttendanceClient({
             </div>
 
             {/* Registration Details List */}
-            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 space-y-3 text-xs">
-              <h4 className="font-bold text-[#17191C] dark:text-[#F1F2F3] text-xs uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+            <div className="rounded-xl border border-[#E5E7E9]  bg-white p-4 space-y-3 text-xs">
+              <h4 className="font-bold text-[#34383D]  text-xs uppercase tracking-wider text-[#858B93] ">
                 Credential Metadata
               </h4>
 
               <div className="flex items-center justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                <span className="text-[#656B73] dark:text-[#989EA7] flex items-center gap-1.5">
+                <span className="text-[#858B93]  flex items-center gap-1.5">
                   <Mail className="h-3.5 w-3.5" /> Email Address
                 </span>
-                <span className="font-medium text-[#17191C] dark:text-[#F1F2F3]">{inspectorParticipant.email}</span>
+                <span className="font-medium text-[#34383D] ">{inspectorParticipant.email}</span>
               </div>
 
               <div className="flex items-center justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                <span className="text-[#656B73] dark:text-[#989EA7] flex items-center gap-1.5">
+                <span className="text-[#858B93]  flex items-center gap-1.5">
                   <Phone className="h-3.5 w-3.5" /> Phone
                 </span>
-                <span className="font-medium text-[#17191C] dark:text-[#F1F2F3]">{inspectorParticipant.phone || "Not provided"}</span>
+                <span className="font-medium text-[#34383D] ">{inspectorParticipant.phone || "Not provided"}</span>
               </div>
 
               <div className="flex items-center justify-between py-1 border-b border-[#F0F1F2] dark:border-[#262A2E]">
-                <span className="text-[#656B73] dark:text-[#989EA7] flex items-center gap-1.5">
+                <span className="text-[#858B93]  flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5" /> Registered Date
                 </span>
-                <span className="font-medium text-[#17191C] dark:text-[#F1F2F3]">
+                <span className="font-medium text-[#34383D] ">
                   {new Date(inspectorParticipant.registeredAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -1375,10 +1482,10 @@ export default function AttendanceClient({
 
               {inspectorParticipant.checkedInAt && (
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-[#656B73] dark:text-[#989EA7] flex items-center gap-1.5">
+                  <span className="text-[#858B93]  flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" /> Verified At
                   </span>
-                  <span className="font-medium text-[#17191C] dark:text-[#F1F2F3]">
+                  <span className="font-medium text-[#34383D] ">
                     {new Date(inspectorParticipant.checkedInAt).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -1411,7 +1518,7 @@ export default function AttendanceClient({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full text-xs h-11 px-4 border-[#E5E7EA] dark:border-[#30353A]"
+                className="rounded-full text-xs h-11 px-4 border-[#E5E7E9] "
                 onClick={() => setInspectorParticipant(null)}
               >
                 Close

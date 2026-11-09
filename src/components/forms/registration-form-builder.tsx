@@ -14,22 +14,24 @@ import {
   Mail,
   Phone,
   Hash,
-  ChevronRight,
   Radio,
   CheckSquare,
   Globe,
   Calendar,
   Info,
-  ClipboardList,
   Files,
   Users,
-  HelpCircle,
-  Layers,
-  Smartphone,
   Monitor,
+  Smartphone,
   Check,
   AlertTriangle,
   RotateCcw,
+  X,
+  Sparkles,
+  ArrowUp,
+  ArrowDown,
+  Sliders,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +43,6 @@ import {
   FormField,
   FormFieldType,
   FormFieldOption,
-  ConditionalRule,
 } from "@/types";
 import {
   DIET_CODE_TEMPLATE,
@@ -67,7 +68,7 @@ const FIELD_TYPE_DEFINITIONS: {
     type: "text",
     label: "Short Text",
     icon: FileText,
-    description: "Names, student IDs, headlines",
+    description: "Names, student IDs, single-line answers",
   },
   {
     type: "textarea",
@@ -109,7 +110,7 @@ const FIELD_TYPE_DEFINITIONS: {
     type: "checkbox",
     label: "Multiple Choice",
     icon: CheckSquare,
-    description: "Skills, checkboxes, terms",
+    description: "Skills, checkboxes, agreements",
   },
   {
     type: "url",
@@ -127,7 +128,7 @@ const FIELD_TYPE_DEFINITIONS: {
     type: "info",
     label: "Notice / Callout",
     icon: Info,
-    description: "WhatsApp link, instructions, rules",
+    description: "Instructions, guidance, rules",
   },
 ];
 
@@ -136,15 +137,16 @@ export function RegistrationFormBuilder({
   onChange,
   participationMode,
 }: RegistrationFormBuilderProps) {
-  const [activeTab, setActiveTab] = useState<"builder" | "preview">("builder");
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [expandedFieldId, setExpandedFieldId] = useState<string | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<string>(() => schema.sections[0]?.id || "");
   const [previewValues, setPreviewValues] = useState<Record<string, unknown>>({
     team_size: "2",
   });
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
-  // Initial template detection
+  // Template detection
   const detectInitialTemplate = (): "diet_code" | "individual" | "team" | "clean" => {
     if (
       schema.teamConfig?.teamSizeFieldId === "team_size" ||
@@ -162,6 +164,12 @@ export function RegistrationFormBuilder({
   const [isCustomized, setIsCustomized] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<"diet_code" | "individual" | "team" | "clean" | null>(null);
 
+  // Ensure activeSectionId is always valid
+  const effectiveActiveSectionId =
+    schema.sections.find((s) => s.id === activeSectionId)?.id ||
+    schema.sections[schema.sections.length - 1]?.id ||
+    "";
+
   // Helper to update schema
   const updateSchema = (next: RegistrationFormSchema) => {
     setIsCustomized(true);
@@ -170,8 +178,9 @@ export function RegistrationFormBuilder({
 
   // Add a new section
   const handleAddSection = () => {
+    const newSectionId = `sec_${Date.now()}`;
     const newSection: FormSection = {
-      id: `sec_${Date.now()}`,
+      id: newSectionId,
       title: `Section ${schema.sections.length + 1}`,
       description: "",
       fields: [],
@@ -180,6 +189,17 @@ export function RegistrationFormBuilder({
       ...schema,
       sections: [...schema.sections, newSection],
     });
+    setActiveSectionId(newSectionId);
+  };
+
+  // Move section up/down
+  const handleMoveSection = (index: number, direction: "up" | "down") => {
+    const targetIdx = direction === "up" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= schema.sections.length) return;
+    const copy = [...schema.sections];
+    const [moved] = copy.splice(index, 1);
+    copy.splice(targetIdx, 0, moved);
+    updateSchema({ ...schema, sections: copy });
   };
 
   // Update section title/description
@@ -202,10 +222,14 @@ export function RegistrationFormBuilder({
     }
     const updated = schema.sections.filter((s) => s.id !== sectionId);
     updateSchema({ ...schema, sections: updated });
+    if (activeSectionId === sectionId) {
+      setActiveSectionId(updated[0]?.id || "");
+    }
   };
 
-  // Add a field to the specified section
+  // Add a field to the specified or active section
   const handleAddField = (sectionId: string, type: FormFieldType) => {
+    const targetId = sectionId || effectiveActiveSectionId;
     const typeDef = FIELD_TYPE_DEFINITIONS.find((t) => t.type === type);
     const uniqueId = `f_${type}_${Date.now().toString(36)}`;
 
@@ -226,7 +250,7 @@ export function RegistrationFormBuilder({
     };
 
     const updated = schema.sections.map((s) => {
-      if (s.id === sectionId) {
+      if (s.id === targetId) {
         return {
           ...s,
           fields: [...s.fields, newField],
@@ -236,6 +260,7 @@ export function RegistrationFormBuilder({
     });
 
     updateSchema({ ...schema, sections: updated });
+    setActiveSectionId(targetId);
     setExpandedFieldId(uniqueId);
   };
 
@@ -263,7 +288,6 @@ export function RegistrationFormBuilder({
 
   // Delete a field (with warning check for conditional references)
   const handleDeleteField = (sectionId: string, fieldId: string) => {
-    // Check if any other field references this in a conditional rule
     const allFields = schema.sections.flatMap((s) => s.fields);
     const dependent = allFields.find(
       (f) => f.conditional && f.conditional.targetFieldId === fieldId
@@ -379,7 +403,7 @@ export function RegistrationFormBuilder({
     handleUpdateField(sectionId, fieldId, { options: copy });
   };
 
-  // Load Presets with unsaved change safety
+  // Load Presets
   const requestLoadTemplate = (t: "diet_code" | "individual" | "team" | "clean") => {
     if (isCustomized) {
       setPendingTemplate(t);
@@ -399,13 +423,13 @@ export function RegistrationFormBuilder({
       onChange(cloneFormSchema(HACKATHON_TEAM_TEMPLATE));
       setActiveTemplate("team");
     } else {
-      onChange({
+      const cleanSchema: RegistrationFormSchema = {
         version: 1,
         sections: [
           {
             id: `sec_main_${Date.now()}`,
-            title: "General Information",
-            description: "Attendee profile details",
+            title: "Attendee Information",
+            description: "Attendee profile details for registration and check-in",
             fields: [
               {
                 id: "full_name",
@@ -424,7 +448,8 @@ export function RegistrationFormBuilder({
             ],
           },
         ],
-      });
+      };
+      onChange(cleanSchema);
       setActiveTemplate("clean");
     }
     setIsCustomized(false);
@@ -432,7 +457,7 @@ export function RegistrationFormBuilder({
     setWarningMessage(null);
   };
 
-  // All fields before a given field (used to prevent circular conditional references)
+  // Preceding fields for conditional visibility
   const getEligibleConditionalTargets = (currentFieldId: string) => {
     const eligible: { id: string; label: string; options?: FormFieldOption[] }[] = [];
     let stop = false;
@@ -443,7 +468,6 @@ export function RegistrationFormBuilder({
           stop = true;
           break;
         }
-        // Only select, radio, or checkbox or text make sensible conditional triggers
         if (field.type !== "info") {
           eligible.push({
             id: field.id,
@@ -462,11 +486,13 @@ export function RegistrationFormBuilder({
     0
   );
 
+  const activeSection = schema.sections.find((s) => s.id === effectiveActiveSectionId) || schema.sections[0];
+
   return (
-    <div className="space-y-4">
-      {/* Pending Template Overwrite Confirmation Dialog */}
+    <div className="space-y-5 w-full">
+      {/* Overwrite Confirmation Dialog */}
       {pendingTemplate && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl bg-[#25292F] text-white p-3.5 shadow-md border border-[#30353A]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-[#17191C] text-white p-3.5 shadow-md border border-[#25292F]">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
             <span className="text-xs">
@@ -487,14 +513,14 @@ export function RegistrationFormBuilder({
             <button
               type="button"
               onClick={() => setPendingTemplate(null)}
-              className="px-3 py-1 text-xs rounded-full border border-white/20 text-white hover:bg-white/10 transition-colors"
+              className="px-3 py-1 text-xs rounded-lg border border-white/20 text-white hover:bg-white/10 transition-colors"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={() => executeLoadTemplate(pendingTemplate)}
-              className="px-3 py-1 text-xs font-bold rounded-full bg-white text-[#17191C] hover:bg-white/90 transition-colors shadow-xs"
+              className="px-3 py-1 text-xs font-semibold rounded-lg bg-white text-[#17191C] hover:bg-white/90 transition-colors shadow-xs"
             >
               Confirm & Overwrite
             </button>
@@ -504,7 +530,7 @@ export function RegistrationFormBuilder({
 
       {/* Warning Notice Banner */}
       {warningMessage && (
-        <div className="flex items-center justify-between rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-600 dark:text-amber-400">
+        <div className="flex items-center justify-between rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-700">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>{warningMessage}</span>
@@ -519,82 +545,79 @@ export function RegistrationFormBuilder({
         </div>
       )}
 
-      {/* Top Bar: Template Quick-Actions & Mobile Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-3">
+      {/* Top Bar: Template Quick-Actions & Live Preview Trigger */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-xl border border-[#E5E7E9] bg-white p-3 shadow-xs">
+        {/* Template Selectors */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#858B93] mr-1">
             Templates:
           </span>
 
-          {/* Diet CODE Reference Button */}
           <button
             type="button"
             onClick={() => requestLoadTemplate("diet_code")}
             aria-pressed={activeTemplate === "diet_code"}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-1 focus-visible:ring-[#17191C] ${
               activeTemplate === "diet_code"
-                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                ? "bg-[#17191C] text-white shadow-xs"
+                : "border border-[#E5E7E9] bg-[#F6F7F8] text-[#34383D] hover:bg-[#EAECEF] hover:text-[#17191C]"
             }`}
           >
             <Files className="h-3.5 w-3.5" />
             <span>Diet CODE Reference</span>
             {activeTemplate === "diet_code" && isCustomized && (
-              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30">
+              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300">
                 Customized
               </span>
             )}
           </button>
 
-          {/* Standard Individual Button */}
           <button
             type="button"
             onClick={() => requestLoadTemplate("individual")}
             aria-pressed={activeTemplate === "individual"}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-1 focus-visible:ring-[#17191C] ${
               activeTemplate === "individual"
-                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                ? "bg-[#17191C] text-white shadow-xs"
+                : "border border-[#E5E7E9] bg-[#F6F7F8] text-[#34383D] hover:bg-[#EAECEF] hover:text-[#17191C]"
             }`}
           >
             <FileText className="h-3.5 w-3.5" />
             <span>Standard Individual</span>
             {activeTemplate === "individual" && isCustomized && (
-              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30">
+              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300">
                 Customized
               </span>
             )}
           </button>
 
-          {/* Multi-Member Team Button */}
           <button
             type="button"
             onClick={() => requestLoadTemplate("team")}
             aria-pressed={activeTemplate === "team"}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-1 focus-visible:ring-[#17191C] ${
               activeTemplate === "team"
-                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                : "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                ? "bg-[#17191C] text-white shadow-xs"
+                : "border border-[#E5E7E9] bg-[#F6F7F8] text-[#34383D] hover:bg-[#EAECEF] hover:text-[#17191C]"
             }`}
           >
             <Users className="h-3.5 w-3.5" />
             <span>Multi-Member Team</span>
             {activeTemplate === "team" && isCustomized && (
-              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 dark:text-amber-800 border border-amber-500/30">
+              <span className="ml-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300">
                 Customized
               </span>
             )}
           </button>
 
-          {/* Reset Clean Button */}
           <button
             type="button"
             onClick={() => requestLoadTemplate("clean")}
             aria-pressed={activeTemplate === "clean"}
-            className={`inline-flex items-center gap-1 rounded-full border border-dashed border-[#D4D7DC] dark:border-[#30353A] px-2.5 py-1 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
+            className={`inline-flex items-center gap-1 rounded-lg border border-dashed border-[#D4D7DC] px-2.5 py-1 text-xs font-medium transition-colors ${
               activeTemplate === "clean"
-                ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                : "text-[#8A9098] dark:text-[#7D858F] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                ? "bg-[#17191C] text-white"
+                : "text-[#858B93] hover:text-[#17191C] hover:bg-[#F6F7F8]"
             }`}
           >
             <RotateCcw className="h-3 w-3" />
@@ -602,136 +625,146 @@ export function RegistrationFormBuilder({
           </button>
         </div>
 
-        {/* View Mode Toggle for Responsive Screen Sizes */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setActiveTab("builder")}
-              className={`flex items-center gap-1 rounded-full px-3 py-1 transition-all ${
-                activeTab === "builder"
-                  ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                  : "text-[#656B73] dark:text-[#8A9098]"
-              }`}
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              <span>Canvas ({totalFields})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("preview")}
-              className={`flex items-center gap-1 rounded-full px-3 py-1 transition-all ${
-                activeTab === "preview"
-                  ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                  : "text-[#656B73] dark:text-[#8A9098]"
-              }`}
-            >
-              <Eye className="h-3.5 w-3.5" />
-              <span>Live Preview</span>
-            </button>
-          </div>
+        {/* Form Controls: Total Count & PROMINENT PREVIEW BUTTON */}
+        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+          <span className="text-xs text-[#858B93] font-medium hidden sm:inline">
+            {schema.sections.length} {schema.sections.length === 1 ? "Section" : "Sections"} &bull; {totalFields} Fields
+          </span>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddSection}
+            className="rounded-lg text-xs font-semibold gap-1.5 h-8 border-[#E5E7E9] text-[#17191C]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Section</span>
+          </Button>
+
+          {/* Prominent Preview Form Button */}
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => setIsPreviewModalOpen(true)}
+            className="rounded-lg text-xs font-semibold gap-1.5 h-8 px-3.5 bg-[#17191C] text-white hover:bg-[#25292F] shadow-xs"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            <span>Preview Form</span>
+          </Button>
         </div>
       </div>
 
-      {/* Main Grid: Responsive 3-Part or Tabbed Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left Column: Field Library Palette (lg: 3 cols) */}
-        <div
-          className={`lg:col-span-3 space-y-3 ${
-            activeTab === "preview" ? "hidden lg:block" : "block"
-          }`}
-        >
-          <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-sm space-y-3">
-            <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#262A2E] pb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
-                <Layers className="h-3.5 w-3.5 text-[#25292F] dark:text-[#E8EAED]" />
-                Field Library
+      {/* HORIZONTAL FORM ELEMENT TOOLBAR (Near the top of workspace) */}
+      <div className="sticky top-16 z-20 rounded-xl border border-[#E5E7E9] bg-white p-3 shadow-xs space-y-2">
+        <div className="flex items-center justify-between gap-2 px-0.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#858B93]">
+              Form Elements:
+            </span>
+            <span className="text-xs text-[#17191C] font-semibold truncate hidden sm:inline">
+              Click any element to add to{" "}
+              <span className="text-[#17191C] underline font-bold">
+                {activeSection?.title || "Active Section"}
               </span>
-              <span className="text-[10px] text-[#8A9098] font-mono">
-                {FIELD_TYPE_DEFINITIONS.length} Types
-              </span>
-            </div>
-
-            <p className="text-[11px] text-[#656B73] dark:text-[#8A9098] leading-tight">
-              Click any element below to add it into your current active section:
-            </p>
-
-            <div className="grid grid-cols-1 gap-1.5 pt-1">
-              {FIELD_TYPE_DEFINITIONS.map((item) => {
-                const Icon = item.icon;
-                const targetSecId =
-                  schema.sections[schema.sections.length - 1]?.id;
-
-                return (
-                  <button
-                    key={item.type}
-                    type="button"
-                    onClick={() => {
-                      if (targetSecId) handleAddField(targetSecId, item.type);
-                    }}
-                    className="group flex items-center justify-between rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] px-3 py-2 text-left text-xs transition-all hover:border-[#25292F] dark:hover:border-[#E8EAED] hover:bg-white dark:hover:bg-[#1B1E21] hover:shadow-xs"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-[#25292F] border border-[#E5E7EA] dark:border-[#30353A] text-[#17191C] dark:text-[#F1F2F3] group-hover:bg-[#25292F] dark:group-hover:bg-[#E8EAED] group-hover:text-white dark:group-hover:text-[#111315] transition-colors">
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-                      <div className="truncate">
-                        <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate">
-                          {item.label}
-                        </div>
-                      </div>
-                    </div>
-                    <Plus className="h-3.5 w-3.5 text-[#8A9098] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3] shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-[#E5E7EA] dark:border-[#262A2E] pt-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddSection}
-                className="w-full rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold gap-1.5"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Add Form Section</span>
-              </Button>
-            </div>
+            </span>
           </div>
+
+          {/* Quick Target Section Switcher if multi-section */}
+          {schema.sections.length > 1 && (
+            <div className="flex items-center gap-1.5 shrink-0 text-xs text-[#858B93]">
+              <span className="text-[10px] uppercase font-bold text-[#858B93] hidden md:inline">Target:</span>
+              <select
+                value={effectiveActiveSectionId}
+                onChange={(e) => setActiveSectionId(e.target.value)}
+                className="h-7 rounded-lg border border-[#E5E7E9] bg-[#F6F7F8] px-2 text-xs font-semibold text-[#17191C] focus:outline-none focus:ring-1 focus:ring-[#17191C]"
+              >
+                {schema.sections.map((s, idx) => (
+                  <option key={s.id} value={s.id}>
+                    Sec {idx + 1}: {s.title || "Untitled"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        {/* Center Column: Form Canvas (lg: 5 cols or full when in builder) */}
-        <div
-          className={`space-y-4 ${
-            activeTab === "preview"
-              ? "hidden lg:block lg:col-span-4"
-              : "lg:col-span-5"
-          }`}
-        >
-          {schema.sections.map((section, sIdx) => (
+        {/* Scrollable Toolbar Items */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          {FIELD_TYPE_DEFINITIONS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.type}
+                type="button"
+                onClick={() => handleAddField(effectiveActiveSectionId, item.type)}
+                className="group flex items-center gap-2 rounded-lg border border-[#E5E7E9] bg-[#F8F9FA] px-2.5 py-1.5 text-xs font-medium text-[#17191C] hover:bg-white hover:border-[#17191C] hover:shadow-xs transition-all shrink-0 select-none"
+                title={`Add ${item.label}: ${item.description}`}
+              >
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white border border-[#E5E7E9] text-[#777E86] group-hover:bg-[#17191C] group-hover:text-white transition-colors">
+                  <Icon className="h-3 w-3" />
+                </div>
+                <span className="whitespace-nowrap">{item.label}</span>
+                <Plus className="h-3 w-3 text-[#858B93] group-hover:text-[#17191C] shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* MAIN FORM EDITOR: Spacious Vertical Document Workspace */}
+      <div className="w-full space-y-6">
+        {schema.sections.map((section, sIdx) => {
+          const isActive = section.id === effectiveActiveSectionId;
+
+          return (
             <div
               key={section.id}
-              className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 sm:p-5 shadow-sm space-y-4"
+              onClick={() => setActiveSectionId(section.id)}
+              className={`rounded-xl border transition-all duration-150 p-5 sm:p-6 space-y-5 bg-white ${
+                isActive
+                  ? "border-[#17191C] ring-1 ring-[#17191C]/10 shadow-xs"
+                  : "border-[#E5E7E9] hover:border-[#CBD0D6] shadow-xs"
+              }`}
             >
-              {/* Section Header Editor */}
-              <div className="flex items-start justify-between gap-3 border-b border-[#E5E7EA] dark:border-[#262A2E] pb-3">
-                <div className="flex-1 space-y-1.5">
+              {/* Section Header */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[#E5E7E9] pb-4">
+                <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
-                      Section {sIdx + 1}
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#F6F7F8] border border-[#E5E7E9] text-[#17191C]">
+                      SECTION {sIdx + 1}
                     </span>
+                    {isActive ? (
+                      <span className="text-[9.5px] font-bold text-[#17191C] uppercase tracking-wider bg-[#EAECEF] px-2 py-0.5 rounded-md">
+                        Active Workspace
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSectionId(section.id);
+                        }}
+                        className="text-[10px] text-[#858B93] hover:text-[#17191C] underline font-medium"
+                      >
+                        Set Active
+                      </button>
+                    )}
                   </div>
+
+                  {/* Editable Section Title */}
                   <input
                     type="text"
                     value={section.title}
                     onChange={(e) =>
                       handleUpdateSection(section.id, "title", e.target.value)
                     }
-                    placeholder="Section Title..."
-                    className="w-full font-bold text-sm text-[#17191C] dark:text-[#F1F2F3] bg-transparent border-b border-transparent hover:border-[#E5E7EA] dark:hover:border-[#30353A] focus:border-[#25292F] dark:focus:border-[#E8EAED] focus:outline-none transition-colors"
+                    placeholder="Section Title (e.g. Attendee Information)..."
+                    className="w-full text-base sm:text-lg font-bold text-[#17191C] bg-transparent border-b border-transparent hover:border-[#E5E7E9] focus:border-[#17191C] focus:outline-none transition-colors"
                   />
+
+                  {/* Editable Section Description */}
                   <input
                     type="text"
                     value={section.description || ""}
@@ -742,124 +775,181 @@ export function RegistrationFormBuilder({
                         e.target.value
                       )
                     }
-                    placeholder="Optional description / helper banner..."
-                    className="w-full text-xs text-[#656B73] dark:text-[#8A9098] bg-transparent border-b border-transparent hover:border-[#E5E7EA] dark:hover:border-[#30353A] focus:border-[#25292F] dark:focus:border-[#E8EAED] focus:outline-none transition-colors"
+                    placeholder="Optional description / instructions for attendees in this section..."
+                    className="w-full text-xs sm:text-sm text-[#858B93] bg-transparent border-b border-transparent hover:border-[#E5E7E9] focus:border-[#17191C] focus:outline-none transition-colors"
                   />
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleDeleteSection(section.id)}
-                  className="text-[#8A9098] hover:text-red-500 p-1 rounded-lg transition-colors"
-                  aria-label="Delete section"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {/* Section Action Controls */}
+                <div className="flex items-center gap-1 self-start sm:self-auto shrink-0 pt-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMoveSection(sIdx, "up");
+                    }}
+                    disabled={sIdx === 0}
+                    className="p-1.5 text-[#858B93] hover:text-[#17191C] disabled:opacity-30 rounded-lg hover:bg-[#F6F7F8] transition-colors"
+                    title="Move section up"
+                    aria-label="Move section up"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMoveSection(sIdx, "down");
+                    }}
+                    disabled={sIdx === schema.sections.length - 1}
+                    className="p-1.5 text-[#858B93] hover:text-[#17191C] disabled:opacity-30 rounded-lg hover:bg-[#F6F7F8] transition-colors"
+                    title="Move section down"
+                    aria-label="Move section down"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteSection(section.id);
+                    }}
+                    className="p-1.5 text-[#858B93] hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors ml-1"
+                    title="Delete section"
+                    aria-label="Delete section"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* Fields List */}
-              <div className="space-y-2.5">
+              {/* Vertically Arranged Form Fields */}
+              <div className="space-y-3">
                 {section.fields.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[#E5E7EA] dark:border-[#30353A] p-4 text-center text-xs text-[#8A9098]">
-                    No fields in this section yet. Click a field in the library to add one.
+                  <div className="rounded-xl border border-dashed border-[#E5E7E9] bg-[#F8F9FA] p-6 text-center text-xs text-[#858B93] space-y-2">
+                    <p>No form fields in this section yet.</p>
+                    <p className="text-[11px] text-[#A4A9AF]">
+                      Select an element from the toolbar above to add a question here.
+                    </p>
                   </div>
                 ) : (
                   section.fields.map((field, fIdx) => {
                     const isExpanded = expandedFieldId === field.id;
-                    const eligibleTargets = getEligibleConditionalTargets(
-                      field.id
-                    );
+                    const eligibleTargets = getEligibleConditionalTargets(field.id);
+                    const typeDef = FIELD_TYPE_DEFINITIONS.find((t) => t.type === field.type);
+                    const FieldIcon = typeDef?.icon || FileText;
 
                     return (
                       <div
                         key={field.id}
                         className={`rounded-xl border transition-all ${
                           isExpanded
-                            ? "border-[#25292F] dark:border-[#E8EAED] bg-[#F9FAFB] dark:bg-[#151719] shadow-xs"
-                            : "border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] hover:border-[#25292F]/50 dark:hover:border-[#E8EAED]/50"
+                            ? "border-[#17191C] bg-[#F8F9FA] shadow-xs"
+                            : "border-[#E5E7E9] bg-white hover:border-[#CBD0D6]"
                         }`}
                       >
                         {/* Compact Field Row */}
-                        <div className="flex items-center justify-between p-3 gap-2">
+                        <div className="flex items-center justify-between p-3.5 gap-3">
                           <div
-                            onClick={() =>
-                              setExpandedFieldId(
-                                isExpanded ? null : field.id
-                              )
-                            }
-                            className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer select-none"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedFieldId(isExpanded ? null : field.id);
+                            }}
+                            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer select-none"
                           >
-                            <span className="rounded-md bg-[#EAECEF] dark:bg-[#25292F] px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase text-[#25292F] dark:text-[#E8EAED]">
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#F6F7F8] border border-[#E5E7E9] text-[#777E86]">
+                              <FieldIcon className="h-3.5 w-3.5" />
+                            </div>
+
+                            <span className="rounded-md bg-[#F6F7F8] border border-[#E5E7E9] px-2 py-0.5 text-[10px] font-mono font-bold uppercase text-[#17191C] shrink-0">
                               {field.type}
                             </span>
-                            <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] truncate">
+
+                            <span className="text-xs font-semibold text-[#17191C] truncate">
                               {field.label}
                             </span>
+
                             {field.required && (
-                              <span className="text-red-500 text-xs font-bold">
+                              <span className="text-rose-600 text-xs font-bold shrink-0" title="Compulsory field">
                                 *
                               </span>
                             )}
+
                             {field.conditional && (
-                              <span className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold px-1.5 py-0.5 rounded-full">
+                              <span className="text-[10px] bg-slate-100 text-[#17191C] border border-[#E5E7E9] font-semibold px-2 py-0.5 rounded-full shrink-0">
                                 conditional
                               </span>
                             )}
                           </div>
 
                           {/* Quick Controls */}
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
-                              onClick={() =>
-                                handleMoveField(section.id, fIdx, "up")
-                              }
+                              onClick={() => handleMoveField(section.id, fIdx, "up")}
                               disabled={fIdx === 0}
-                              className="p-1 text-[#8A9098] hover:text-[#17191C] dark:hover:text-[#F1F2F3] disabled:opacity-30 rounded"
+                              className="p-1 text-[#858B93] hover:text-[#17191C] disabled:opacity-30 rounded hover:bg-[#EAECEF]"
+                              title="Move field up"
                               aria-label="Move field up"
                             >
                               <ChevronUp className="h-3.5 w-3.5" />
                             </button>
+
                             <button
                               type="button"
-                              onClick={() =>
-                                handleMoveField(section.id, fIdx, "down")
-                              }
+                              onClick={() => handleMoveField(section.id, fIdx, "down")}
                               disabled={fIdx === section.fields.length - 1}
-                              className="p-1 text-[#8A9098] hover:text-[#17191C] dark:hover:text-[#F1F2F3] disabled:opacity-30 rounded"
+                              className="p-1 text-[#858B93] hover:text-[#17191C] disabled:opacity-30 rounded hover:bg-[#EAECEF]"
+                              title="Move field down"
                               aria-label="Move field down"
                             >
                               <ChevronDown className="h-3.5 w-3.5" />
                             </button>
+
                             <button
                               type="button"
-                              onClick={() =>
-                                handleDuplicateField(section.id, field)
-                              }
-                              className="p-1 text-[#8A9098] hover:text-[#17191C] dark:hover:text-[#F1F2F3] rounded"
+                              onClick={() => handleDuplicateField(section.id, field)}
+                              className="p-1 text-[#858B93] hover:text-[#17191C] rounded hover:bg-[#EAECEF]"
+                              title="Duplicate field"
                               aria-label="Duplicate field"
                             >
                               <Copy className="h-3.5 w-3.5" />
                             </button>
+
                             <button
                               type="button"
-                              onClick={() =>
-                                handleDeleteField(section.id, field.id)
-                              }
-                              className="p-1 text-[#8A9098] hover:text-red-500 rounded"
+                              onClick={() => handleDeleteField(section.id, field.id)}
+                              className="p-1 text-[#858B93] hover:text-rose-600 rounded hover:bg-rose-50"
+                              title="Delete field"
                               aria-label="Delete field"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setExpandedFieldId(isExpanded ? null : field.id)}
+                              className={`p-1 rounded transition-colors ml-1 ${
+                                isExpanded
+                                  ? "bg-[#17191C] text-white"
+                                  : "text-[#858B93] hover:text-[#17191C] hover:bg-[#EAECEF]"
+                              }`}
+                              title={isExpanded ? "Collapse settings" : "Configure field"}
+                              aria-label="Configure field"
+                            >
+                              <Settings2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </div>
 
                         {/* Expanded Field Editor */}
                         {isExpanded && (
-                          <div className="border-t border-[#E5E7EA] dark:border-[#30353A] p-3.5 space-y-3 bg-white dark:bg-[#1B1E21] rounded-b-xl text-xs">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="border-t border-[#E5E7E9] p-4 sm:p-5 space-y-4 bg-white rounded-b-xl text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] mb-1">
+                                <label className="block text-[11px] font-semibold text-[#17191C] mb-1">
                                   Field Label *
                                 </label>
                                 <Input
@@ -869,12 +959,13 @@ export function RegistrationFormBuilder({
                                       label: e.target.value,
                                     })
                                   }
+                                  placeholder="e.g. Department, Full Name, Portfolio URL..."
                                 />
                               </div>
 
                               <div>
-                                <label className="block text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] mb-1">
-                                  Placeholder
+                                <label className="block text-[11px] font-semibold text-[#17191C] mb-1">
+                                  Placeholder Text
                                 </label>
                                 <Input
                                   value={field.placeholder || ""}
@@ -883,13 +974,14 @@ export function RegistrationFormBuilder({
                                       placeholder: e.target.value,
                                     })
                                   }
+                                  placeholder="Optional ghost text inside field..."
                                 />
                               </div>
                             </div>
 
                             <div>
-                              <label className="block text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] mb-1">
-                                Helper Description
+                              <label className="block text-[11px] font-semibold text-[#17191C] mb-1">
+                                Helper Guidance / Description
                               </label>
                               <Input
                                 value={field.description || ""}
@@ -898,19 +990,19 @@ export function RegistrationFormBuilder({
                                     description: e.target.value,
                                   })
                                 }
-                                placeholder="Instructions or format hints..."
+                                placeholder="Instructions, formatting guidelines or hints..."
                               />
                             </div>
 
                             {/* Required Switch */}
                             {field.type !== "info" && (
-                              <div className="flex items-center justify-between pt-1">
+                              <div className="flex items-center justify-between pt-2 border-t border-[#F0F1F2]">
                                 <div>
-                                  <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3] block">
-                                    Compulsory Question
+                                  <span className="font-semibold text-[#17191C] block">
+                                    Compulsory Question (Required)
                                   </span>
-                                  <span className="text-[11px] text-[#656B73] dark:text-[#8A9098]">
-                                    Participant cannot submit without completing this
+                                  <span className="text-[11px] text-[#858B93]">
+                                    Attendee cannot submit form without filling this field
                                   </span>
                                 </div>
                                 <CustomSwitch
@@ -928,29 +1020,27 @@ export function RegistrationFormBuilder({
                             {(field.type === "select" ||
                               field.type === "radio" ||
                               field.type === "checkbox") && (
-                              <div className="border-t border-[#E5E7EA] dark:border-[#30353A] pt-3 space-y-2">
+                              <div className="border-t border-[#F0F1F2] pt-3 space-y-3">
                                 <div className="flex items-center justify-between">
-                                  <span className="font-bold text-[11px] uppercase tracking-wider text-[#17191C] dark:text-[#F1F2F3]">
+                                  <span className="font-bold text-[11px] uppercase tracking-wider text-[#17191C]">
                                     Choices / Options
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleAddOption(section.id, field.id)
-                                    }
-                                    className="text-xs font-semibold text-[#25292F] dark:text-[#E8EAED] hover:underline flex items-center gap-1"
+                                    onClick={() => handleAddOption(section.id, field.id)}
+                                    className="text-xs font-semibold text-[#17191C] hover:underline flex items-center gap-1"
                                   >
                                     <Plus className="h-3 w-3" />
                                     <span>Add Option</span>
                                   </button>
                                 </div>
 
-                                <div className="space-y-1.5">
+                                <div className="space-y-2">
                                   {(field.options || []).map((opt, optIdx) => (
-                                    <div
-                                      key={optIdx}
-                                      className="flex items-center gap-2"
-                                    >
+                                    <div key={optIdx} className="flex items-center gap-2">
+                                      <span className="text-[10px] font-mono text-[#858B93] w-5 text-right">
+                                        {optIdx + 1}.
+                                      </span>
                                       <Input
                                         value={opt.label}
                                         onChange={(e) =>
@@ -963,25 +1053,20 @@ export function RegistrationFormBuilder({
                                           )
                                         }
                                         placeholder={`Option ${optIdx + 1}`}
-                                        className="h-8 text-xs"
+                                        className="h-8 text-xs flex-1"
                                       />
-                                      {field.options &&
-                                        field.options.length > 1 && (
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              handleRemoveOption(
-                                                section.id,
-                                                field.id,
-                                                optIdx
-                                              )
-                                            }
-                                            className="p-1 text-[#8A9098] hover:text-red-500 rounded"
-                                            aria-label="Remove option"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </button>
-                                        )}
+                                      {field.options && field.options.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleRemoveOption(section.id, field.id, optIdx)
+                                          }
+                                          className="p-1 text-[#858B93] hover:text-rose-600 rounded"
+                                          aria-label="Remove option"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -989,14 +1074,14 @@ export function RegistrationFormBuilder({
                             )}
 
                             {/* Conditional Visibility Rules */}
-                            <div className="border-t border-[#E5E7EA] dark:border-[#30353A] pt-3 space-y-2">
+                            <div className="border-t border-[#F0F1F2] pt-3 space-y-3">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3] block">
-                                    Conditional Visibility
+                                  <span className="font-semibold text-[#17191C] block">
+                                    Conditional Visibility Rule
                                   </span>
-                                  <span className="text-[11px] text-[#656B73] dark:text-[#8A9098]">
-                                    Show this field only when a previous answer matches
+                                  <span className="text-[11px] text-[#858B93]">
+                                    Show this field only when a preceding answer matches criteria
                                   </span>
                                 </div>
                                 <CustomSwitch
@@ -1005,18 +1090,13 @@ export function RegistrationFormBuilder({
                                     if (checked) {
                                       if (eligibleTargets.length > 0) {
                                         const first = eligibleTargets[0];
-                                        handleUpdateField(
-                                          section.id,
-                                          field.id,
-                                          {
-                                            conditional: {
-                                              targetFieldId: first.id,
-                                              operator: "equals",
-                                              value:
-                                                first.options?.[0]?.value || "",
-                                            },
-                                          }
-                                        );
+                                        handleUpdateField(section.id, field.id, {
+                                          conditional: {
+                                            targetFieldId: first.id,
+                                            operator: "equals",
+                                            value: first.options?.[0]?.value || "",
+                                          },
+                                        });
                                       }
                                     } else {
                                       handleUpdateField(section.id, field.id, {
@@ -1028,15 +1108,15 @@ export function RegistrationFormBuilder({
                               </div>
 
                               {field.conditional && (
-                                <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-3 space-y-2">
+                                <div className="rounded-xl border border-[#E5E7E9] bg-[#F8F9FA] p-3.5 space-y-3">
                                   {eligibleTargets.length === 0 ? (
-                                    <p className="text-[11px] text-[#8A9098]">
+                                    <p className="text-[11px] text-[#858B93]">
                                       No preceding fields are available to build a rule. Add other fields before this one first.
                                     </p>
                                   ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                       <div>
-                                        <label className="block text-[10px] font-bold uppercase text-[#8A9098] mb-1">
+                                        <label className="block text-[10px] font-bold uppercase text-[#858B93] mb-1">
                                           When Field
                                         </label>
                                         <CustomSelect
@@ -1044,74 +1124,49 @@ export function RegistrationFormBuilder({
                                             value: t.id,
                                             label: t.label,
                                           }))}
-                                          value={
-                                            field.conditional.targetFieldId
-                                          }
+                                          value={field.conditional.targetFieldId}
                                           onChange={(val) => {
-                                            const target = eligibleTargets.find(
-                                              (t) => t.id === val
-                                            );
-                                            handleUpdateField(
-                                              section.id,
-                                              field.id,
-                                              {
-                                                conditional: {
-                                                  ...field.conditional!,
-                                                  targetFieldId: val,
-                                                  value:
-                                                    target?.options?.[0]
-                                                      ?.value || "",
-                                                },
-                                              }
-                                            );
+                                            const target = eligibleTargets.find((t) => t.id === val);
+                                            handleUpdateField(section.id, field.id, {
+                                              conditional: {
+                                                ...field.conditional!,
+                                                targetFieldId: val,
+                                                value: target?.options?.[0]?.value || "",
+                                              },
+                                            });
                                           }}
                                         />
                                       </div>
 
                                       <div>
-                                        <label className="block text-[10px] font-bold uppercase text-[#8A9098] mb-1">
+                                        <label className="block text-[10px] font-bold uppercase text-[#858B93] mb-1">
                                           Condition
                                         </label>
                                         <CustomSelect
                                           options={[
                                             { value: "equals", label: "Equals" },
-                                            {
-                                              value: "not_equals",
-                                              label: "Does Not Equal",
-                                            },
-                                            {
-                                              value: "contains",
-                                              label: "Contains",
-                                            },
+                                            { value: "not_equals", label: "Does Not Equal" },
+                                            { value: "contains", label: "Contains" },
                                           ]}
                                           value={field.conditional.operator}
                                           onChange={(val) =>
-                                            handleUpdateField(
-                                              section.id,
-                                              field.id,
-                                              {
-                                                conditional: {
-                                                  ...field.conditional!,
-                                                  operator: val as
-                                                    | "equals"
-                                                    | "not_equals"
-                                                    | "contains",
-                                                },
-                                              }
-                                            )
+                                            handleUpdateField(section.id, field.id, {
+                                              conditional: {
+                                                ...field.conditional!,
+                                                operator: val as "equals" | "not_equals" | "contains",
+                                              },
+                                            })
                                           }
                                         />
                                       </div>
 
                                       <div>
-                                        <label className="block text-[10px] font-bold uppercase text-[#8A9098] mb-1">
+                                        <label className="block text-[10px] font-bold uppercase text-[#858B93] mb-1">
                                           Value
                                         </label>
                                         {(() => {
                                           const currentTarget = eligibleTargets.find(
-                                            (t) =>
-                                              t.id ===
-                                              field.conditional?.targetFieldId
+                                            (t) => t.id === field.conditional?.targetFieldId
                                           );
                                           if (
                                             currentTarget &&
@@ -1120,26 +1175,18 @@ export function RegistrationFormBuilder({
                                           ) {
                                             return (
                                               <CustomSelect
-                                                options={currentTarget.options.map(
-                                                  (o) => ({
-                                                    value: o.value,
-                                                    label: o.label,
-                                                  })
-                                                )}
-                                                value={
-                                                  field.conditional.value
-                                                }
+                                                options={currentTarget.options.map((o) => ({
+                                                  value: o.value,
+                                                  label: o.label,
+                                                }))}
+                                                value={field.conditional.value}
                                                 onChange={(val) =>
-                                                  handleUpdateField(
-                                                    section.id,
-                                                    field.id,
-                                                    {
-                                                      conditional: {
-                                                        ...field.conditional!,
-                                                        value: val,
-                                                      },
-                                                    }
-                                                  )
+                                                  handleUpdateField(section.id, field.id, {
+                                                    conditional: {
+                                                      ...field.conditional!,
+                                                      value: val,
+                                                    },
+                                                  })
                                                 }
                                               />
                                             );
@@ -1148,19 +1195,15 @@ export function RegistrationFormBuilder({
                                             <Input
                                               value={field.conditional.value}
                                               onChange={(e) =>
-                                                handleUpdateField(
-                                                  section.id,
-                                                  field.id,
-                                                  {
-                                                    conditional: {
-                                                      ...field.conditional!,
-                                                      value: e.target.value,
-                                                    },
-                                                  }
-                                                )
+                                                handleUpdateField(section.id, field.id, {
+                                                  conditional: {
+                                                    ...field.conditional!,
+                                                    value: e.target.value,
+                                                  },
+                                                })
                                               }
                                               placeholder="Target value..."
-                                              className="h-8 text-xs"
+                                              className="h-8.5 text-xs"
                                             />
                                           );
                                         })()}
@@ -1178,82 +1221,130 @@ export function RegistrationFormBuilder({
                 )}
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
+      </div>
 
-        {/* Right Column: Live Form Preview (lg: 4 cols or full when preview tab active) */}
-        <div
-          className={`space-y-4 ${
-            activeTab === "builder"
-              ? "hidden lg:block lg:col-span-4"
-              : "lg:col-span-7"
-          }`}
+      {/* Add New Section Footer Button */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={handleAddSection}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-[#D4D7DC] bg-white text-xs font-semibold text-[#17191C] hover:border-[#17191C] hover:bg-[#F8F9FA] transition-all shadow-xs"
         >
-          <div className="sticky top-20 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 sm:p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#262A2E] pb-3">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5 text-[#25292F] dark:text-[#E8EAED]" />
-                  Live Participant Preview
-                </span>
-                <p className="text-[11px] text-[#656B73] dark:text-[#8A9098]">
-                  Interactive preview responding to values & rules
-                </p>
+          <Plus className="h-4 w-4" />
+          <span>Add Another Form Section</span>
+        </button>
+      </div>
+
+      {/* LIVE PREVIEW MODAL (Spacious, interactive registration view) */}
+      {isPreviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl border border-[#E5E7E9] shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#E5E7E9] px-6 py-4 bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F6F7F8] border border-[#E5E7E9] text-[#17191C]">
+                  <Eye className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#17191C]">Live Form Preview</h3>
+                  <p className="text-[11px] text-[#858B93]">
+                    Interactive test mode synchronized with your live builder schema
+                  </p>
+                </div>
               </div>
 
-              {/* Device Width Switcher */}
-              <div className="flex items-center gap-1 bg-[#F4F5F6] dark:bg-[#151719] p-1 rounded-full border border-[#E5E7EA] dark:border-[#30353A]">
+              <div className="flex items-center gap-3">
+                {/* Desktop / Mobile Switcher */}
+                <div className="flex items-center gap-1 bg-[#F6F7F8] p-1 rounded-lg border border-[#E5E7E9]">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("desktop")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      previewDevice === "desktop"
+                        ? "bg-white text-[#17191C] shadow-xs"
+                        : "text-[#858B93] hover:text-[#17191C]"
+                    }`}
+                  >
+                    <Monitor className="h-3.5 w-3.5" />
+                    <span>Desktop</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("mobile")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                      previewDevice === "mobile"
+                        ? "bg-white text-[#17191C] shadow-xs"
+                        : "text-[#858B93] hover:text-[#17191C]"
+                    }`}
+                  >
+                    <Smartphone className="h-3.5 w-3.5" />
+                    <span>Mobile</span>
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setPreviewDevice("desktop")}
-                  className={`p-1 rounded-full ${
-                    previewDevice === "desktop"
-                      ? "bg-white dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] shadow-xs"
-                      : "text-[#8A9098]"
-                  }`}
-                  aria-label="Desktop preview"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="p-1.5 rounded-lg text-[#858B93] hover:text-[#17191C] hover:bg-[#F6F7F8] transition-colors"
+                  aria-label="Close preview"
                 >
-                  <Monitor className="h-3 w-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewDevice("mobile")}
-                  className={`p-1 rounded-full ${
-                    previewDevice === "mobile"
-                      ? "bg-white dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] shadow-xs"
-                      : "text-[#8A9098]"
-                  }`}
-                  aria-label="Mobile preview"
-                >
-                  <Smartphone className="h-3 w-3" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
 
-            {/* Simulated Frame */}
-            <div
-              className={`mx-auto rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#111315] p-3 sm:p-4 overflow-y-auto max-h-[640px] transition-all ${
-                previewDevice === "mobile" ? "max-w-[340px]" : "w-full"
-              }`}
-            >
-              <div className="mb-3 border-b border-[#E5E7EA] dark:border-[#262A2E] pb-2 text-center">
-                <span className="text-[10px] font-mono uppercase text-[#8A9098]">
-                  Client Registration Preview
-                </span>
-              </div>
+            {/* Modal Body with Scrollable Simulated View */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 bg-[#F8F9FA]">
+              <div
+                className={`mx-auto transition-all ${
+                  previewDevice === "mobile"
+                    ? "max-w-[380px] bg-white rounded-2xl border-4 border-[#17191C] p-5 shadow-xl"
+                    : "max-w-2xl bg-white rounded-xl border border-[#E5E7E9] p-6 sm:p-8 shadow-xs"
+                }`}
+              >
+                <div className="mb-4 pb-3 border-b border-[#E5E7E9] flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#858B93]">
+                    Official Registration View
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md">
+                    Interactive Mode
+                  </span>
+                </div>
 
-              <DynamicFormRenderer
-                schema={schema}
-                values={previewValues}
-                onChange={(fId, val) =>
-                  setPreviewValues((prev) => ({ ...prev, [fId]: val }))
-                }
-                isPreview
-              />
+                <DynamicFormRenderer
+                  schema={schema}
+                  values={previewValues}
+                  onChange={(fId, val) =>
+                    setPreviewValues((prev) => ({ ...prev, [fId]: val }))
+                  }
+                  isPreview
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-[#E5E7E9] px-6 py-3 bg-white flex items-center justify-between shrink-0">
+              <span className="text-xs text-[#858B93]">
+                Changes are automatically preserved when returning to editing.
+              </span>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => setIsPreviewModalOpen(false)}
+                className="rounded-lg text-xs font-semibold"
+              >
+                Return to Editing
+              </Button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

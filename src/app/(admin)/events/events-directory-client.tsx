@@ -13,6 +13,8 @@ import {
   Filter,
   AlertCircle,
   RefreshCw,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +49,35 @@ export default function EventsDirectoryClient({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(initialError);
+  const [copiedEventId, setCopiedEventId] = useState<string | null>(null);
+
+  const handleCopyEventLink = async (e: React.MouseEvent, item: EventItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const publicUrl = `${window.location.origin}/e/${item.slug || item.id}`;
+
+    if (typeof navigator !== "undefined" && navigator.share && /mobile|android|iphone/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: item.title,
+          url: publicUrl,
+        });
+        setCopiedEventId(item.id);
+        setTimeout(() => setCopiedEventId(null), 2500);
+        return;
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopiedEventId(item.id);
+      setTimeout(() => setCopiedEventId(null), 2500);
+    } catch {
+      // Fallback
+    }
+  };
 
   // In Preview Mode, sync with local store updates
   useEffect(() => {
@@ -117,51 +148,54 @@ export default function EventsDirectoryClient({
   }, [events, activeTab, selectedCategory, searchQuery]);
 
   return (
-    <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto text-[#17191C] dark:text-[#F1F2F3]">
+    <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto text-[#17191C]">
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / EVENTS
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C]">
               Event Directory
             </h1>
             {isPreview ? (
-              <Badge variant="outline" className="text-[10px] uppercase font-semibold text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40">
+              <Badge variant="outline" className="text-[10px] uppercase font-semibold bg-white border-[#E5E7E9] text-[#777E86]">
                 Preview Mode
               </Badge>
             ) : (
-              <Badge className="text-[10px] uppercase font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+              <Badge className="text-[10px] uppercase font-semibold bg-white border-[#E5E7E9] text-[#17191C]">
                 Connected
               </Badge>
             )}
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#A6ADB5]">
+          <p className="mt-1 text-xs sm:text-sm text-[#858B93]">
             Create, configure, and monitor every SKETCH experience through its complete lifecycle.
           </p>
         </div>
 
         <Link href="/events/new">
-          <Button variant="charcoal" className="rounded-full gap-2 font-semibold shadow-sm text-xs sm:text-sm h-9 sm:h-10 px-4 sm:px-5">
-            <Plus className="h-4 w-4" />
+          <Button variant="default" className="rounded-lg gap-2 font-semibold shadow-xs text-xs sm:text-sm h-9 sm:h-10 px-4 sm:px-5 bg-[#17191C] text-white hover:bg-[#25292F]">
+            <Plus className="h-4 w-4 text-white/80" />
             <span>Create Event</span>
           </Button>
         </Link>
       </div>
 
-      {/* Production Database Error Banner (Never silently hides) */}
+      {/* Production Database Error Banner */}
       {error && (
         <div
           role="alert"
-          className="rounded-[20px] border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30 p-5 shadow-sm text-rose-900 dark:text-rose-200"
+          className="rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-rose-800"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
             <div className="flex-1 text-xs space-y-1">
-              <h3 className="font-bold text-sm">Database Connection Error</h3>
-              <p className="text-rose-800 dark:text-rose-300">
-                Unable to load events from the persistent database: <code className="bg-rose-100 dark:bg-rose-900/60 px-1 py-0.5 rounded font-mono">{error}</code>
+              <h3 className="font-semibold text-sm text-rose-900">Database Connection Alert</h3>
+              <p className="text-rose-700">
+                Unable to load events from the persistent database: <code className="bg-rose-100 px-1 py-0.5 rounded font-mono text-rose-800">{error}</code>
               </p>
-              <p className="text-[11px] text-rose-700 dark:text-rose-400 pt-1">
+              <p className="text-[11px] text-rose-600 pt-1">
                 Notice: Mock events are strictly not substituted in production to preserve data integrity.
               </p>
             </div>
@@ -169,9 +203,9 @@ export default function EventsDirectoryClient({
               variant="outline"
               size="sm"
               onClick={() => window.location.reload()}
-              className="rounded-full text-xs font-semibold gap-1.5 border-rose-300 dark:border-rose-800"
+              className="rounded-lg text-xs font-semibold gap-1.5 border-rose-200 bg-white hover:bg-rose-50 text-rose-800"
             >
-              <RefreshCw className="h-3 w-3" />
+              <RefreshCw className="h-3 w-3 text-rose-700" />
               <span>Retry</span>
             </Button>
           </div>
@@ -179,7 +213,7 @@ export default function EventsDirectoryClient({
       )}
 
       {/* Filter Tabs, Category Selector & Search Bar */}
-      <div className="flex flex-col gap-3 rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <div className="flex flex-col gap-3 rounded-xl border border-[#E5E7E9] bg-white p-3.5 shadow-xs">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Lifecycle Tabs */}
           <AnimatedTabs
@@ -191,20 +225,20 @@ export default function EventsDirectoryClient({
 
           {/* Search Input */}
           <div className="relative w-full lg:w-72">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098] dark:text-[#7D858F]" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#777E86]" />
             <input
               type="text"
               placeholder="Search events, venues, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#363C46] bg-[#F4F5F6] dark:bg-[#181B1F] pl-9 pr-4 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] transition-all focus:bg-white dark:focus:bg-[#20252C] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED] focus:border-[#25292F] dark:focus:border-[#E8EAED]"
+              className="h-9 w-full rounded-lg border border-[#E5E7E9] bg-[#F6F7F8] pl-9 pr-4 text-xs text-[#17191C] placeholder:text-[#858B93] transition-colors focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#858B93] focus:border-[#858B93]"
             />
           </div>
         </div>
 
         {/* Category Pill Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[#F4F5F6] dark:border-white/10 text-xs">
-          <span className="text-[#8A9098] dark:text-white/60 text-[11px] font-semibold pr-1 shrink-0">Category:</span>
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[#E5E7E9] text-xs">
+          <span className="text-[#858B93] text-[11px] font-semibold pr-1 shrink-0">Category:</span>
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase();
             return (
@@ -212,10 +246,10 @@ export default function EventsDirectoryClient({
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-all shrink-0 ${
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all shrink-0 ${
                   isSelected
-                    ? "bg-[#25292F] dark:bg-white text-white dark:text-[#17191C]"
-                    : "bg-[#F4F5F6] dark:bg-[#181B1F] border border-transparent dark:border-[#363C46] text-[#5E646E] dark:text-white/70 hover:text-[#17191C] dark:hover:text-white"
+                    ? "bg-[#17191C] text-white shadow-xs"
+                    : "bg-[#F6F7F8] border border-[#E5E7E9] text-[#777E86] hover:text-[#17191C] hover:bg-[#EAECEF]"
                 }`}
               >
                 {cat === "all" ? "All Categories" : cat}
@@ -225,7 +259,7 @@ export default function EventsDirectoryClient({
         </div>
       </div>
 
-      {/* Events Grid with Stable, Flicker-Free Transition */}
+      {/* Events Grid */}
       <AnimatePresence mode="wait" initial={false}>
         {filteredEvents.length === 0 ? (
           <motion.div
@@ -234,11 +268,13 @@ export default function EventsDirectoryClient({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-12 text-center shadow-sm"
+            className="rounded-xl border border-dashed border-[#E5E7E9] bg-white p-12 text-center shadow-xs flex flex-col items-center justify-center"
           >
-            <Filter className="mx-auto h-8 w-8 text-[#8A9098] dark:text-[#7D858F] mb-3 opacity-40" />
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">No events match your filter</h3>
-            <p className="mt-1 text-xs text-[#656B73] dark:text-[#A6ADB5]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F6F7F8] border border-[#E5E7E9] text-[#777E86] mb-3.5">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <h3 className="text-sm font-semibold text-[#17191C]">No events match your filter</h3>
+            <p className="mt-1 text-xs text-[#858B93] max-w-sm leading-relaxed">
               Try adjusting your search query, clearing category selection, or switching the active lifecycle filter.
             </p>
             <Button
@@ -249,7 +285,7 @@ export default function EventsDirectoryClient({
                 setSelectedCategory("all");
                 setSearchQuery("");
               }}
-              className="mt-4 rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold"
+              className="mt-4 rounded-lg border-[#E5E7E9] text-xs font-semibold text-[#17191C] bg-white hover:bg-[#F6F7F8]"
             >
               Reset Filters
             </Button>
@@ -272,32 +308,32 @@ export default function EventsDirectoryClient({
               return (
                 <div
                   key={event.id}
-                  className="group flex flex-col justify-between overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#48515E] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] motion-reduce:transition-none motion-reduce:transform-none"
+                  className="group flex flex-col justify-between overflow-hidden rounded-xl border border-[#E5E7E9] bg-white shadow-xs transition-all duration-150 hover:border-[#D9DCE0] hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:transform-none"
                 >
                   {/* Poster / Artwork Header */}
-                  <div className="relative h-44 w-full overflow-hidden bg-[#EAECEF] dark:bg-[#2A2F35]">
+                  <div className="relative h-44 w-full overflow-hidden bg-[#F6F7F8]">
                     <img
                       src={event.directoryImage || event.posterUrl || event.heroImage || "/sketch-logo.png"}
                       alt={event.title}
                       style={{ objectPosition: event.directoryImageFocalPoint || event.focalPoint || "center center" }}
                       className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02] motion-reduce:transform-none"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#34383D]/70 via-transparent to-transparent" />
 
                     <div className="absolute top-3 left-3 flex gap-2">
-                      <span className="rounded-full bg-white/90 dark:bg-white/90 px-2.5 py-0.5 text-[10px] font-bold text-[#17191C] backdrop-blur-md shadow-xs">
+                      <span className="rounded-md bg-white/95 px-2.5 py-0.5 text-[10px] font-semibold text-[#34383D] shadow-xs">
                         {event.category}
                       </span>
                     </div>
 
                     <div className="absolute top-3 right-3">
-                      <span className="rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md border border-white/20">
+                      <span className="rounded-md bg-white/95 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#34383D] border border-[#E5E7E9]">
                         {event.lifecycle}
                       </span>
                     </div>
 
                     <div className="absolute bottom-3 left-3 right-3">
-                      <h3 className="text-base font-bold text-white drop-shadow-sm line-clamp-1">
+                      <h3 className="text-base font-bold text-white drop-shadow-xs line-clamp-1">
                         {event.title}
                       </h3>
                     </div>
@@ -305,18 +341,18 @@ export default function EventsDirectoryClient({
 
                   {/* Body Details */}
                   <div className="flex flex-1 flex-col p-4">
-                    <p className="text-xs text-[#5E646E] dark:text-white/75 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#858B93] line-clamp-2 leading-relaxed">
                       {event.shortDescription || event.description}
                     </p>
 
                     {/* Meta info */}
-                    <div className="mt-4 space-y-2 border-t border-[#F4F5F6] dark:border-white/10 pt-3 text-xs text-[#5E646E] dark:text-white/70">
+                    <div className="mt-4 space-y-2 border-t border-[#E5E7E9] pt-3 text-xs text-[#858B93]">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-3.5 w-3.5 text-[#8A9098] dark:text-white/60" />
+                        <Calendar className="h-3.5 w-3.5 text-[#777E86]" />
                         <span>{formatDate(event.startDate)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-[#8A9098] dark:text-white/60" />
+                        <MapPin className="h-3.5 w-3.5 text-[#777E86]" />
                         <span className="truncate">{event.venue}</span>
                       </div>
                     </div>
@@ -324,38 +360,55 @@ export default function EventsDirectoryClient({
                     {/* Capacity Progress Bar */}
                     <div className="mt-3 space-y-1">
                       <div className="flex justify-between text-[11px]">
-                        <span className="text-[#5E646E] dark:text-white/70 flex items-center gap-1">
-                          <Users className="h-3 w-3 text-[#8A9098] dark:text-white/60" />
-                          <strong className="text-[#17191C] dark:text-white font-semibold font-mono tabular-nums">{event.registeredCount}</strong> / <span className="font-mono tabular-nums">{event.capacity}</span>
+                        <span className="text-[#858B93] flex items-center gap-1">
+                          <Users className="h-3 w-3 text-[#777E86]" />
+                          <strong className="text-[#34383D] font-semibold font-mono tabular-nums">{event.registeredCount}</strong> / <span className="font-mono tabular-nums">{event.capacity}</span>
                         </span>
-                        <span className="text-[#8A9098] dark:text-white/60 font-medium font-mono tabular-nums">{percentFilled}% Filled</span>
+                        <span className="text-[#858B93] font-medium font-mono tabular-nums">{percentFilled}% Filled</span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#EAECEF] dark:bg-white/10">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#EAECEF]">
                         <div
                           style={{ width: `${percentFilled}%` }}
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            percentFilled >= 90
-                              ? "bg-[#25292F] dark:bg-white"
-                              : "bg-[#71767F] dark:bg-white/80"
-                          }`}
+                          className="h-full rounded-full bg-[#34383D] transition-all duration-300"
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Footer Actions */}
-                  <div className="flex items-center justify-between border-t border-[#F4F5F6] dark:border-white/10 bg-[#F9FAFB] dark:bg-[#181B1F] px-4 py-2.5">
+                  <div className="flex items-center justify-between border-t border-[#E5E7E9] bg-[#F6F7F8] px-4 py-2.5">
                     {event.lifecycle === "published" || event.lifecycle === "live" ? (
-                      <Link
-                        href={`/e/${event.slug}`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#17191C] dark:text-white hover:underline"
-                      >
-                        <span>Public Page</span>
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyEventLink(e, event)}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#656B73] hover:text-[#17191C] transition-colors"
+                          title="Copy public event link"
+                        >
+                          {copiedEventId === event.id ? (
+                            <>
+                              <Check className="h-3 w-3 text-emerald-600" />
+                              <span className="text-emerald-700 font-bold">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" />
+                              <span>Copy Link</span>
+                            </>
+                          )}
+                        </button>
+                        <span className="text-[#D0D3D6]">•</span>
+                        <Link
+                          href={`/e/${event.slug || event.id}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#34383D] hover:underline"
+                        >
+                          <span>Public Page</span>
+                          <ArrowUpRight className="h-3 w-3 text-[#777E86]" />
+                        </Link>
+                      </div>
                     ) : (
-                      <span className="text-[11px] font-medium text-[#8A9098] dark:text-white/60 italic">
+                      <span className="text-[11px] font-medium text-[#858B93] italic">
                         Draft (Unpublished)
                       </span>
                     )}
@@ -364,7 +417,7 @@ export default function EventsDirectoryClient({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 rounded-full border-[#E5E7EA] dark:border-[#363C46] px-3 text-xs font-semibold text-[#17191C] dark:text-white hover:bg-white dark:hover:bg-white/10 dark:hover:border-[#48515E]"
+                        className="h-7 rounded-lg border-[#E5E7E9] px-3 text-xs font-semibold text-[#34383D] bg-white hover:bg-[#EAECEF]"
                       >
                         Manage
                       </Button>

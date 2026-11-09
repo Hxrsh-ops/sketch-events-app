@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import {
@@ -14,14 +13,15 @@ import {
   QrCode,
   FileBadge,
   Mail,
-  Ticket,
+  Sliders,
   BarChart3,
   Download,
   ShieldCheck,
   Settings,
-  HelpCircle,
   Plus,
   ArrowUpRight,
+  Database,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,30 +36,21 @@ interface NavItem {
   badge?: string;
 }
 
-const OPERATIONS_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: LayoutGrid },
+// Core Primary Modules as requested in Section 3
+const CORE_MODULES: NavItem[] = [
+  { label: "Overview", href: "/", icon: LayoutGrid },
   { label: "Events", href: "/events", icon: CalendarDays },
+  { label: "Form Generator", href: "/studio", icon: Sliders },
   { label: "Participants", href: "/participants", icon: Users },
   { label: "Teams", href: "/teams", icon: UserCheck },
   { label: "Rounds & Stages", href: "/rounds", icon: GitBranch },
-  { label: "Live Attendance", href: "/attendance", icon: QrCode },
-];
-
-const COMMUNICATIONS_ITEMS: NavItem[] = [
-  { label: "Ticket Studio", href: "/studio", icon: Ticket },
+  { label: "Attendance", href: "/attendance", icon: QrCode },
   { label: "Certificates", href: "/certificates", icon: FileBadge },
   { label: "Communications", href: "/communications", icon: Mail },
-];
-
-const INTELLIGENCE_ITEMS: NavItem[] = [
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Data Exports", href: "/exports", icon: Download },
+  { label: "Exports", href: "/exports", icon: Download },
   { label: "Audit & Records", href: "/audit", icon: ShieldCheck },
-];
-
-const SYSTEM_ITEMS: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
-  { label: "Documentation", href: "https://github.com", icon: HelpCircle },
 ];
 
 interface SidebarProps {
@@ -135,7 +126,6 @@ export function Sidebar({
     return undefined;
   };
 
-
   const isItemVisible = (href: string) => {
     const requiredPermission = getRequiredPermissionForPath(href);
     if (!requiredPermission) return true;
@@ -150,259 +140,161 @@ export function Sidebar({
     return pathname.startsWith(href);
   };
 
-
   return (
     <aside
       className={cn(
-        "flex flex-col h-screen sticky top-0 bg-[#F4F5F6] dark:bg-[#151719] border-r border-[#E5E7EA] dark:border-[#30353A] py-6 px-4 select-none w-64 shrink-0 justify-between overflow-y-auto transition-colors duration-200",
+        "flex flex-col h-screen sticky top-0 bg-[#F4F5F6] border-r border-[#E5E7EB] py-5 px-3.5 select-none w-[272px] shrink-0 justify-between overflow-y-auto transition-colors duration-150",
         className
       )}
     >
-      {/* Top Brand Header */}
-      <div className="flex flex-col space-y-6">
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className="flex items-center gap-3 px-2 group transition-opacity hover:opacity-90"
-        >
-          <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-[#F0F1F2] dark:bg-[#22262B] flex items-center justify-center shrink-0 shadow-xs border border-[#E5E7EA] dark:border-[#30353A] p-1.5">
-            <Image
-              src="/sketch-logo.png"
-              alt="SketchHUB Logo"
-              width={36}
-              height={36}
-              className="object-contain h-full w-full dark:invert"
-              priority
-            />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-base text-[#17191C] dark:text-[#F1F2F3] tracking-tight leading-tight">
-              SketchHUB
-            </span>
-            <span className="text-[10px] font-semibold text-[#8A9098] dark:text-[#7D858F] tracking-wide uppercase">
-              Event Operations Platform
-            </span>
-          </div>
-        </Link>
+      <div className="flex flex-col space-y-4">
+        {/* Top Header Section */}
+        <div className="px-1 pt-0.5">
+          <Link
+            href="/"
+            onClick={onNavigate}
+            className="flex items-center gap-3 group transition-opacity hover:opacity-90"
+          >
+            <div className="relative h-9 w-9 rounded-xl overflow-hidden bg-white flex items-center justify-center shrink-0 border border-[#E5E7EB] p-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <Image
+                src="/sketch-logo.png"
+                alt="SketchHUB Logo"
+                width={24}
+                height={24}
+                className="object-contain h-full w-full"
+                priority
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-[15px] text-[#111827] tracking-tight leading-none">
+                SketchHUB
+              </span>
+              <span className="text-[10px] font-semibold text-[#6B7280] tracking-[0.08em] uppercase mt-1">
+                Event Operations
+              </span>
+            </div>
+          </Link>
+        </div>
 
-        {/* Quick Action in Sidebar */}
-        <div className="px-1">
-          <Link href="/events/new" onClick={onNavigate}>
-            <Button
-              variant="charcoal"
-              size="sm"
-              className="w-full h-9 rounded-xl font-medium gap-1.5 shadow-sm text-xs justify-center"
+        {/* Active Event Selector with Browse Option */}
+        <div className="px-0.5">
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-[#E5E7EB] bg-white text-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-[#D1D5DB] transition-colors">
+            <div className="flex items-center gap-2 overflow-hidden pr-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className="truncate text-[12px] font-medium text-[#111827]" title="Design Sprint 2026">
+                Design Sprint 2026
+              </span>
+            </div>
+            <Link
+              href="/events"
+              onClick={onNavigate}
+              className="text-[11px] font-medium text-[#6B7280] hover:text-[#111827] shrink-0 transition-colors"
             >
-              <Plus className="h-3.5 w-3.5" />
+              Browse
+            </Link>
+          </div>
+        </div>
+
+        {/* Quick Action: Create Event */}
+        <div className="px-0.5">
+          <Link href="/events/new" onClick={onNavigate} className="block">
+            <Button
+              variant="default"
+              className="w-full h-11 rounded-lg font-semibold gap-2 text-[13px] justify-center bg-[#18181B] text-white hover:bg-[#27272A] active:bg-[#09090B] shadow-[0_1px_2px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.12)] active:scale-[0.99] transition-all duration-150 px-4"
+            >
+              <Plus className="h-4 w-4 stroke-[2.25] text-white/90 shrink-0" />
               <span>Create Event</span>
             </Button>
           </Link>
         </div>
 
-        {/* Navigation Groups */}
-        <div className="flex flex-col space-y-5 pr-1">
-          {/* Operations */}
-          <div>
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
-              Operations
-            </div>
-            <nav className="flex flex-col space-y-0.5">
-              {OPERATIONS_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
-                const active = isItemActive(item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
-                      active
-                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
-                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
-                    )}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
-                    )}
-                    <div className="flex items-center gap-2.5 pl-0.5">
-                      <Icon
+        {/* Navigation Core Modules */}
+        <div className="flex flex-col space-y-1.5 pt-2">
+          <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9CA3AF]">
+            Platform Modules
+          </div>
+          <nav className="flex flex-col space-y-1">
+            {CORE_MODULES.filter((item) => isItemVisible(item.href)).map((item) => {
+              const active = isItemActive(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "group flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#18181B]/20",
+                    active
+                      ? "bg-white border border-[#E5E7EB] text-[#111827] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                      : "text-[#6B7280] hover:text-[#111827] hover:bg-[#EAECEF]/80 border border-transparent"
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 shrink-0 transition-colors stroke-[1.8]",
+                        active ? "text-[#111827]" : "text-[#9CA3AF] group-hover:text-[#111827]"
+                      )}
+                    />
+                    <span>{item.label}</span>
+                  </div>
+                  {(() => {
+                    const badge = item.badge ?? getBadgeForItem(item.href);
+                    if (badge === undefined || badge === null) return null;
+                    return (
+                      <span
+                        data-testid={`sidebar-badge-${item.label.toLowerCase()}`}
+                        title={isPreview ? "Preview event count" : "Authoritative event count"}
                         className={cn(
-                          "w-4 h-4 transition-colors",
+                          "text-[11px] px-2 py-0.5 rounded-md font-medium tabular-nums border",
                           active
-                            ? "text-[#17191C] dark:text-[#F1F2F3]"
-                            : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
+                            ? "bg-[#F3F4F6] border-[#E5E7EB] text-[#111827]"
+                            : "bg-[#EAECEF] border-[#E5E7EB] text-[#6B7280]"
                         )}
-                      />
-                      <span>{item.label}</span>
-                    </div>
-                    {(() => {
-                      const badge = item.badge ?? getBadgeForItem(item.href);
-                      if (badge === undefined || badge === null) return null;
-                      return (
-                        <span
-                          data-testid={`sidebar-badge-${item.label.toLowerCase()}`}
-                          title={isPreview ? "Preview event count" : "Authoritative event count"}
-                          className={cn(
-                            "text-[10px] px-1.5 py-0.2 rounded-full font-bold tabular-nums",
-                            active
-                              ? "bg-[#F0F1F2] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3]"
-                              : "bg-[#EAECEF] dark:bg-[#2A2F35] text-[#8A9098] dark:text-[#7D858F]"
-                          )}
-                        >
-                          {badge}
-                        </span>
-                      );
-                    })()}
-
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Communications */}
-          <div>
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
-              Delivery & Credentials
-            </div>
-            <nav className="flex flex-col space-y-0.5">
-              {COMMUNICATIONS_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
-                const active = isItemActive(item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
-                      active
-                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
-                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
-                    )}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
-                    )}
-                    <Icon
-                      className={cn(
-                        "w-4 h-4 pl-0.5",
-                        active
-                          ? "text-[#17191C] dark:text-[#F1F2F3]"
-                          : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
-                      )}
-                    />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Intelligence */}
-          <div>
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
-              Intelligence & Logs
-            </div>
-            <nav className="flex flex-col space-y-0.5">
-              {INTELLIGENCE_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
-                const active = isItemActive(item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
-                      active
-                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
-                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
-                    )}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
-                    )}
-                    <Icon
-                      className={cn(
-                        "w-4 h-4 pl-0.5",
-                        active
-                          ? "text-[#17191C] dark:text-[#F1F2F3]"
-                          : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
-                      )}
-                    />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* System */}
-          <div>
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
-              System
-            </div>
-            <nav className="flex flex-col space-y-0.5">
-              {SYSTEM_ITEMS.filter((item) => isItemVisible(item.href)).map((item) => {
-                const active = isItemActive(item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] group",
-                      active
-                        ? "text-[#17191C] dark:text-[#F1F2F3] font-bold bg-white dark:bg-[#1B1E21] shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
-                        : "text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-white/60 dark:hover:bg-[#1B1E21]/60"
-                    )}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 rounded-r-full bg-[#17191C] dark:bg-[#E8EAED]" />
-                    )}
-                    <Icon
-                      className={cn(
-                        "w-4 h-4 pl-0.5",
-                        active
-                          ? "text-[#17191C] dark:text-[#F1F2F3]"
-                          : "text-[#8A9098] dark:text-[#7D858F] group-hover:text-[#17191C] dark:group-hover:text-[#F1F2F3]"
-                      )}
-                    />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+                      >
+                        {badge}
+                      </span>
+                    );
+                  })()}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </div>
 
-      {/* Bottom Operational Status Pill */}
-      <div className="pt-4 border-t border-[#E5E7EA] dark:border-[#30353A]">
-        <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm space-y-2">
+      {/* Bottom Backend Connection Status */}
+      <div className="pt-4 border-t border-[#E5E7EB]">
+        <div className="rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F]">
-              Live Desk
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#9CA3AF]">
+              Backend Status
             </span>
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-[#17191C] dark:text-[#F1F2F3]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#17191C] dark:bg-[#E8EAED] animate-pulse" />
-              Active
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#111827]">
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  isPreview ? "bg-[#9CA3AF]" : "bg-emerald-500 animate-pulse"
+                )}
+              />
+              {isPreview ? "Offline Preview" : "Connected"}
             </span>
           </div>
-          <p className="text-[11px] text-[#656B73] dark:text-[#A6ADB5] leading-snug">
-            Design Sprint Studio B check-in station ready.
-          </p>
-          <Link
-            href="/attendance"
-            onClick={onNavigate}
-            className="flex items-center justify-between text-[11px] font-bold text-[#17191C] dark:text-[#F1F2F3] hover:underline pt-1"
-          >
-            <span>Launch Scanner</span>
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </Link>
+          <div className="flex items-center justify-between text-[11px] text-[#6B7280] pt-0.5">
+            <span className="flex items-center gap-1.5 truncate pr-2">
+              <Database className="h-3.5 w-3.5 text-[#9CA3AF] shrink-0" />
+              <span className="truncate">{isPreview ? "Mock In-Memory" : "Supabase PostgreSQL"}</span>
+            </span>
+            <Link
+              href="/attendance"
+              onClick={onNavigate}
+              className="text-[#111827] hover:text-black hover:underline flex items-center gap-0.5 font-medium shrink-0"
+              title="Launch QR Attendance Desk"
+            >
+              <span>Desk</span>
+              <ArrowUpRight className="h-3 w-3 text-[#9CA3AF]" />
+            </Link>
+          </div>
         </div>
       </div>
     </aside>

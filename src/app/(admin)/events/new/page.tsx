@@ -43,6 +43,8 @@ import {
 import { saveEvent } from "@/lib/registration-store";
 import { createEventAction } from "@/app/actions/event-actions";
 import { EventItem, RegistrationFormSchema } from "@/types";
+import { useAuth } from "@/lib/auth/auth-context";
+import { AccessDenied } from "@/components/auth/access-denied";
 
 const CATEGORY_OPTIONS: SelectOption[] = [
   { value: "Design", label: "Design", description: "Design sprints, UI/UX hackathons, and creative design systems" },
@@ -106,6 +108,18 @@ const FOCAL_PRESETS = [
 
 export default function NewEventPage() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  if (user && user.role !== "master_admin" && user.role !== "event_manager") {
+    return (
+      <AccessDenied
+        currentRole={user.role}
+        requiredRoles={["master_admin", "event_manager"]}
+        moduleName="Event Creation Wizard"
+      />
+    );
+  }
+
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPublishedPreview, setIsPublishedPreview] = useState(false);
@@ -426,32 +440,35 @@ export default function NewEventPage() {
   };
 
   return (
-    <div className="flex flex-col space-y-6 pb-12 max-w-4xl mx-auto text-[#17191C] dark:text-[#F1F2F3]">
+    <div className="flex flex-col space-y-6 pb-12 max-w-5xl mx-auto text-[#17191C]">
       {/* Top Breadcrumb & Step Info */}
       <div className="flex items-center justify-between">
         <Link
           href="/events"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#858B93] hover:text-[#17191C] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Event Directory</span>
         </Link>
-        <span className="text-xs font-semibold text-[#8A9098] dark:text-[#7D858F]">
+        <span className="text-xs font-semibold text-[#858B93]">
           Step {currentStep} of 4: {STEPS[currentStep - 1].name}
         </span>
       </div>
 
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
+        <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+          SKETCHHUB WORKSPACE / EVENTS / NEW EVENT
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-bold mt-0.5 tracking-tight text-[#17191C]">
           Create New Event
         </h1>
-        <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#A6ADB5]">
-          Configure event details, registration thresholds, and multi-stage competition pipelines
+        <p className="mt-1 text-xs sm:text-sm text-[#858B93]">
+          Configure event details, dynamic registration form, and multi-stage competition pipelines
         </p>
       </div>
 
       {/* Connected Monochrome Stepper */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3 shadow-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-[#E5E7E9] bg-white p-3 shadow-xs">
         {STEPS.map((step) => {
           const isCurrent = currentStep === step.id;
           const isCompleted = currentStep > step.id;
@@ -464,30 +481,30 @@ export default function NewEventPage() {
                 if (step.id < currentStep) handleJumpToStep(step.id);
               }}
               disabled={step.id > currentStep}
-              className={`flex items-center gap-2.5 rounded-xl p-2 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
+              className={`flex items-center gap-2.5 rounded-lg p-2.5 text-left transition-all outline-none focus-visible:ring-1 focus-visible:ring-[#17191C] ${
                 isCurrent
-                  ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                  ? "bg-[#17191C] text-white shadow-xs"
                   : isCompleted
-                  ? "bg-[#F9FAFB] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#2A2F35] cursor-pointer"
-                  : "bg-transparent text-[#8A9098] dark:text-[#7D858F] cursor-not-allowed opacity-60"
+                  ? "bg-[#F8F9FA] text-[#17191C] hover:bg-[#F2F3F4] cursor-pointer border border-[#E5E7E9]"
+                  : "bg-transparent text-[#858B93] cursor-not-allowed opacity-60"
               }`}
             >
               <div
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold ${
                   isCurrent
-                    ? "bg-white dark:bg-[#111315] text-[#25292F] dark:text-[#E8EAED]"
+                    ? "bg-white text-[#17191C]"
                     : isCompleted
-                    ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                    : "bg-[#E5E7EA] dark:bg-[#30353A] text-[#8A9098] dark:text-[#7D858F]"
+                    ? "bg-[#17191C] text-white"
+                    : "bg-[#EAECEF] text-[#858B93]"
                 }`}
               >
                 {isCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : step.id}
               </div>
               <div className="hidden sm:flex flex-col min-w-0">
-                <span className={`text-xs font-bold truncate ${isCurrent ? "text-white dark:text-[#111315]" : isCompleted ? "text-[#17191C] dark:text-[#F1F2F3]" : "text-[#8A9098] dark:text-[#7D858F]"}`}>
+                <span className={`text-xs font-bold truncate ${isCurrent ? "text-white" : isCompleted ? "text-[#17191C]" : "text-[#858B93]"}`}>
                   {step.name}
                 </span>
-                <span className={`text-[10px] truncate ${isCurrent ? "text-white/70 dark:text-[#111315]/70" : "text-[#8A9098] dark:text-[#7D858F]"}`}>
+                <span className={`text-[10px] truncate ${isCurrent ? "text-white/70" : "text-[#858B93]"}`}>
                   {step.summary}
                 </span>
               </div>
@@ -497,7 +514,7 @@ export default function NewEventPage() {
       </div>
 
       {/* Main Wizard Form Card */}
-      <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 sm:p-8 shadow-sm">
+      <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 sm:p-8 shadow-sm">
         <AnimatePresence mode="wait">
           {/* STEP 1: Basic Information */}
           {currentStep === 1 && (
@@ -509,15 +526,15 @@ export default function NewEventPage() {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
-              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
-                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">1. Basic Information & Logistics</h2>
-                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Define core event metadata and public presentation.</p>
+              <div className="border-b border-[#F4F5F6]  pb-3">
+                <h2 className="text-base font-bold text-[#34383D] ">1. Basic Information & Logistics</h2>
+                <p className="text-xs text-[#858B93]  mt-0.5">Define core event metadata and public presentation.</p>
               </div>
 
               <div className="space-y-4">
                 {/* Event Title */}
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                  <label className="text-xs font-semibold text-[#34383D]  block mb-1">
                     Event Title *
                   </label>
                   <Input
@@ -548,7 +565,7 @@ export default function NewEventPage() {
 
                 {/* Venue Location */}
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                  <label className="text-xs font-semibold text-[#34383D]  block mb-1">
                     Venue / Room / Online Link *
                   </label>
                   <Input
@@ -590,7 +607,7 @@ export default function NewEventPage() {
 
                 {/* Short Description */}
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                  <label className="text-xs font-semibold text-[#34383D]  block mb-1">
                     Short Summary (Event Cards) *
                   </label>
                   <textarea
@@ -598,37 +615,37 @@ export default function NewEventPage() {
                     placeholder="A concise 1-2 sentence synopsis shown in discovery cards and outbox dispatches..."
                     value={formData.shortDescription}
                     onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                    className="w-full rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#7D858F] focus:border-[#25292F] dark:focus:border-[#E8EAED] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+                    className="w-full rounded-xl border border-[#E5E7E9]  bg-white p-3 text-xs text-[#34383D]  placeholder:text-[#858B93] dark:placeholder:text-[#7D858F] focus:border-[#25292F] dark:focus:border-[#E8EAED] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
                   />
                   {errors.shortDescription && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.shortDescription}</p>}
                 </div>
 
                 {/* Event Cover Artwork Manager (Separate Directory Card & Public Hero Assets) */}
-                <div className="space-y-4 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#F0F1F2] dark:border-[#262A2E] pb-3">
+                <div className="space-y-4 rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#F0F1F2]  pb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <label className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3] block">
+                        <label className="text-xs font-bold text-[#34383D]  block">
                           Event Artwork Assets
                         </label>
-                        <span className="rounded-full bg-[#EAECEF] dark:bg-[#25292F] px-2 py-0.2 text-[9.5px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+                        <span className="rounded-full bg-[#EAECEF]  px-2 py-0.2 text-[9.5px] font-semibold text-[#858B93] ">
                           Independent 16:9 & Hero
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#656B73] dark:text-[#8A9098] mt-0.5">
+                      <p className="text-[11px] text-[#858B93]  mt-0.5">
                         Configure independent images and crop anchors for Directory Cards and the Public Registration Hero banner.
                       </p>
                     </div>
 
                     {/* Role Tab Selector (Directory vs Hero) */}
-                    <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-xs font-semibold shrink-0">
+                    <div className="inline-flex rounded-full border border-[#E5E7E9]  bg-white p-0.5 text-xs font-semibold shrink-0">
                       <button
                         type="button"
                         onClick={() => setActiveArtworkTab("directory")}
                         className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
                           activeArtworkTab === "directory"
                             ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                            : "text-[#656B73] dark:text-[#8A9098] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                            : "text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                         }`}
                       >
                         <span>Directory Card (16:9)</span>
@@ -642,7 +659,7 @@ export default function NewEventPage() {
                         className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
                           activeArtworkTab === "hero"
                             ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                            : "text-[#656B73] dark:text-[#8A9098] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                            : "text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                         }`}
                       >
                         <span>Public Hero (Panoramic)</span>
@@ -658,17 +675,17 @@ export default function NewEventPage() {
                     /* ===================== DIRECTORY ARTWORK TAB ===================== */
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#858B93] ">
                           Directory Card Image Source
                         </span>
-                        <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-[11px] font-semibold">
+                        <div className="inline-flex rounded-full border border-[#E5E7E9]  bg-white p-0.5 text-[11px] font-semibold">
                           <button
                             type="button"
                             onClick={() => setDirectoryArtworkMode("preset")}
                             className={`px-2.5 py-0.5 rounded-full transition-all ${
                               directoryArtworkMode === "preset"
                                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                                : "text-[#656B73] dark:text-[#8A9098]"
+                                : "text-[#858B93] "
                             }`}
                           >
                             Presets
@@ -679,7 +696,7 @@ export default function NewEventPage() {
                             className={`px-2.5 py-0.5 rounded-full transition-all flex items-center gap-1 ${
                               directoryArtworkMode === "upload"
                                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                                : "text-[#656B73] dark:text-[#8A9098]"
+                                : "text-[#858B93] "
                             }`}
                           >
                             <Upload className="h-3 w-3" />
@@ -728,18 +745,18 @@ export default function NewEventPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed border-[#D4D7DC] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed border-[#D4D7DC]  bg-white">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
                               <ImageIcon className="h-4 w-4" />
                             </div>
                             <div>
-                              <div className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                              <div className="text-xs font-bold text-[#34383D] ">
                                 {formData.isDirectoryCustomUpload
                                   ? formData.directoryCustomFileName || "Custom Directory Image"
                                   : "Upload Directory Card Image"}
                               </div>
-                              <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F]">
+                              <p className="text-[11px] text-[#858B93] ">
                                 JPEG, PNG, or WebP &lt; 5MB.
                               </p>
                             </div>
@@ -772,7 +789,7 @@ export default function NewEventPage() {
 
                       {/* Directory Focal Controls */}
                       <div className="flex items-center justify-between gap-2 pt-1">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#34383D] ">
                           <Crop className="h-3.5 w-3.5" />
                           <span>Directory 16:9 Focal Anchor</span>
                         </div>
@@ -791,7 +808,7 @@ export default function NewEventPage() {
                               className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-medium transition-colors ${
                                 formData.directoryImageFocalPoint === fp.value
                                   ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                                  : "border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                                  : "border border-[#E5E7E9]  text-[#858B93]  hover:bg-[#F6F7F8] dark:hover:bg-[#22262A]"
                               }`}
                             >
                               {fp.label}
@@ -804,17 +821,17 @@ export default function NewEventPage() {
                     /* ===================== PUBLIC HERO ARTWORK TAB ===================== */
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#858B93] ">
                           Public Hero Banner Image Source
                         </span>
-                        <div className="inline-flex rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-[11px] font-semibold">
+                        <div className="inline-flex rounded-full border border-[#E5E7E9]  bg-white p-0.5 text-[11px] font-semibold">
                           <button
                             type="button"
                             onClick={() => setHeroArtworkMode("preset")}
                             className={`px-2.5 py-0.5 rounded-full transition-all ${
                               heroArtworkMode === "preset"
                                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                                : "text-[#656B73] dark:text-[#8A9098]"
+                                : "text-[#858B93] "
                             }`}
                           >
                             Presets
@@ -825,7 +842,7 @@ export default function NewEventPage() {
                             className={`px-2.5 py-0.5 rounded-full transition-all flex items-center gap-1 ${
                               heroArtworkMode === "upload"
                                 ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                                : "text-[#656B73] dark:text-[#8A9098]"
+                                : "text-[#858B93] "
                             }`}
                           >
                             <Upload className="h-3 w-3" />
@@ -873,18 +890,18 @@ export default function NewEventPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed border-[#D4D7DC] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed border-[#D4D7DC]  bg-white">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
                               <ImageIcon className="h-4 w-4" />
                             </div>
                             <div>
-                              <div className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                              <div className="text-xs font-bold text-[#34383D] ">
                                 {formData.isHeroCustomUpload
                                   ? formData.heroCustomFileName || "Custom Hero Banner"
                                   : "Upload Public Hero Banner Image"}
                               </div>
-                              <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F]">
+                              <p className="text-[11px] text-[#858B93] ">
                                 JPEG, PNG, or WebP &lt; 5MB (Panoramic crop).
                               </p>
                             </div>
@@ -917,7 +934,7 @@ export default function NewEventPage() {
 
                       {/* Hero Focal Controls */}
                       <div className="flex items-center justify-between gap-2 pt-1">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#34383D] ">
                           <Crop className="h-3.5 w-3.5" />
                           <span>Hero Panoramic Focal Anchor</span>
                         </div>
@@ -930,7 +947,7 @@ export default function NewEventPage() {
                               className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-medium transition-colors ${
                                 formData.heroImageFocalPoint === fp.value
                                   ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                                  : "border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] hover:bg-[#F4F5F6] dark:hover:bg-[#22262A]"
+                                  : "border border-[#E5E7E9]  text-[#858B93]  hover:bg-[#F6F7F8] dark:hover:bg-[#22262A]"
                               }`}
                             >
                               {fp.label}
@@ -949,8 +966,8 @@ export default function NewEventPage() {
                   )}
 
                   {/* Dual Independent Live Previews */}
-                  <div className="border-t border-[#F0F1F2] dark:border-[#262A2E] pt-3">
-                    <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider block mb-2">
+                  <div className="border-t border-[#F0F1F2]  pt-3">
+                    <span className="text-[10px] font-bold text-[#858B93] uppercase tracking-wider block mb-2">
                       Dual Live Layout Previews (Real Assets Applied)
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -959,16 +976,16 @@ export default function NewEventPage() {
                         onClick={() => setActiveArtworkTab("directory")}
                         className={`cursor-pointer rounded-xl border p-2 space-y-1.5 transition-all ${
                           activeArtworkTab === "directory"
-                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
-                            : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 opacity-80 hover:opacity-100"
+                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white shadow-xs"
+                            : "border-[#E5E7E9]  bg-white/60 /60 opacity-80 hover:opacity-100"
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider">
+                          <span className="text-[10px] font-bold text-[#858B93] uppercase tracking-wider">
                             1. Directory Card (16:9)
                           </span>
                           {activeArtworkTab === "directory" && (
-                            <span className="text-[9.5px] font-semibold text-[#17191C] dark:text-[#F1F2F3] underline">
+                            <span className="text-[9.5px] font-semibold text-[#34383D]  underline">
                               Editing
                             </span>
                           )}
@@ -994,16 +1011,16 @@ export default function NewEventPage() {
                         onClick={() => setActiveArtworkTab("hero")}
                         className={`cursor-pointer rounded-xl border p-2 space-y-1.5 transition-all ${
                           activeArtworkTab === "hero"
-                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
-                            : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 opacity-80 hover:opacity-100"
+                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white shadow-xs"
+                            : "border-[#E5E7E9]  bg-white/60 /60 opacity-80 hover:opacity-100"
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-[#8A9098] uppercase tracking-wider">
+                          <span className="text-[10px] font-bold text-[#858B93] uppercase tracking-wider">
                             2. Public Hero Banner (Panoramic)
                           </span>
                           {activeArtworkTab === "hero" && (
-                            <span className="text-[9.5px] font-semibold text-[#17191C] dark:text-[#F1F2F3] underline">
+                            <span className="text-[9.5px] font-semibold text-[#34383D]  underline">
                               Editing
                             </span>
                           )}
@@ -1039,16 +1056,16 @@ export default function NewEventPage() {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
-              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
-                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">2. Registration Rules & Capacity</h2>
-                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Control attendee quotas, participation structure, and form fields.</p>
+              <div className="border-b border-[#F4F5F6]  pb-3">
+                <h2 className="text-base font-bold text-[#34383D] ">2. Registration Rules & Capacity</h2>
+                <p className="text-xs text-[#858B93]  mt-0.5">Control attendee quotas, participation structure, and form fields.</p>
               </div>
 
               <div className="space-y-5">
                 {/* Capacity & Participation Mode */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                    <label className="text-xs font-semibold text-[#34383D]  block mb-1">
                       Max Registration Capacity (Seats) *
                     </label>
                     <Input
@@ -1058,7 +1075,7 @@ export default function NewEventPage() {
                       onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
                       className={errors.capacity ? "border-red-500" : ""}
                     />
-                    <p className="text-[11px] text-[#8A9098] dark:text-[#7D858F] mt-1">
+                    <p className="text-[11px] text-[#858B93]  mt-1">
                       Public registration automatically closes when capacity is reached.
                     </p>
                     {errors.capacity && <p className="mt-1 text-[11px] font-medium text-red-600">{errors.capacity}</p>}
@@ -1078,16 +1095,16 @@ export default function NewEventPage() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-3"
+                    className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-3"
                   >
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
-                      <h3 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Team Roster Configuration</h3>
+                      <Users className="h-4 w-4 text-[#25292F] " />
+                      <h3 className="text-xs font-bold text-[#34383D] ">Team Roster Configuration</h3>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-medium text-[#17191C] dark:text-[#F1F2F3] block mb-1">Min Team Members</label>
+                        <label className="text-xs font-medium text-[#34383D]  block mb-1">Min Team Members</label>
                         <Input
                           type="number"
                           min={2}
@@ -1098,7 +1115,7 @@ export default function NewEventPage() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-medium text-[#17191C] dark:text-[#F1F2F3] block mb-1">Max Team Members</label>
+                        <label className="text-xs font-medium text-[#34383D]  block mb-1">Max Team Members</label>
                         <Input
                           type="number"
                           min={formData.minTeamSize}
@@ -1112,15 +1129,15 @@ export default function NewEventPage() {
                 )}
 
                 {/* Registration Form Builder */}
-                <div className="space-y-3 border-t border-[#F4F5F6] dark:border-[#262A2E] pt-4">
+                <div className="space-y-3 border-t border-[#F4F5F6]  pt-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <ClipboardList className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
-                      <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                      <ClipboardList className="h-4 w-4 text-[#25292F] " />
+                      <h3 className="text-sm font-bold text-[#34383D] ">
                         Custom Registration Form Builder
                       </h3>
                     </div>
-                    <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">
+                    <p className="text-xs text-[#858B93]  mt-0.5">
                       Design custom questions, dropdowns, conditional logic, and member rules. Test interactive behavior in the live preview.
                     </p>
                   </div>
@@ -1147,13 +1164,13 @@ export default function NewEventPage() {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
-              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
-                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">3. Competition Rounds & Progression</h2>
-                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Configure multi-stage elimination or single-stage unified sessions.</p>
+              <div className="border-b border-[#F4F5F6]  pb-3">
+                <h2 className="text-base font-bold text-[#34383D] ">3. Competition Rounds & Progression</h2>
+                <p className="text-xs text-[#858B93]  mt-0.5">Configure multi-stage elimination or single-stage unified sessions.</p>
               </div>
 
               {/* Multi-Round Switch */}
-              <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4">
+              <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4">
                 <CustomSwitch
                   checked={formData.hasRounds}
                   onChange={(c) => setFormData({ ...formData, hasRounds: c })}
@@ -1166,7 +1183,7 @@ export default function NewEventPage() {
               {formData.hasRounds ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                    <span className="text-xs font-bold text-[#34383D] ">
                       Configured Stages ({formData.rounds.length})
                     </span>
                     <Button
@@ -1174,7 +1191,7 @@ export default function NewEventPage() {
                       variant="outline"
                       size="sm"
                       onClick={addRound}
-                      className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold gap-1.5 h-8"
+                      className="rounded-full border-[#E5E7E9]  text-xs font-semibold gap-1.5 h-8"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       <span>Add Next Stage</span>
@@ -1185,9 +1202,9 @@ export default function NewEventPage() {
                     {formData.rounds.map((round, idx) => (
                       <div
                         key={round.id}
-                        className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#151719] p-4 shadow-xs space-y-3"
+                        className="rounded-xl border border-[#E5E7E9]  bg-white  p-4 shadow-xs space-y-3"
                       >
-                        <div className="flex items-center justify-between border-b border-[#F4F5F6] dark:border-[#262A2E] pb-2">
+                        <div className="flex items-center justify-between border-b border-[#F4F5F6]  pb-2">
                           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-bold">
                             {idx + 1}
                           </span>
@@ -1205,7 +1222,7 @@ export default function NewEventPage() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                            <label className="text-[11px] font-semibold text-[#34383D]  block mb-1">
                               Stage Name *
                             </label>
                             <Input
@@ -1216,7 +1233,7 @@ export default function NewEventPage() {
                           </div>
 
                           <div>
-                            <label className="text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                            <label className="text-[11px] font-semibold text-[#34383D]  block mb-1">
                               Stage Venue / Room
                             </label>
                             <Input
@@ -1228,7 +1245,7 @@ export default function NewEventPage() {
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">
+                          <label className="text-[11px] font-semibold text-[#34383D]  block mb-1">
                             Advancement Criteria / Quota
                           </label>
                           <Input
@@ -1242,10 +1259,10 @@ export default function NewEventPage() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6]/50 dark:bg-[#151719]/50 p-6 text-center space-y-2">
-                  <FileCheck2 className="mx-auto h-8 w-8 text-[#8A9098] dark:text-[#7D858F]" />
-                  <h3 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Single-Stage Unified Session</h3>
-                  <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] max-w-md mx-auto">
+                <div className="rounded-xl border border-[#E5E7E9]  bg-[#F6F7F8]/50 /50 p-6 text-center space-y-2">
+                  <FileCheck2 className="mx-auto h-8 w-8 text-[#858B93] " />
+                  <h3 className="text-xs font-bold text-[#34383D] ">Single-Stage Unified Session</h3>
+                  <p className="text-xs text-[#858B93]  max-w-md mx-auto">
                     All registered attendees participate in a single continuous session. Recommended for workshops, keynotes, and exhibitions.
                   </p>
                 </div>
@@ -1263,14 +1280,14 @@ export default function NewEventPage() {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
-              <div className="border-b border-[#F4F5F6] dark:border-[#262A2E] pb-3">
-                <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">4. Review Event Specification</h2>
-                <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Confirm all configuration before saving or launching.</p>
+              <div className="border-b border-[#F4F5F6]  pb-3">
+                <h2 className="text-base font-bold text-[#34383D] ">4. Review Event Specification</h2>
+                <p className="text-xs text-[#858B93]  mt-0.5">Confirm all configuration before saving or launching.</p>
               </div>
 
               {/* Submission Error Banner */}
               {submitError && (
-                <div className="rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 p-4 flex items-start gap-3">
+                <div className="rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 p-4 flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold text-red-900 dark:text-red-200">
@@ -1286,71 +1303,71 @@ export default function NewEventPage() {
               {/* Review Sections */}
               <div className="space-y-4 text-xs">
                 {/* Section 1: Basic Info */}
-                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
-                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
-                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Basic Information</span>
+                <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-2">
+                    <span className="font-bold text-[#34383D] ">Basic Information</span>
                     <button
                       type="button"
                       onClick={() => handleJumpToStep(1)}
-                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                      className="text-[#25292F]  font-semibold hover:underline"
                     >
                       Edit Step 1
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[#656B73] dark:text-[#A6ADB5]">
-                    <div>Title: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.title}</strong></div>
-                    <div>Category: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.category}</strong></div>
-                    <div>Mode: <strong className="text-[#17191C] dark:text-[#F1F2F3] capitalize">{formData.venueMode}</strong></div>
-                    <div>Venue: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.venue}</strong></div>
-                    <div>Schedule: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.startDate || "TBD"}</strong></div>
+                  <div className="grid grid-cols-2 gap-2 text-[#858B93] ">
+                    <div>Title: <strong className="text-[#34383D] ">{formData.title}</strong></div>
+                    <div>Category: <strong className="text-[#34383D] ">{formData.category}</strong></div>
+                    <div>Mode: <strong className="text-[#34383D]  capitalize">{formData.venueMode}</strong></div>
+                    <div>Venue: <strong className="text-[#34383D] ">{formData.venue}</strong></div>
+                    <div>Schedule: <strong className="text-[#34383D] ">{formData.startDate || "TBD"}</strong></div>
                   </div>
                 </div>
 
                 {/* Section 2: Registration Rules */}
-                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
-                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
-                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Registration Rules & Capacity</span>
+                <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-2">
+                    <span className="font-bold text-[#34383D] ">Registration Rules & Capacity</span>
                     <button
                       type="button"
                       onClick={() => handleJumpToStep(2)}
-                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                      className="text-[#25292F]  font-semibold hover:underline"
                     >
                       Edit Step 2
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[#656B73] dark:text-[#A6ADB5]">
-                    <div>Capacity: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.capacity} Seats</strong></div>
-                    <div>Participation: <strong className="text-[#17191C] dark:text-[#F1F2F3] capitalize">{formData.participationMode}</strong></div>
+                  <div className="grid grid-cols-2 gap-2 text-[#858B93] ">
+                    <div>Capacity: <strong className="text-[#34383D] ">{formData.capacity} Seats</strong></div>
+                    <div>Participation: <strong className="text-[#34383D]  capitalize">{formData.participationMode}</strong></div>
                     {formData.participationMode === "team" && (
-                      <div>Team Size: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.minTeamSize} – {formData.maxTeamSize} Members</strong></div>
+                      <div>Team Size: <strong className="text-[#34383D] ">{formData.minTeamSize} – {formData.maxTeamSize} Members</strong></div>
                     )}
                   </div>
                 </div>
 
                 {/* Section 2.5: Custom Registration Form */}
-                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
-                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
-                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Configured Registration Form</span>
+                <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-2">
+                    <span className="font-bold text-[#34383D] ">Configured Registration Form</span>
                     <button
                       type="button"
                       onClick={() => handleJumpToStep(2)}
-                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                      className="text-[#25292F]  font-semibold hover:underline"
                     >
                       Edit Form
                     </button>
                   </div>
-                  <div className="space-y-1.5 text-[#656B73] dark:text-[#A6ADB5]">
+                  <div className="space-y-1.5 text-[#858B93] ">
                     <div>
-                      Form Architecture: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.registrationForm.sections.length} Sections, {formData.registrationForm.sections.reduce((acc, s) => acc + s.fields.length, 0)} Total Questions</strong>
+                      Form Architecture: <strong className="text-[#34383D] ">{formData.registrationForm.sections.length} Sections, {formData.registrationForm.sections.reduce((acc, s) => acc + s.fields.length, 0)} Total Questions</strong>
                     </div>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {formData.registrationForm.sections.flatMap((s) => s.fields).slice(0, 8).map((f) => (
-                        <span key={f.id} className="rounded-md bg-white dark:bg-[#25292F] border border-[#E5E7EA] dark:border-[#30353A] px-2 py-0.5 text-[10px] text-[#17191C] dark:text-[#F1F2F3]">
+                        <span key={f.id} className="rounded-md bg-white  border border-[#E5E7E9]  px-2 py-0.5 text-[10px] text-[#34383D] ">
                           {f.label} {f.required && "*"}
                         </span>
                       ))}
                       {formData.registrationForm.sections.flatMap((s) => s.fields).length > 8 && (
-                        <span className="text-[10px] text-[#8A9098] self-center">
+                        <span className="text-[10px] text-[#858B93] self-center">
                           +{formData.registrationForm.sections.flatMap((s) => s.fields).length - 8} more
                         </span>
                       )}
@@ -1359,24 +1376,24 @@ export default function NewEventPage() {
                 </div>
 
                 {/* Section 3: Competition Pipeline */}
-                <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
-                  <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
-                    <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">Competition Pipeline</span>
+                <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-2">
+                    <span className="font-bold text-[#34383D] ">Competition Pipeline</span>
                     <button
                       type="button"
                       onClick={() => handleJumpToStep(3)}
-                      className="text-[#25292F] dark:text-[#E8EAED] font-semibold hover:underline"
+                      className="text-[#25292F]  font-semibold hover:underline"
                     >
                       Edit Step 3
                     </button>
                   </div>
                   <div>
                     {formData.hasRounds ? (
-                      <p className="text-[#17191C] dark:text-[#F1F2F3] font-semibold">
+                      <p className="text-[#34383D]  font-semibold">
                         Multi-Stage Structure ({formData.rounds.length} Configured Stages)
                       </p>
                     ) : (
-                      <p className="text-[#656B73] dark:text-[#A6ADB5]">Single-Stage Unified Session</p>
+                      <p className="text-[#858B93] ">Single-Stage Unified Session</p>
                     )}
                   </div>
                 </div>
@@ -1386,13 +1403,13 @@ export default function NewEventPage() {
         </AnimatePresence>
 
         {/* Wizard Footer Controls */}
-        <div className="mt-8 flex items-center justify-between border-t border-[#F4F5F6] dark:border-[#262A2E] pt-5">
+        <div className="mt-8 flex items-center justify-between border-t border-[#F4F5F6]  pt-5">
           <Button
             type="button"
             variant="outline"
             onClick={handlePrev}
             disabled={currentStep === 1 || isSubmitting}
-            className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold px-5"
+            className="rounded-full border-[#E5E7E9]  text-xs font-semibold px-5"
           >
             Previous
           </Button>
@@ -1414,7 +1431,7 @@ export default function NewEventPage() {
                 variant="outline"
                 onClick={() => handlePublish(true)}
                 disabled={isSubmitting}
-                className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold px-4 gap-1.5"
+                className="rounded-full border-[#E5E7E9]  text-xs font-semibold px-4 gap-1.5"
               >
                 {isSubmitting && submittingMode === "draft" ? (
                   <>
@@ -1452,23 +1469,23 @@ export default function NewEventPage() {
       {/* Published Preview Modal */}
       {isPublishedPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-2xl space-y-4 text-center">
+          <div className="w-full max-w-md rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-2xl space-y-4 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
               <Check className="h-8 w-8 stroke-[3]" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">
+              <h3 className="text-lg font-bold text-[#34383D] ">
                 Event Published (Preview Mode)
               </h3>
-              <p className="text-xs text-[#656B73] dark:text-[#A6ADB5]">
+              <p className="text-xs text-[#858B93] ">
                 &quot;{formData.title}&quot; has been configured with its custom registration form and is ready for participant entries.
               </p>
             </div>
 
-            <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-3 text-xs text-[#656B73] dark:text-[#A6ADB5] text-left space-y-1">
-              <div>Capacity: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.capacity} Seats</strong></div>
-              <div>Category: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.category}</strong></div>
-              <div>Form Questions: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{formData.registrationForm.sections.reduce((acc, s) => acc + s.fields.length, 0)} Fields</strong></div>
+            <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-3 text-xs text-[#858B93]  text-left space-y-1">
+              <div>Capacity: <strong className="text-[#34383D] ">{formData.capacity} Seats</strong></div>
+              <div>Category: <strong className="text-[#34383D] ">{formData.category}</strong></div>
+              <div>Form Questions: <strong className="text-[#34383D] ">{formData.registrationForm.sections.reduce((acc, s) => acc + s.fields.length, 0)} Fields</strong></div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">

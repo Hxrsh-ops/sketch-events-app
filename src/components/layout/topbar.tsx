@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Bell, Mail, Menu, Command, LogOut } from "lucide-react";
+import { Search, Bell, Mail, Menu, Command, LogOut, Settings } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useAuth } from "@/lib/auth/auth-context";
 import { GlobalSearchDialog } from "@/components/layout/global-search-dialog";
 import { AdminUser } from "@/types";
+import { isPreviewMode } from "@/lib/env";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_ADMIN_FALLBACK: AdminUser = {
   id: "admin",
@@ -26,6 +27,11 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
   const currentUser = user || DEFAULT_ADMIN_FALLBACK;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isPreview, setIsPreview] = useState(false);
+
+  useEffect(() => {
+    setIsPreview(isPreviewMode());
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,67 +54,77 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 md:h-20 w-full items-center justify-between bg-[#F4F5F6] dark:bg-[#151719] px-6 md:px-8 border-b border-[#E5E7EA] dark:border-[#30353A] transition-colors duration-200">
-      {/* Mobile Drawer Trigger */}
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-white px-5 sm:px-6 md:px-8 border-b border-[#E5E7EB] transition-colors duration-150">
+      {/* Mobile Drawer Trigger & Brand */}
       <div className="flex items-center gap-3 lg:hidden">
         <Button
           variant="outline"
           size="icon-sm"
           onClick={onOpenMobileMenu}
-          className="rounded-full border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21]"
+          className="rounded-lg border-[#E5E7EB] bg-white h-9 w-9 text-[#111827] hover:bg-[#F9FAFB]"
           aria-label="Open mobile menu"
         >
-          <Menu className="h-4 w-4 text-[#17191C] dark:text-[#F1F2F3]" />
+          <Menu className="h-4 w-4" />
         </Button>
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-lg bg-[#F0F1F2] dark:bg-[#22262B] p-0.5 border border-[#E5E7EA] dark:border-[#30353A] flex items-center justify-center">
-            <img src="/sketch-logo.png" alt="Sketch" className="h-4 w-4 object-contain dark:invert" />
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-[#F9FAFB] p-1 border border-[#E5E7EB] flex items-center justify-center">
+            <img src="/sketch-logo.png" alt="Sketch" className="h-4.5 w-4.5 object-contain" />
           </div>
-          <span className="font-bold text-sm tracking-tight text-[#17191C] dark:text-[#F1F2F3]">SketchHUB</span>
+          <span className="font-bold text-[15px] tracking-tight text-[#111827]">SketchHUB</span>
         </div>
       </div>
 
       {/* Global Search / Command Bar */}
-      <div className="hidden sm:flex flex-1 max-w-md items-center">
+      <div className="hidden sm:flex flex-1 max-w-[500px] lg:max-w-[540px] items-center mr-4">
         <button
           type="button"
           onClick={() => setIsSearchOpen(true)}
-          className="relative w-full text-left focus:outline-none"
+          className="relative w-full text-left focus:outline-none group"
           aria-label="Open universal search dialog"
         >
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098] dark:text-[#7D858F]" />
-          <div className="flex items-center h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] pl-9 pr-12 text-xs text-[#8A9098] dark:text-[#7D858F] transition-all duration-150 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] shadow-sm select-none">
-            Search events, participants, passes...
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF] group-hover:text-[#111827] transition-colors" />
+          <div className="flex items-center h-[42px] w-full rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] pl-10 pr-16 text-[13px] text-[#6B7280] group-hover:bg-white group-hover:border-[#D1D5DB] group-hover:shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all select-none">
+            Search events, participants, records...
           </div>
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#22262A] px-1.5 py-0.5 text-[10px] font-medium text-[#8A9098] dark:text-[#7D858F] select-none">
-            <Command className="h-2.5 w-2.5" />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded border border-[#E5E7EB] bg-white px-2 py-0.5 text-[11px] font-mono font-medium text-[#9CA3AF] shadow-xs select-none pointer-events-none">
+            <Command className="h-3 w-3" />
             <span>K</span>
           </div>
         </button>
       </div>
 
-      {/* Right Global Utilities, Theme & Profile */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      {/* Right Utilities: Backend Connection Status, Quick Settings, Notifications & Profile */}
+      <div className="flex items-center gap-2 sm:gap-2.5">
         {/* Mobile Search Button */}
         <button
           type="button"
           onClick={() => setIsSearchOpen(true)}
-          className="sm:hidden flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+          className="sm:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] shadow-xs hover:bg-[#F9FAFB] hover:text-[#111827]"
           title="Search"
           aria-label="Search"
         >
           <Search className="h-4 w-4" />
         </button>
 
-        {/* Theme Toggle Button */}
-        <ThemeToggle />
+        {/* Quick Settings */}
+        <Link href="/settings">
+          <button
+            type="button"
+            className="flex h-9.5 w-9.5 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:bg-[#F9FAFB] hover:text-[#111827] hover:border-[#D1D5DB] transition-all"
+            title="Settings"
+            aria-label="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </Link>
 
         {/* Communications Outbox */}
         <Link href="/communications">
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors duration-150 ease-out hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
+            className="flex h-9.5 w-9.5 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:bg-[#F9FAFB] hover:text-[#111827] hover:border-[#D1D5DB] transition-all"
             title="Communications Outbox"
+            aria-label="Communications Outbox"
           >
             <Mail className="h-4 w-4" />
           </button>
@@ -118,59 +134,62 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
         <div className="relative">
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors duration-150 ease-out hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
+            className="flex h-9.5 w-9.5 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:bg-[#F9FAFB] hover:text-[#111827] hover:border-[#D1D5DB] transition-all"
             title="Notifications"
             onClick={() => setShowNotifications(!showNotifications)}
+            aria-label="Notifications"
           >
             <Bell className="h-4 w-4" />
           </button>
 
-          {/* Quick Notification Dropdown */}
+          {/* Clean Monochromatic Notification Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 shadow-elevated z-50 animate-in fade-in zoom-in-95">
-              <div className="flex items-center justify-between pb-2.5 border-b border-[#E5E7EA] dark:border-[#30353A]">
-                <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">Operational Alerts</span>
-                <span className="text-[10px] text-[#25292F] dark:text-[#F1F2F3] bg-[#F0F1F2] dark:bg-[#25292F] px-2 py-0.5 rounded-full font-semibold">2 Active</span>
+            <div className="absolute right-0 mt-2.5 w-84 rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-xl z-50">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+                <span className="text-xs font-bold text-[#111827]">Operational Alerts</span>
+                <span className="text-[10px] text-[#111827] bg-[#F3F4F6] border border-[#E5E7EB] px-2 py-0.5 rounded-full font-semibold">
+                  2 Active
+                </span>
               </div>
-              <div className="py-2 space-y-2">
+              <div className="py-2.5 space-y-2">
                 <Link
                   href="/events"
                   onClick={() => setShowNotifications(false)}
-                  className="block p-2.5 rounded-xl bg-[#F4F5F6] dark:bg-[#22262A] hover:bg-[#EAECEF] dark:hover:bg-[#2A2F35] transition-colors"
+                  className="block p-3 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] hover:bg-[#F3F4F6] hover:border-[#D1D5DB] transition-all"
                 >
-                  <div className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">Capacity Alert (93%)</div>
-                  <div className="text-[11px] text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Sketch Design Sprint 2026 has 18 seats remaining.</div>
+                  <div className="text-xs font-semibold text-[#111827]">Capacity Notice (93%)</div>
+                  <div className="text-[11px] text-[#6B7280] mt-0.5 leading-snug">Sketch Design Sprint 2026 has 18 seats remaining.</div>
                 </Link>
                 <Link
                   href="/certificates"
                   onClick={() => setShowNotifications(false)}
-                  className="block p-2.5 rounded-xl bg-[#F4F5F6] dark:bg-[#22262A] hover:bg-[#EAECEF] dark:hover:bg-[#2A2F35] transition-colors"
+                  className="block p-3 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] hover:bg-[#F3F4F6] hover:border-[#D1D5DB] transition-all"
                 >
-                  <div className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">Certificates Ready</div>
-                  <div className="text-[11px] text-[#656B73] dark:text-[#A6ADB5] mt-0.5">Visual Storytelling Masterclass attendance finalized.</div>
+                  <div className="text-xs font-semibold text-[#111827]">Certificates Prepared</div>
+                  <div className="text-[11px] text-[#6B7280] mt-0.5 leading-snug">Visual Storytelling Masterclass attendance finalized.</div>
                 </Link>
               </div>
             </div>
           )}
         </div>
 
-        {/* Admin Profile - Session Aware Avatar & Sign Out */}
-        <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-[#E5E7EA] dark:border-[#30353A]">
-          <Avatar className="h-9 w-9 border border-[#E5E7EA] dark:border-[#30353A] bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]">
-            <AvatarFallback className="bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold">
+        {/* User Profile & Account Connection Status */}
+        <div className="flex items-center gap-3 pl-3 sm:pl-3.5 border-l border-[#E5E7EB]">
+          <Avatar className="h-9 w-9 rounded-lg border border-[#E5E7EB] bg-[#18181B] text-white shadow-xs">
+            <AvatarFallback className="bg-[#18181B] text-white text-xs font-semibold">
               {getInitials(currentUser.name)}
             </AvatarFallback>
           </Avatar>
           <div className="hidden md:flex flex-col text-left">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] leading-none">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-[#111827] leading-none">
                 {currentUser.name}
               </span>
-              <span className="text-[9px] font-semibold text-[#656B73] dark:text-[#A6ADB5] bg-[#EAECEF] dark:bg-[#2A2F35] px-1.5 py-0.5 rounded-full uppercase">
+              <span className="text-[10px] font-semibold text-[#6B7280] bg-[#F3F4F6] border border-[#E5E7EB] px-1.5 py-0.5 rounded uppercase tracking-wider">
                 {currentUser.role.replace("_", " ")}
               </span>
             </div>
-            <span className="text-[10px] text-[#8A9098] dark:text-[#7D858F] leading-tight mt-0.5">
+            <span className="text-[11px] text-[#9CA3AF] leading-tight mt-1">
               {currentUser.email}
             </span>
           </div>
@@ -180,7 +199,8 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
             type="button"
             onClick={() => signOut()}
             title="Sign out of SketchHUB"
-            className="ml-1 p-1.5 rounded-full text-[#8A9098] hover:text-[#B91C1C] dark:text-[#7D858F] dark:hover:text-[#F87171] hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] transition-colors"
+            className="ml-1 p-2 rounded-lg text-[#9CA3AF] hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
           </button>

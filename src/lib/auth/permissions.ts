@@ -18,7 +18,8 @@ export type Permission =
   | "analytics:view"
   | "exports:download"
   | "audit:view"
-  | "settings:manage";
+  | "settings:manage"
+  | "rounds:manage";
 
 export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
   master_admin: [
@@ -40,6 +41,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     "exports:download",
     "audit:view",
     "settings:manage",
+    "rounds:manage",
   ],
   event_manager: [
     "events:view",
@@ -57,7 +59,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     "communications:send",
     "analytics:view",
     "exports:download",
-    "audit:view",
+    "rounds:manage",
   ],
   attendance_staff: [
     "events:view",
@@ -71,8 +73,28 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     "registrations:view",
     "analytics:view",
     "exports:download",
-    "audit:view",
   ],
+};
+
+/**
+ * Route protection mapping specifying which administrator roles are permitted
+ * to view and operate each route in the platform.
+ */
+export const ROUTE_ALLOWED_ROLES: Record<string, AdminRole[]> = {
+  "/studio": ["master_admin", "event_manager"],
+  "/settings": ["master_admin"],
+  "/audit": ["master_admin"],
+  "/events/new": ["master_admin", "event_manager"],
+  "/rounds": ["master_admin", "event_manager"],
+  "/certificates": ["master_admin", "event_manager"],
+  "/communications": ["master_admin", "event_manager"],
+  "/attendance": ["master_admin", "event_manager", "attendance_staff"],
+  "/participants": ["master_admin", "event_manager", "attendance_staff", "analyst"],
+  "/teams": ["master_admin", "event_manager", "attendance_staff", "analyst"],
+  "/analytics": ["master_admin", "event_manager", "analyst"],
+  "/exports": ["master_admin", "event_manager", "analyst"],
+  "/events": ["master_admin", "event_manager", "attendance_staff", "analyst"],
+  "/": ["master_admin", "event_manager", "attendance_staff", "analyst"],
 };
 
 /**
@@ -86,22 +108,49 @@ export function hasPermission(role: AdminRole | null | undefined, permission: Pe
 }
 
 /**
- * Checks if a route path requires a specific permission
+ * Checks if a specific admin role is authorized to access a given pathname
+ */
+export function isRoleAllowedForRoute(role: AdminRole | null | undefined, pathname: string): boolean {
+  if (!role) return false;
+  if (role === "master_admin") return true;
+
+  // Exact match
+  if (ROUTE_ALLOWED_ROLES[pathname]) {
+    return ROUTE_ALLOWED_ROLES[pathname].includes(role);
+  }
+
+  // Parameterized match: /events/:id
+  if (pathname.startsWith("/events/") && pathname !== "/events/new") {
+    return role === "event_manager";
+  }
+
+  // Prefix match for subpaths
+  for (const [route, allowed] of Object.entries(ROUTE_ALLOWED_ROLES)) {
+    if (route !== "/" && pathname.startsWith(route)) {
+      return allowed.includes(role);
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Checks if a route path requires a specific permission (for sidebar visibility)
  */
 export function getRequiredPermissionForPath(pathname: string): Permission | null {
   if (pathname === "/settings") return "settings:manage";
   if (pathname === "/studio" || pathname.startsWith("/studio")) return "events:edit";
+  if (pathname === "/audit" || pathname.startsWith("/audit")) return "audit:view";
   if (pathname === "/events/new") return "events:create";
-  if (pathname === "/attendance") return "attendance:view";
-  if (pathname === "/certificates") return "certificates:view";
-  if (pathname === "/communications") return "communications:view";
-  if (pathname === "/analytics") return "analytics:view";
-  if (pathname === "/exports") return "exports:download";
-  if (pathname === "/audit") return "audit:view";
-  if (pathname === "/participants") return "registrations:view";
-  if (pathname === "/teams") return "registrations:view";
-  if (pathname === "/rounds") return "events:view";
+  if (pathname === "/rounds" || pathname.startsWith("/rounds")) return "rounds:manage";
+  if (pathname === "/certificates" || pathname.startsWith("/certificates")) return "certificates:view";
+  if (pathname === "/communications" || pathname.startsWith("/communications")) return "communications:view";
+  if (pathname === "/attendance" || pathname.startsWith("/attendance")) return "attendance:view";
+  if (pathname === "/analytics" || pathname.startsWith("/analytics")) return "analytics:view";
+  if (pathname === "/exports" || pathname.startsWith("/exports")) return "exports:download";
+  if (pathname === "/participants" || pathname.startsWith("/participants")) return "registrations:view";
+  if (pathname === "/teams" || pathname.startsWith("/teams")) return "registrations:view";
   if (pathname.startsWith("/events")) return "events:view";
-  if (pathname === "/") return "events:view"; // Dashboard requires basic event access
+  if (pathname === "/") return "events:view";
   return null;
 }

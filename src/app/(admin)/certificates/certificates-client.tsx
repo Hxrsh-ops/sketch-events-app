@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
+import { EmptyState } from "@/components/feedback/feedback-states";
 import { MOCK_CERTIFICATES, MOCK_EVENTS, MOCK_PARTICIPANTS } from "@/lib/mock-data";
 import { CertificateRecord, EventItem, Participant } from "@/types";
 import { formatDate } from "@/lib/utils";
@@ -102,71 +103,70 @@ export default function CertificatesClient({
       );
 
       if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error || "Unable to download certificate PDF.");
+        throw new Error(
+          `Certificate PDF generation failed (${response.status} ${response.statusText})`
+        );
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `${cert.certificateNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
+      const objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `certificate-${cert.certificateNumber}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err: any) {
       setFeedbackMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to download certificate PDF."
+        err?.message || "Failed to download certificate PDF. Please retry."
       );
     }
   };
-  const filteredCerts = certificates.filter((c) => {
-    const matchesEvent = selectedEventId === "all" || c.eventId === selectedEventId;
-    const matchesSearch =
-      c.recipientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.recipientEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.certificateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.eventTitle.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesEvent && matchesSearch;
-  });
 
+  // Event dropdown options
   const eventOptions = [
     { value: "all", label: "All Events Combined" },
     ...events.map((e) => ({ value: e.id, label: e.title })),
   ];
 
+  // Filtered certificates list
+  const filteredCerts = certificates.filter((c) => {
+    const matchesEvent = selectedEventId === "all" || c.eventId === selectedEventId;
+    const matchesSearch =
+      c.recipientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.recipientEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.certificateNumber.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesEvent && matchesSearch;
+  });
+
   return (
-    <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto">
-      {/* Header */}
+    <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto text-[#17191C]">
+      {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
-              Verified Credentials & Certificates
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / CERTIFICATES
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C]">
+              Certificates &amp; Credentials
             </h1>
             <Badge
               variant="outline"
-              className={`text-[10px] uppercase font-semibold ${
-                isPreview
-                  ? "border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5]"
-                  : "border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20"
-              }`}
+              className="text-[10px] uppercase font-semibold bg-[#F6F7F8] border-[#E5E7E9] text-[#858B93]"
             >
-              {isPreview ? "Preview Mode" : "Production Live"}
+              {isPreview ? "Preview Mode" : "Connected"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#989EA7]">
+          <p className="mt-1 text-xs sm:text-sm text-[#777E86]">
             Generate and dispatch verifiable attendance certificates to validated event attendees.
           </p>
         </div>
 
         <Button
-          variant="charcoal"
-          className="rounded-full gap-2 text-xs sm:text-sm font-semibold shadow-sm h-9 sm:h-10 px-4 sm:px-5"
+          variant="default"
+          className="rounded-full gap-2 text-xs sm:text-sm font-semibold shadow-sm h-9 sm:h-10 px-4 sm:px-5 bg-[#17191C] text-white hover:bg-[#25292F]"
           onClick={() => setIsBatchModalOpen(true)}
         >
           <Send className="h-4 w-4" />
@@ -176,15 +176,15 @@ export default function CertificatesClient({
 
       {/* Action Feedback Banner */}
       {feedbackMessage && (
-        <div className="rounded-2xl border border-[#17191C] dark:border-[#30353A] bg-[#17191C] dark:bg-[#22262A] text-white p-4 text-xs flex items-center justify-between shadow-sm">
+        <div className="rounded-xl border border-[#E5E7E9] bg-[#F6F7F8] text-[#34383D] p-4 text-xs flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-white" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#777E86]" />
             <span className="font-medium">{feedbackMessage}</span>
           </div>
           <button
             type="button"
             onClick={() => setFeedbackMessage(null)}
-            className="text-[11px] text-white/60 hover:text-white underline ml-3"
+            className="text-[11px] text-[#858B93] hover:text-[#34383D] underline ml-3"
           >
             Dismiss
           </button>
@@ -193,35 +193,35 @@ export default function CertificatesClient({
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="sketch-card-hero rounded-[20px] p-5 select-none cursor-default">
-          <span className="text-xs font-semibold text-white/80">Total Verified & Issued</span>
-          <div className="text-3xl font-bold text-white mt-2 tabular-nums">
+        <div className="sketch-card-hero rounded-xl border border-[#E5E7E9] bg-white p-5 select-none cursor-default shadow-xs text-[#34383D]">
+          <span className="text-xs font-medium text-[#858B93]">Total Verified &amp; Issued</span>
+          <div className="text-3xl font-bold text-[#34383D] mt-2 tabular-nums">
             {certificates.length}
           </div>
-          <span className="text-[11px] text-white/65 font-medium mt-1 block">
+          <span className="text-[11px] text-[#858B93] mt-1 block">
             {isPreview ? "Recorded in local preview ledger" : "Verified in production database"}
           </span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Awaiting Issuance</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-white mt-2 tabular-nums">
+        <div className="rounded-xl border border-[#E5E7E9] bg-white text-[#34383D] p-5 shadow-xs transition-colors hover:border-[#D9DCE0] select-none cursor-default">
+          <span className="text-xs font-medium text-[#858B93]">Awaiting Issuance</span>
+          <div className="text-3xl font-bold text-[#34383D] mt-2 tabular-nums">
             {eligibleAttendees.length}
           </div>
-          <span className="text-[11px] text-[#656B73] dark:text-[#8A9098] mt-1 block">
+          <span className="text-[11px] text-[#858B93] mt-1 block">
             Checked-in attendees
           </span>
         </div>
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] text-[#17191C] dark:text-[#F1F2F3] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.14)] hover:border-[#CBD0D6] dark:hover:border-[#48515E] motion-reduce:transition-none motion-reduce:transform-none select-none cursor-default">
-          <span className="text-xs font-semibold text-[#5E646E] dark:text-white/80">Delivery Reliability</span>
-          <div className="text-3xl font-bold text-[#17191C] dark:text-white mt-2 tabular-nums">100%</div>
-          <span className="text-[11px] text-[#8A9098] dark:text-[#8A9098] mt-1 block">
+        <div className="rounded-xl border border-[#E5E7E9] bg-white text-[#34383D] p-5 shadow-xs transition-colors hover:border-[#D9DCE0] select-none cursor-default">
+          <span className="text-xs font-medium text-[#858B93]">Delivery Reliability</span>
+          <div className="text-3xl font-bold text-[#34383D] mt-2 tabular-nums">100%</div>
+          <span className="text-[11px] text-[#858B93] mt-1 block">
             {isPreview ? "Client Preview Simulation" : "Transactional email outbox"}
           </span>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-[#E5E7E9] bg-white p-3.5 shadow-xs">
         <div className="w-full sm:w-80">
           <CustomSelect
             options={eventOptions}
@@ -232,28 +232,28 @@ export default function CertificatesClient({
         </div>
 
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098] dark:text-[#656B73]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#777E86]" />
           <input
             type="text"
             placeholder="Search by recipient or certificate ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] pl-9 pr-4 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#656B73] transition-all focus:bg-white dark:focus:bg-[#1B1E21] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+            className="h-9 w-full rounded-lg border border-[#E5E7E9] bg-[#F6F7F8] pl-9 pr-4 text-xs text-[#34383D] placeholder:text-[#A4A9AF] transition-colors focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#858B93] focus:border-[#858B93]"
           />
         </div>
       </div>
 
       {/* Table of Issued Certificates */}
-      <div className="overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm">
-        <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] px-6 py-4 bg-[#F9FAFB] dark:bg-[#151719]">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#656B73] dark:text-[#989EA7]">
+      <div className="overflow-hidden rounded-xl border border-[#E5E7E9] bg-white shadow-xs">
+        <div className="flex items-center justify-between border-b border-[#E5E7E9] px-6 py-4 bg-[#F6F7F8]">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[#858B93]">
             Issued Certificate Records ({filteredCerts.length})
           </h2>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[11px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+            <thead className="border-b border-[#E5E7E9] bg-white text-[11px] font-semibold text-[#858B93]">
               <tr>
                 <th className="py-3.5 pl-6 pr-4">Recipient</th>
                 <th className="px-4 py-3.5">Certificate ID</th>
@@ -263,11 +263,24 @@ export default function CertificatesClient({
                 <th className="px-4 py-3.5 text-right pr-6">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F4F5F6] dark:divide-[#262A2E]">
+            <tbody className="divide-y divide-[#E5E7E9]">
               {filteredCerts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-[#8A9098] dark:text-[#656B73]">
-                    No certificate records match your filter criteria.
+                  <td colSpan={6} className="p-8">
+                    <EmptyState
+                      icon={Award}
+                      title="No certificates found"
+                      description={
+                        searchQuery || selectedEventId !== "all"
+                          ? "No certificate records match your filter or search criteria."
+                          : "No certificates have been issued yet. Click 'Issue Eligible Batch' to generate credentials for checked-in attendees."
+                      }
+                      actionLabel={searchQuery || selectedEventId !== "all" ? "Reset Filters" : undefined}
+                      onAction={() => {
+                        setSearchQuery("");
+                        setSelectedEventId("all");
+                      }}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -275,28 +288,28 @@ export default function CertificatesClient({
                   <tr
                     key={cert.id}
                     onClick={() => setSelectedCert(cert)}
-                    className="group cursor-pointer hover:bg-[#F9FAFB] dark:hover:bg-[#151719] transition-colors"
+                    className="group cursor-pointer hover:bg-[#F8F9FA] transition-colors"
                   >
                     <td className="py-3.5 pl-6 pr-4">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline">
+                        <span className="font-semibold text-[#34383D] group-hover:underline">
                           {cert.recipientName}
                         </span>
-                        <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">{cert.recipientEmail}</span>
+                        <span className="text-[11px] text-[#858B93]">{cert.recipientEmail}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 font-mono text-[11px] text-[#656B73] dark:text-[#989EA7]">
+                    <td className="px-4 py-3.5 font-mono text-[11px] text-[#858B93]">
                       {cert.certificateNumber}
                     </td>
-                    <td className="px-4 py-3.5 font-medium text-[#17191C] dark:text-[#F1F2F3]">
+                    <td className="px-4 py-3.5 font-medium text-[#34383D]">
                       {cert.eventTitle}
                     </td>
-                    <td className="px-4 py-3.5 text-[#656B73] dark:text-[#989EA7]">
+                    <td className="px-4 py-3.5 text-[#858B93]">
                       {formatDate(cert.issuedAt)}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#17191C] dark:text-[#111315] bg-[#F0F1F2] dark:bg-[#E8EAED] px-2.5 py-0.5 rounded-full">
-                        <CheckCircle2 className="h-3 w-3 text-[#25292F] dark:text-[#111315]" />
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#34383D] bg-[#E3E5E8] border border-[#E5E7E9] px-2.5 py-0.5 rounded-md">
+                        <CheckCircle2 className="h-3 w-3 text-[#777E86]" />
                         Verified
                       </span>
                     </td>
@@ -304,9 +317,9 @@ export default function CertificatesClient({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 rounded-full border-[#E5E7EA] dark:border-[#30353A] px-2.5 text-[11px] font-medium text-[#17191C] dark:text-[#F1F2F3] hover:bg-white dark:hover:bg-[#151719] gap-1"
+                        className="h-7 rounded-lg border-[#E5E7E9] px-2.5 text-[11px] font-medium text-[#34383D] hover:bg-[#F6F7F8] gap-1"
                       >
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-3 w-3 text-[#777E86]" />
                         <span>Preview</span>
                       </Button>
                     </td>
@@ -329,35 +342,35 @@ export default function CertificatesClient({
         {selectedCert && (
           <div className="space-y-6">
             {/* Visual Certificate Card */}
-            <div className="rounded-2xl border-2 border-[#17191C] dark:border-[#30353A] bg-white dark:bg-[#151719] p-6 shadow-md text-center space-y-4">
-              <div className="flex justify-between items-center border-b border-[#E5E7EA] dark:border-[#30353A] pb-3">
-                <span className="text-[10px] font-bold tracking-widest uppercase text-[#8A9098] dark:text-[#656B73]">
+            <div className="rounded-xl border border-[#E5E7E9] bg-[#F6F7F8] p-6 shadow-xs text-center space-y-4">
+              <div className="flex justify-between items-center border-b border-[#E5E7E9] pb-3">
+                <span className="text-[10px] font-semibold tracking-widest uppercase text-[#858B93]">
                   SKETCH CREDENTIAL ARCHIVE
                 </span>
-                <ShieldCheck className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+                <ShieldCheck className="h-4 w-4 text-[#777E86]" />
               </div>
 
               <div className="space-y-1 pt-2">
-                <p className="text-[11px] text-[#656B73] dark:text-[#989EA7] uppercase tracking-wider">
+                <p className="text-[11px] text-[#858B93] uppercase tracking-wider">
                   Certificate of Participation
                 </p>
-                <h3 className="text-xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
+                <h3 className="text-xl font-bold text-[#34383D]">
                   {selectedCert.recipientName}
                 </h3>
-                <p className="text-xs text-[#656B73] dark:text-[#989EA7]">has successfully completed and attended</p>
-                <h4 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">{selectedCert.eventTitle}</h4>
+                <p className="text-xs text-[#858B93]">has successfully completed and attended</p>
+                <h4 className="text-sm font-semibold text-[#34383D]">{selectedCert.eventTitle}</h4>
               </div>
 
-              <div className="flex items-center justify-between border-t border-[#E5E7EA] dark:border-[#30353A] pt-4 text-left">
+              <div className="flex items-center justify-between border-t border-[#E5E7E9] pt-4 text-left">
                 <div>
-                  <p className="text-[10px] text-[#8A9098] dark:text-[#656B73]">ISSUED ON</p>
-                  <p className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                  <p className="text-[10px] text-[#858B93]">ISSUED ON</p>
+                  <p className="text-xs font-semibold text-[#34383D]">
                     {formatDate(selectedCert.issuedAt)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-[#8A9098] dark:text-[#656B73]">SERIAL IDENTIFIER</p>
-                  <p className="text-xs font-mono font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                  <p className="text-[10px] text-[#858B93]">SERIAL IDENTIFIER</p>
+                  <p className="text-xs font-mono font-bold text-[#34383D]">
                     {selectedCert.certificateNumber}
                   </p>
                 </div>
@@ -366,10 +379,10 @@ export default function CertificatesClient({
 
             <Button
               variant="charcoal"
-              className="w-full rounded-full text-xs font-semibold gap-2 h-10 shadow-sm"
+              className="w-full rounded-lg text-xs font-semibold gap-2 h-10 shadow-xs bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] hover:bg-[#D9DCE0]"
               onClick={() => handleDownloadCertPdf(selectedCert)}
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-4 w-4 text-[#777E86]" />
               <span>Download Certificate PDF</span>
             </Button>
           </div>
@@ -385,30 +398,30 @@ export default function CertificatesClient({
         widthClass="max-w-md"
       >
         <div className="space-y-5 text-xs">
-          <p className="text-[#656B73] dark:text-[#989EA7] leading-relaxed">
+          <p className="text-[#858B93] leading-relaxed">
             Generate verified certificates for all attendees who were checked in at the attendance desk.
           </p>
 
-          <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">
+          <div className="rounded-xl border border-[#E5E7E9] bg-[#F6F7F8] p-4 space-y-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#858B93]">
               Issuance Preview
             </span>
             <div className="flex justify-between font-medium">
-              <span className="text-[#656B73] dark:text-[#989EA7]">Eligible Checked-In Attendees:</span>
-              <strong className="text-[#17191C] dark:text-[#F1F2F3]">{eligibleAttendees.length}</strong>
+              <span className="text-[#858B93]">Eligible Checked-In Attendees:</span>
+              <strong className="text-[#34383D]">{eligibleAttendees.length}</strong>
             </div>
             <div className="flex justify-between font-medium">
-              <span className="text-[#656B73] dark:text-[#989EA7]">Template:</span>
-              <span className="text-[#656B73] dark:text-[#989EA7]">SKETCH Standard Monochrome SVG</span>
+              <span className="text-[#858B93]">Template:</span>
+              <span className="text-[#858B93]">SKETCH Standard Monochrome SVG</span>
             </div>
           </div>
 
           <Button
             variant="charcoal"
-            className="w-full rounded-full text-xs font-semibold h-10"
+            className="w-full rounded-lg text-xs font-semibold h-10 bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] hover:bg-[#D9DCE0]"
             onClick={() => handleBatchIssue(selectedEventId)}
           >
-            Confirm & Issue {eligibleAttendees.length} Certificates
+            Confirm &amp; Issue {eligibleAttendees.length} Certificates
           </Button>
         </div>
       </SlideOver>

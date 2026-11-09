@@ -10,6 +10,7 @@ import {
   Download,
   AlertTriangle,
   RefreshCw,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { EmptyState } from "@/components/feedback/feedback-states";
 import { Team, EventItem } from "@/types";
 
 interface TeamsClientProps {
@@ -113,7 +115,7 @@ export default function TeamsClient({
   if (initialError) {
     return (
       <div className="flex flex-col space-y-6 pb-12 max-w-[1400px] mx-auto min-w-0">
-        <div className="rounded-[20px] border border-red-200 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/20 p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
+        <div className="rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/20 p-12 text-center shadow-sm max-w-xl mx-auto space-y-4">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-7 w-7" />
           </div>
@@ -147,15 +149,18 @@ export default function TeamsClient({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / TEAMS
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C]">
               Teams & Rosters
             </h1>
             <Badge variant="outline" className="text-[10px] uppercase font-semibold">
               {isPreview ? "Preview Mode" : "PostgreSQL Live"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#989EA7]">
+          <p className="mt-1 text-xs sm:text-sm text-[#777E86]">
             Manage participant teams, rosters, slot allocations, and team captain contacts for hackathons and design sprints.
           </p>
         </div>
@@ -165,7 +170,7 @@ export default function TeamsClient({
             variant="outline"
             size="sm"
             onClick={handleExportTeamsCsv}
-            className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold gap-1.5 h-9"
+            className="rounded-full border-[#E5E7E9] text-xs font-semibold gap-1.5 h-9"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export Teams CSV</span>
@@ -174,7 +179,7 @@ export default function TeamsClient({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between rounded-xl border border-[#E5E7E9] bg-white p-3.5 shadow-sm">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <AnimatedTabs
             tabs={filterTabs}
@@ -194,22 +199,34 @@ export default function TeamsClient({
         </div>
 
         <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098] dark:text-[#656B73]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#858B93]" />
           <input
             type="text"
             placeholder="Search by team, captain, or event..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] pl-9 pr-4 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#656B73] transition-all focus:bg-white dark:focus:bg-[#1B1E21] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+            className="h-9 w-full rounded-full border border-[#E5E7E9] bg-[#F6F7F8] pl-9 pr-4 text-xs text-[#17191C] placeholder:text-[#858B93] transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#17191C]"
           />
         </div>
       </div>
 
       {/* Teams Grid */}
       {filteredTeams.length === 0 ? (
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-12 text-center text-xs text-[#8A9098] dark:text-[#656B73]">
-          No teams found matching your current filter criteria.
-        </div>
+        <EmptyState
+          icon={Users}
+          title="No teams found"
+          description={
+            searchQuery || selectedEventId !== "all" || activeTab !== "all"
+              ? "No team rosters match your current filter or search criteria."
+              : "No team records have been created or registered yet."
+          }
+          actionLabel={searchQuery || selectedEventId !== "all" || activeTab !== "all" ? "Reset Filters" : undefined}
+          onAction={() => {
+            setSearchQuery("");
+            setSelectedEventId("all");
+            setActiveTab("all");
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredTeams.map((team) => {
@@ -229,15 +246,15 @@ export default function TeamsClient({
                     setSelectedTeam(team);
                   }
                 }}
-                className="group cursor-pointer flex flex-col justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] motion-reduce:transition-none motion-reduce:transform-none select-none"
+                className="group cursor-pointer flex flex-col justify-between rounded-xl border border-[#E5E7E9]  bg-white p-5 shadow-sm transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] motion-reduce:transition-none motion-reduce:transform-none select-none"
               >
                 <div>
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline">
+                      <h3 className="text-base font-bold text-[#34383D]  group-hover:underline">
                         {team.name}
                       </h3>
-                      <span className="text-xs text-[#656B73] dark:text-[#989EA7]">{team.eventTitle}</span>
+                      <span className="text-xs text-[#858B93] ">{team.eventTitle}</span>
                     </div>
                     <Badge
                       variant={isFull ? "default" : "secondary"}
@@ -249,11 +266,11 @@ export default function TeamsClient({
 
                   {/* Roster Capacity Progress Bar */}
                   <div className="mt-3">
-                    <div className="flex justify-between text-[11px] text-[#8A9098] dark:text-[#656B73] mb-1">
+                    <div className="flex justify-between text-[11px] text-[#858B93]  mb-1">
                       <span>Roster Capacity</span>
                       <span>{team.memberCount} of {team.maxMembers}</span>
                     </div>
-                    <div className="h-1.5 w-full bg-[#F0F1F2] dark:bg-[#151719] rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-[#EAECEF]  rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#25292F] dark:bg-[#E8EAED] rounded-full"
                         style={{ width: `${Math.min(100, (team.memberCount / Math.max(1, team.maxMembers)) * 100)}%` }}
@@ -261,35 +278,35 @@ export default function TeamsClient({
                     </div>
                   </div>
 
-                  <div className="mt-4 space-y-2 border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 text-xs">
+                  <div className="mt-4 space-y-2 border-t border-[#F4F5F6]  pt-3 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-[#8A9098] dark:text-[#656B73] flex items-center gap-1.5">
+                      <span className="text-[#858B93]  flex items-center gap-1.5">
                         <Shield className="h-3.5 w-3.5" /> Captain
                       </span>
-                      <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">{team.captainName}</span>
+                      <span className="font-semibold text-[#34383D] ">{team.captainName}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[#8A9098] dark:text-[#656B73] flex items-center gap-1.5">
+                      <span className="text-[#858B93]  flex items-center gap-1.5">
                         <Mail className="h-3.5 w-3.5" /> Email
                       </span>
-                      <span className="text-[#656B73] dark:text-[#989EA7] truncate max-w-[170px]">{team.captainEmail}</span>
+                      <span className="text-[#858B93]  truncate max-w-[170px]">{team.captainEmail}</span>
                     </div>
                   </div>
 
                   {/* Member Avatars preview */}
-                  <div className="mt-4 pt-3 border-t border-[#F4F5F6] dark:border-[#262A2E] flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-[#F4F5F6]  flex items-center justify-between">
                     <div className="flex -space-x-1.5 overflow-hidden">
                       {members.map((m, idx) => (
                         <div
                           key={`${m.email}-${idx}`}
                           title={m.name}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-[9px] font-bold text-white dark:text-[#F1F2F3] ring-2 ring-white dark:ring-[#1B1E21]"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-[9px] font-bold text-white  ring-2 ring-white dark:ring-[#1B1E21]"
                         >
                           {m.name.charAt(0)}
                         </div>
                       ))}
                     </div>
-                    <span className="text-[11px] text-[#8A9098] dark:text-[#656B73] flex items-center gap-1">
+                    <span className="text-[11px] text-[#858B93]  flex items-center gap-1">
                       Inspect Roster
                       <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </span>
@@ -312,38 +329,38 @@ export default function TeamsClient({
         {selectedTeam && (
           <div className="space-y-6">
             {/* Captain Hero Box */}
-            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 flex items-center justify-between">
+            <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border border-[#E5E7EA] dark:border-[#30353A] bg-[#25292F] text-white">
-                  <AvatarFallback className="bg-[#25292F] dark:bg-[#30353A] text-white dark:text-[#F1F2F3] font-bold text-xs">
+                <Avatar className="h-10 w-10 border border-[#E5E7E9]  bg-[#25292F] text-white">
+                  <AvatarFallback className="bg-[#25292F] dark:bg-[#30353A] text-white  font-bold text-xs">
                     {selectedTeam.captainName.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                    <span className="text-xs font-bold text-[#34383D] ">
                       {selectedTeam.captainName}
                     </span>
                     <Badge variant="default" className="text-[9px] py-0 px-1.5">
                       Captain
                     </Badge>
                   </div>
-                  <span className="text-[11px] text-[#656B73] dark:text-[#989EA7]">{selectedTeam.captainEmail}</span>
+                  <span className="text-[11px] text-[#858B93] ">{selectedTeam.captainEmail}</span>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-[#8A9098] dark:text-[#656B73] block uppercase">Status</span>
-                <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3] capitalize">{selectedTeam.status}</span>
+                <span className="text-[10px] text-[#858B93]  block uppercase">Status</span>
+                <span className="text-xs font-bold text-[#34383D]  capitalize">{selectedTeam.status}</span>
               </div>
             </div>
 
             {/* Roster Members List */}
             <div>
-              <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EA] dark:border-[#30353A]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#656B73] dark:text-[#989EA7]">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E5E7E9] ">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#858B93] ">
                   Registered Team Members ({selectedTeam.members?.length || 0})
                 </h3>
-                <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+                <span className="text-[11px] text-[#858B93] ">
                   Max Capacity: {selectedTeam.maxMembers}
                 </span>
               </div>
@@ -355,17 +372,17 @@ export default function TeamsClient({
                     className="py-3 flex items-center justify-between hover:bg-[#F9FAFB] dark:hover:bg-[#151719] px-2 rounded-xl transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0F1F2] dark:bg-[#151719] text-[#17191C] dark:text-[#F1F2F3] font-bold text-[10px]">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EAECEF]  text-[#34383D]  font-bold text-[10px]">
                         {member.name.charAt(0)}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">{member.name}</span>
+                          <span className="text-xs font-bold text-[#34383D] ">{member.name}</span>
                           {(member as any).attendanceStatus === "checked_in" && (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-[#17191C] dark:text-[#E8EAED]" />
+                            <CheckCircle2 className="h-3.5 w-3.5 text-[#34383D] " />
                           )}
                         </div>
-                        <div className="text-[11px] text-[#8A9098] dark:text-[#656B73] flex items-center gap-1 font-mono">
+                        <div className="text-[11px] text-[#858B93]  flex items-center gap-1 font-mono">
                           <span>{(member as any).registrationId || member.email}</span>
                           {member.department && (
                             <>
@@ -381,8 +398,8 @@ export default function TeamsClient({
                       <span
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           (member as any).attendanceStatus === "checked_in"
-                            ? "bg-[#F0F1F2] dark:bg-[#E8EAED] text-[#17191C] dark:text-[#111315]"
-                            : "bg-[#F4F5F6] dark:bg-[#151719] text-[#8A9098] dark:text-[#989EA7]"
+                            ? "bg-[#EAECEF] dark:bg-[#E8EAED] text-[#34383D] dark:text-[#111315]"
+                            : "bg-[#F6F7F8]  text-[#858B93] "
                         }`}
                       >
                         {(member as any).attendanceStatus === "checked_in" ? "Checked In" : "Pending"}

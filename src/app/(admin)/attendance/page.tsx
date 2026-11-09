@@ -1,8 +1,24 @@
 import { SketchRepository } from "@/lib/supabase/repository";
+import { verifyAdminSession } from "@/lib/auth/session";
+import { AccessDenied } from "@/components/auth/access-denied";
 import { Participant, EventItem } from "@/types";
 import AttendanceClient from "./attendance-client";
 
 export default async function AttendancePage() {
+  const session = await verifyAdminSession();
+
+  // Strict RBAC: Attendance is restricted to master_admin, event_manager, and attendance_staff
+  const role = session.user?.role;
+  if (role !== "master_admin" && role !== "event_manager" && role !== "attendance_staff") {
+    return (
+      <AccessDenied
+        currentRole={role}
+        requiredRoles={["master_admin", "event_manager", "attendance_staff"]}
+        moduleName="Attendance Verification & Desk Scanner"
+      />
+    );
+  }
+
   let events: EventItem[] = [];
   let participants: Participant[] = [];
   let fetchError: string | null = null;

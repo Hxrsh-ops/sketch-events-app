@@ -469,21 +469,24 @@ export default function StudioClient({
   );
 
   return (
-    <div className="flex flex-col space-y-6 pb-12 max-w-[1440px] mx-auto text-[#17191C] dark:text-[#F1F2F3]">
+    <div className="flex flex-col space-y-6 pb-12 max-w-[1440px] mx-auto text-[#17191C]">
       {/* Top Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-2.5">
-              <Ticket className="h-7 w-7 text-amber-500" />
-              Ticket Design Studio
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / FORM GENERATOR &amp; PASS STUDIO
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] flex items-center gap-2.5">
+              <Ticket className="h-6 w-6 text-[#17191C]" />
+              Form Generator &amp; Pass Studio
             </h1>
-            <Badge variant="outline" className="text-[10px] uppercase font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400">
+            <Badge variant="outline" className="text-[10px] uppercase font-semibold border-[#E5E7E9] bg-white text-[#17191C]">
               v{activeVersionNumber} Published
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#A6ADB5]">
-            Create cinematic personalized passes, customize visual themes, and publish immutable template versions.
+          <p className="mt-1 text-xs sm:text-sm text-[#858B93]">
+            Create personalized event passes, customize visual themes, and publish immutable template versions.
           </p>
         </div>
 
@@ -494,20 +497,20 @@ export default function StudioClient({
             size="sm"
             onClick={handleSaveDraft}
             disabled={isSaving}
-            className="rounded-full h-9 px-4 text-xs font-semibold gap-1.5"
+            className="rounded-lg h-9 px-4 text-xs font-semibold gap-1.5 border-[#E5E7E9] text-[#17191C]"
           >
-            <Save className="h-3.5 w-3.5" />
+            <Save className="h-3.5 w-3.5 text-[#777E86]" />
             <span>{isSaving ? "Saving..." : "Save Draft"}</span>
           </Button>
 
           <Button
-            variant="charcoal"
+            variant="default"
             size="sm"
             onClick={handlePublish}
             disabled={isPublishing}
-            className="rounded-full h-9 px-4 text-xs font-semibold gap-1.5 shadow-sm"
+            className="rounded-lg h-9 px-4 text-xs font-semibold gap-1.5 shadow-xs bg-[#17191C] text-white hover:bg-[#25292F]"
           >
-            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+            <Sparkles className="h-3.5 w-3.5 text-white/80" />
             <span>{isPublishing ? "Publishing..." : "Publish Version"}</span>
           </Button>
         </div>
@@ -515,7 +518,7 @@ export default function StudioClient({
 
       {/* Database Schema Notice Banner */}
       {initialError && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start gap-3">
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
           <div className="space-y-1 text-xs">
             <div className="font-bold text-amber-300">Database Schema Notice</div>
@@ -549,14 +552,14 @@ export default function StudioClient({
       )}
 
       {/* Studio Navigation & Mode Selector */}
-      <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#2C3136] pb-3 flex-wrap gap-3">
-        <div className="flex items-center gap-1.5 p-1 bg-[#F4F5F6] dark:bg-[#1A1D20] rounded-xl border border-[#E5E7EA] dark:border-[#2A2E33]">
+      <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-3 flex-wrap gap-3">
+        <div className="flex items-center gap-1.5 p-1 bg-[#F6F7F8]  rounded-xl border border-[#E5E7E9] ">
           <button
             onClick={() => setEditorMode("customizer")}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
               editorMode === "customizer"
-                ? "bg-white dark:bg-[#25292E] text-[#17191C] dark:text-[#F1F2F3] shadow-sm"
-                : "text-[#656B73] dark:text-[#8E95A0] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                ? "bg-white  text-[#34383D]  shadow-sm"
+                : "text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
             }`}
           >
             <Sliders className="h-3.5 w-3.5" />
@@ -567,8 +570,8 @@ export default function StudioClient({
             onClick={() => setEditorMode("visual")}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
               editorMode === "visual"
-                ? "bg-white dark:bg-[#25292E] text-[#17191C] dark:text-[#F1F2F3] shadow-sm"
-                : "text-[#656B73] dark:text-[#8E95A0] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                ? "bg-white  text-[#34383D]  shadow-sm"
+                : "text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
             }`}
           >
             <Move className="h-3.5 w-3.5" />
@@ -579,8 +582,8 @@ export default function StudioClient({
             onClick={() => setEditorMode("preview")}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 ${
               editorMode === "preview"
-                ? "bg-white dark:bg-[#25292E] text-[#17191C] dark:text-[#F1F2F3] shadow-sm"
-                : "text-[#656B73] dark:text-[#8E95A0] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                ? "bg-white  text-[#34383D]  shadow-sm"
+                : "text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
             }`}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -590,7 +593,7 @@ export default function StudioClient({
 
         {/* Starter Layout Selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#656B73] dark:text-[#8E95A0] font-medium hidden sm:inline">
+          <span className="text-xs text-[#858B93]  font-medium hidden sm:inline">
             Preset:
           </span>
           <select
@@ -599,7 +602,7 @@ export default function StudioClient({
               const preset = STARTER_TEMPLATES[e.target.value];
               if (preset) updateDesign(() => preset);
             }}
-            className="text-xs font-semibold bg-white dark:bg-[#181B1E] border border-[#E5E7EA] dark:border-[#2C3136] rounded-xl px-3 py-1.5 text-[#17191C] dark:text-[#F1F2F3]"
+            className="text-xs font-semibold bg-white  border border-[#E5E7E9]  rounded-xl px-3 py-1.5 text-[#34383D] "
           >
             <option value="cinematic-midnight">Cinematic Midnight Premiere</option>
             <option value="minimal-carbon">Minimal Carbon Stub</option>
@@ -615,7 +618,7 @@ export default function StudioClient({
           {/* Left Controls Panel */}
           <div className="lg:col-span-4 space-y-5">
             {/* Visual Tokens Card */}
-            <Card className="rounded-[20px] border-[#E5E7EA] dark:border-[#2C3136] shadow-sm">
+            <Card className="rounded-xl border-[#E5E7E9]  shadow-sm">
               <CardHeader className="pb-3 pt-5 px-5">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Palette className="h-4 w-4 text-amber-500" />
@@ -624,7 +627,7 @@ export default function StudioClient({
               </CardHeader>
               <CardContent className="px-5 pb-5 space-y-3.5 text-xs">
                 <div>
-                  <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                     Accent Color
                   </label>
                   <div className="flex items-center gap-2.5">
@@ -637,7 +640,7 @@ export default function StudioClient({
                           theme: { ...prev.theme, accent: e.target.value },
                         }))
                       }
-                      className="h-8 w-12 rounded border border-[#E5E7EA] dark:border-[#2C3136] cursor-pointer bg-transparent"
+                      className="h-8 w-12 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
                     />
                     <input
                       type="text"
@@ -648,13 +651,13 @@ export default function StudioClient({
                           theme: { ...prev.theme, accent: e.target.value },
                         }))
                       }
-                      className="font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7EA] dark:border-[#2C3136] bg-[#F9FAFB] dark:bg-[#15171A] w-28"
+                      className="font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A] w-28"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                     Surface Base
                   </label>
                   <div className="flex items-center gap-2.5">
@@ -667,7 +670,7 @@ export default function StudioClient({
                           theme: { ...prev.theme, surface: e.target.value },
                         }))
                       }
-                      className="h-8 w-12 rounded border border-[#E5E7EA] dark:border-[#2C3136] cursor-pointer bg-transparent"
+                      className="h-8 w-12 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
                     />
                     <input
                       type="text"
@@ -678,13 +681,13 @@ export default function StudioClient({
                           theme: { ...prev.theme, surface: e.target.value },
                         }))
                       }
-                      className="font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7EA] dark:border-[#2C3136] bg-[#F9FAFB] dark:bg-[#15171A] w-28"
+                      className="font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A] w-28"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                     Typography Mode
                   </label>
                   <select
@@ -695,7 +698,7 @@ export default function StudioClient({
                         theme: { ...prev.theme, fontFamily: e.target.value as any },
                       }))
                     }
-                    className="w-full text-xs font-semibold bg-white dark:bg-[#181B1E] border border-[#E5E7EA] dark:border-[#2C3136] rounded-xl px-3 py-2 text-[#17191C] dark:text-[#F1F2F3]"
+                    className="w-full text-xs font-semibold bg-white  border border-[#E5E7E9]  rounded-xl px-3 py-2 text-[#34383D] "
                   >
                     <option value="cinematic">Cinematic Display (Bold Editorial)</option>
                     <option value="sans">Modern Geometric Sans</option>
@@ -707,7 +710,7 @@ export default function StudioClient({
             </Card>
 
             {/* Ticket Background Settings */}
-            <Card className="rounded-[20px] border-[#E5E7EA] dark:border-[#2C3136] shadow-sm">
+            <Card className="rounded-xl border-[#E5E7E9]  shadow-sm">
               <CardHeader className="pb-3 pt-5 px-5">
                 <CardTitle className="text-sm font-bold flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -767,15 +770,15 @@ export default function StudioClient({
                   )}
                 </div>
 
-                <p className="text-[11px] text-[#656B73] dark:text-[#8E95A0]">
+                <p className="text-[11px] text-[#858B93] ">
                   PNG, JPEG, WebP up to 5MB. Verified server-side.
                 </p>
 
                 {design.backgroundImage && (
-                  <div className="space-y-3 pt-2 border-t border-[#E5E7EA] dark:border-[#2C3136]">
+                  <div className="space-y-3 pt-2 border-t border-[#E5E7E9] ">
                     {/* Fit Mode */}
                     <div>
-                      <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                      <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                         Image Fit
                       </label>
                       <div className="grid grid-cols-2 gap-2">
@@ -793,7 +796,7 @@ export default function StudioClient({
                           className={`py-1.5 px-3 text-xs font-semibold rounded-xl border text-center transition-colors ${
                             design.backgroundImage.fit === "cover"
                               ? "border-sky-500 bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                              : "border-[#E5E7EA] dark:border-[#2C3136] hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                              : "border-[#E5E7E9]  hover:bg-neutral-50 dark:hover:bg-neutral-800"
                           }`}
                         >
                           Cover / Fill
@@ -812,7 +815,7 @@ export default function StudioClient({
                           className={`py-1.5 px-3 text-xs font-semibold rounded-xl border text-center transition-colors ${
                             design.backgroundImage.fit === "contain"
                               ? "border-sky-500 bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                              : "border-[#E5E7EA] dark:border-[#2C3136] hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                              : "border-[#E5E7E9]  hover:bg-neutral-50 dark:hover:bg-neutral-800"
                           }`}
                         >
                           Contain / Fit
@@ -822,7 +825,7 @@ export default function StudioClient({
 
                     {/* Position */}
                     <div>
-                      <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                      <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                         Alignment Position
                       </label>
                       <select
@@ -836,7 +839,7 @@ export default function StudioClient({
                             },
                           }))
                         }
-                        className="w-full text-xs font-semibold bg-white dark:bg-[#181B1E] border border-[#E5E7EA] dark:border-[#2C3136] rounded-xl px-3 py-2 text-[#17191C] dark:text-[#F1F2F3]"
+                        className="w-full text-xs font-semibold bg-white  border border-[#E5E7E9]  rounded-xl px-3 py-2 text-[#34383D] "
                       >
                         <option value="center">Center</option>
                         <option value="top">Top</option>
@@ -852,7 +855,7 @@ export default function StudioClient({
 
                     {/* Contrast Overlay Color & Opacity */}
                     <div>
-                      <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                      <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                         Readability Contrast Overlay
                       </label>
                       <div className="flex items-center gap-2 mb-2">
@@ -868,14 +871,14 @@ export default function StudioClient({
                               },
                             }))
                           }
-                          className="h-8 w-12 rounded border border-[#E5E7EA] dark:border-[#2C3136] cursor-pointer bg-transparent"
+                          className="h-8 w-12 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
                         />
-                        <span className="font-mono text-xs text-[#656B73] dark:text-[#8E95A0]">
+                        <span className="font-mono text-xs text-[#858B93] ">
                           {design.backgroundImage.overlayColor || "#000000"}
                         </span>
                       </div>
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[11px] text-[#656B73] dark:text-[#8E95A0]">
+                        <div className="flex justify-between text-[11px] text-[#858B93] ">
                           <span>Dimming Opacity</span>
                           <span className="font-mono font-bold">
                             {Math.round((design.backgroundImage.overlayOpacity ?? 0.25) * 100)}%
@@ -906,7 +909,7 @@ export default function StudioClient({
             </Card>
 
             {/* Perforated Stub Settings */}
-            <Card className="rounded-[20px] border-[#E5E7EA] dark:border-[#2C3136] shadow-sm">
+            <Card className="rounded-xl border-[#E5E7E9]  shadow-sm">
               <CardHeader className="pb-3 pt-5 px-5">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Scissors className="h-4 w-4 text-amber-500" />
@@ -915,7 +918,7 @@ export default function StudioClient({
               </CardHeader>
               <CardContent className="px-5 pb-5 space-y-3.5 text-xs">
                 <div>
-                  <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                     Stub Badge Title
                   </label>
                   <input
@@ -927,12 +930,12 @@ export default function StudioClient({
                         stub: { ...prev.stub, badgeText: e.target.value },
                       }))
                     }
-                    className="w-full text-xs font-medium px-3 py-2 rounded-xl border border-[#E5E7EA] dark:border-[#2C3136] bg-[#F9FAFB] dark:bg-[#15171A]"
+                    className="w-full text-xs font-medium px-3 py-2 rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                     Perforation Position
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -947,7 +950,7 @@ export default function StudioClient({
                       className={`py-2 px-3 text-xs font-semibold rounded-xl border text-center transition-colors ${
                         design.stub.perforationPosition === "right"
                           ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                          : "border-[#E5E7EA] dark:border-[#2C3136] hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                          : "border-[#E5E7E9]  hover:bg-neutral-50 dark:hover:bg-neutral-800"
                       }`}
                     >
                       Right Side Stub
@@ -963,7 +966,7 @@ export default function StudioClient({
                       className={`py-2 px-3 text-xs font-semibold rounded-xl border text-center transition-colors ${
                         design.stub.perforationPosition === "none"
                           ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                          : "border-[#E5E7EA] dark:border-[#2C3136] hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                          : "border-[#E5E7E9]  hover:bg-neutral-50 dark:hover:bg-neutral-800"
                       }`}
                     >
                       Seamless Card
@@ -974,7 +977,7 @@ export default function StudioClient({
             </Card>
 
             {/* Event Assignment Card */}
-            <Card className="rounded-[20px] border-[#E5E7EA] dark:border-[#2C3136] shadow-sm">
+            <Card className="rounded-xl border-[#E5E7E9]  shadow-sm">
               <CardHeader className="pb-3 pt-5 px-5">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-emerald-500" />
@@ -983,13 +986,13 @@ export default function StudioClient({
               </CardHeader>
               <CardContent className="px-5 pb-5 space-y-3.5 text-xs">
                 <div>
-                  <label className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1.5">
+                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
                     Target Event
                   </label>
                   <select
                     value={targetEventId}
                     onChange={(e) => setTargetEventId(e.target.value)}
-                    className="w-full text-xs font-semibold bg-white dark:bg-[#181B1E] border border-[#E5E7EA] dark:border-[#2C3136] rounded-xl px-3 py-2 text-[#17191C] dark:text-[#F1F2F3]"
+                    className="w-full text-xs font-semibold bg-white  border border-[#E5E7E9]  rounded-xl px-3 py-2 text-[#34383D] "
                   >
                     {initialEvents.map((ev) => (
                       <option key={ev.id} value={ev.id}>
@@ -1015,7 +1018,7 @@ export default function StudioClient({
           <div className="lg:col-span-8 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#656B73] dark:text-[#8E95A0] uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#858B93]  uppercase tracking-wider">
                   Live Synthetic Preview
                 </span>
                 <span className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full font-medium">
@@ -1027,7 +1030,7 @@ export default function StudioClient({
                 <button
                   type="button"
                   onClick={() => setShowSyntheticData(!showSyntheticData)}
-                  className="text-xs text-[#656B73] dark:text-[#8E95A0] hover:text-[#17191C] dark:hover:text-[#F1F2F3] font-medium"
+                  className="text-xs text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3] font-medium"
                 >
                   {showSyntheticData ? "Show Variable Keys" : "Show Sample Data"}
                 </button>
@@ -1035,7 +1038,7 @@ export default function StudioClient({
             </div>
 
             {/* Rendered Cinematic Ticket Card */}
-            <div className="p-4 sm:p-8 rounded-[24px] bg-[#0E1012] border border-[#23272C] flex items-center justify-center overflow-x-auto">
+            <div className="p-4 sm:p-8 rounded-xl bg-[#F8F9FA] border border-[#23272C] flex items-center justify-center overflow-x-auto">
               <RenderedTicketCard
                 design={design}
                 showSyntheticData={showSyntheticData}
@@ -1043,10 +1046,10 @@ export default function StudioClient({
             </div>
 
             {/* Security Guarantee Note */}
-            <div className="p-4 rounded-2xl bg-[#F9FAFB] dark:bg-[#181B1E] border border-[#E5E7EA] dark:border-[#2C3136] flex items-start gap-3 text-xs text-[#656B73] dark:text-[#8E95A0]">
+            <div className="p-4 rounded-xl bg-[#F9FAFB]  border border-[#E5E7E9]  flex items-start gap-3 text-xs text-[#858B93] ">
               <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
               <div>
-                <strong className="text-[#17191C] dark:text-[#F1F2F3] block mb-0.5">
+                <strong className="text-[#34383D]  block mb-0.5">
                   Version History & Immutability
                 </strong>
                 When an organizer publishes a template, a permanent frozen version is stored. Already-issued participant passes can never be unexpectedly distorted or broken by future template edits.
@@ -1060,7 +1063,7 @@ export default function StudioClient({
       {editorMode === "visual" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Canvas Tools Toolbar */}
-          <div className="lg:col-span-12 flex items-center justify-between p-3 bg-white dark:bg-[#181B1E] rounded-2xl border border-[#E5E7EA] dark:border-[#2C3136] shadow-sm flex-wrap gap-3">
+          <div className="lg:col-span-12 flex items-center justify-between p-3 bg-white  rounded-xl border border-[#E5E7E9]  shadow-sm flex-wrap gap-3">
             <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
@@ -1112,12 +1115,12 @@ export default function StudioClient({
             </div>
 
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1.5 text-xs text-[#656B73] dark:text-[#8E95A0] cursor-pointer">
+              <label className="flex items-center gap-1.5 text-xs text-[#858B93]  cursor-pointer">
                 <input
                   type="checkbox"
                   checked={showSafeMargins}
                   onChange={(e) => setShowSafeMargins(e.target.checked)}
-                  className="rounded border-[#E5E7EA] dark:border-[#2C3136]"
+                  className="rounded border-[#E5E7E9] "
                 />
                 <span>Safe Print Margins</span>
               </label>
@@ -1148,7 +1151,7 @@ export default function StudioClient({
 
           {/* Element Inspector Panel */}
           <div className="lg:col-span-4 space-y-4">
-            <Card className="rounded-[20px] border-[#E5E7EA] dark:border-[#2C3136] shadow-sm">
+            <Card className="rounded-xl border-[#E5E7E9]  shadow-sm">
               <CardHeader className="pb-3 pt-5 px-5">
                 <CardTitle className="text-sm font-bold flex items-center justify-between">
                   <span>Element Properties</span>
@@ -1163,7 +1166,7 @@ export default function StudioClient({
                 {selectedElement ? (
                   <>
                     <div>
-                      <span className="text-[11px] font-semibold text-[#656B73] dark:text-[#8E95A0] uppercase block mb-1">
+                      <span className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1">
                         Bound Variable
                       </span>
                       <span className="font-mono text-xs text-amber-600 dark:text-amber-400 font-bold">
@@ -1173,7 +1176,7 @@ export default function StudioClient({
 
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="text-[11px] text-[#656B73] dark:text-[#8E95A0] block mb-1">
+                        <label className="text-[11px] text-[#858B93]  block mb-1">
                           X Position (px)
                         </label>
                         <input
@@ -1188,12 +1191,12 @@ export default function StudioClient({
                               ),
                             }));
                           }}
-                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7EA] dark:border-[#2C3136] bg-[#F9FAFB] dark:bg-[#15171A]"
+                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A]"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] text-[#656B73] dark:text-[#8E95A0] block mb-1">
+                        <label className="text-[11px] text-[#858B93]  block mb-1">
                           Y Position (px)
                         </label>
                         <input
@@ -1208,13 +1211,13 @@ export default function StudioClient({
                               ),
                             }));
                           }}
-                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7EA] dark:border-[#2C3136] bg-[#F9FAFB] dark:bg-[#15171A]"
+                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A]"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#656B73] dark:text-[#8E95A0] block mb-1">
+                      <label className="text-[11px] text-[#858B93]  block mb-1">
                         Font Size (pt)
                       </label>
                       <input
@@ -1231,12 +1234,12 @@ export default function StudioClient({
                             ),
                           }));
                         }}
-                        className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7EA] dark:border-[#2C3136] bg-[#F9FAFB] dark:bg-[#15171A]"
+                        className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A]"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#656B73] dark:text-[#8E95A0] block mb-1">
+                      <label className="text-[11px] text-[#858B93]  block mb-1">
                         Text Color
                       </label>
                       <div className="flex items-center gap-2">
@@ -1252,7 +1255,7 @@ export default function StudioClient({
                               ),
                             }));
                           }}
-                          className="h-7 w-10 rounded border border-[#E5E7EA] dark:border-[#2C3136] cursor-pointer bg-transparent"
+                          className="h-7 w-10 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
                         />
                         <span className="font-mono text-xs">{selectedElement.color || "#F3F4F6"}</span>
                       </div>
@@ -1272,13 +1275,13 @@ export default function StudioClient({
       {/* Omnichannel Preview Mode */}
       {editorMode === "preview" && (
         <div className="space-y-6">
-          <div className="flex items-center gap-2 border-b border-[#E5E7EA] dark:border-[#2C3136] pb-3">
+          <div className="flex items-center gap-2 border-b border-[#E5E7E9]  pb-3">
             <button
               onClick={() => setPreviewTab("ticket")}
               className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 ${
                 previewTab === "ticket"
-                  ? "bg-[#17191C] text-white dark:bg-[#25292E]"
-                  : "text-[#656B73] dark:text-[#8E95A0]"
+                  ? "bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] "
+                  : "text-[#858B93] "
               }`}
             >
               <Ticket className="h-4 w-4" />
@@ -1288,8 +1291,8 @@ export default function StudioClient({
               onClick={() => setPreviewTab("email")}
               className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 ${
                 previewTab === "email"
-                  ? "bg-[#17191C] text-white dark:bg-[#25292E]"
-                  : "text-[#656B73] dark:text-[#8E95A0]"
+                  ? "bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] "
+                  : "text-[#858B93] "
               }`}
             >
               <Mail className="h-4 w-4" />
@@ -1299,8 +1302,8 @@ export default function StudioClient({
               onClick={() => setPreviewTab("print")}
               className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 ${
                 previewTab === "print"
-                  ? "bg-[#17191C] text-white dark:bg-[#25292E]"
-                  : "text-[#656B73] dark:text-[#8E95A0]"
+                  ? "bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] "
+                  : "text-[#858B93] "
               }`}
             >
               <Printer className="h-4 w-4" />
@@ -1309,23 +1312,23 @@ export default function StudioClient({
           </div>
 
           {previewTab === "ticket" && (
-            <div className="p-8 bg-[#0E1012] rounded-3xl border border-[#23272C] flex items-center justify-center">
+            <div className="p-8 bg-[#F8F9FA] rounded-3xl border border-[#23272C] flex items-center justify-center">
               <RenderedTicketCard design={design} showSyntheticData={true} />
             </div>
           )}
 
           {previewTab === "email" && (
-            <div className="max-w-[600px] mx-auto p-6 bg-white dark:bg-[#181B1E] rounded-3xl border border-[#E5E7EA] dark:border-[#2C3136] shadow-sm space-y-4">
-              <div className="border-b border-[#E5E7EA] dark:border-[#2C3136] pb-3 text-xs text-[#656B73] dark:text-[#8E95A0]">
+            <div className="max-w-[600px] mx-auto p-6 bg-white  rounded-3xl border border-[#E5E7E9]  shadow-sm space-y-4">
+              <div className="border-b border-[#E5E7E9]  pb-3 text-xs text-[#858B93] ">
                 <strong>Subject:</strong> Your Pass for Sample Event Summit
               </div>
               <p className="text-sm">
                 Hello <strong>Sample Attendee</strong>,
               </p>
-              <p className="text-xs text-[#656B73] dark:text-[#8E95A0] leading-relaxed">
+              <p className="text-xs text-[#858B93]  leading-relaxed">
                 Your registration is confirmed. Tap the button below when arriving at the venue to present your entry pass.
               </p>
-              <div className="p-4 rounded-2xl bg-[#111315] text-white text-center space-y-2">
+              <div className="p-4 rounded-xl bg-[#111315] text-white text-center space-y-2">
                 <span className="text-[10px] font-bold tracking-wider text-amber-400 uppercase">
                   ENTRY PASS
                 </span>
@@ -1346,10 +1349,10 @@ export default function StudioClient({
 
           {previewTab === "print" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-white dark:bg-[#181B1E] rounded-2xl border border-[#E5E7EA] dark:border-[#2C3136]">
+              <div className="flex items-center justify-between p-4 bg-white  rounded-xl border border-[#E5E7E9] ">
                 <div>
-                  <div className="font-bold text-sm text-[#17191C] dark:text-[#F1F2F3]">Printable Landscape Admission Pass</div>
-                  <div className="text-xs text-[#656B73] dark:text-[#8E95A0]">Landscape A4/letter ready. Zero surrounding UI or admin controls when printed.</div>
+                  <div className="font-bold text-sm text-[#34383D] ">Printable Landscape Admission Pass</div>
+                  <div className="text-xs text-[#858B93] ">Landscape A4/letter ready. Zero surrounding UI or admin controls when printed.</div>
                 </div>
                 <Button
                   onClick={() => window.print()}
@@ -1362,7 +1365,7 @@ export default function StudioClient({
                 </Button>
               </div>
 
-              <div className="p-8 bg-[#0E1012] rounded-3xl border border-[#23272C] flex items-center justify-center overflow-x-auto">
+              <div className="p-8 bg-[#F8F9FA] rounded-3xl border border-[#23272C] flex items-center justify-center overflow-x-auto">
                 <RenderedTicketCard design={design} showSyntheticData={true} />
               </div>
             </div>
@@ -1428,7 +1431,7 @@ function InteractiveCanvas({
         backgroundColor: design.theme.background,
         borderColor: design.theme.borderColor,
       }}
-      className="relative rounded-2xl border shadow-2xl overflow-hidden select-none"
+      className="relative rounded-xl border shadow-2xl overflow-hidden select-none"
     >
       {/* Background Image Layer if present */}
       {design.backgroundImage?.url && (
@@ -1513,7 +1516,7 @@ function InteractiveCanvas({
           <div className="w-24 h-24 bg-white rounded-lg flex items-center justify-center p-1">
             <QrCode className="h-20 w-20 text-black" />
           </div>
-          <span className="text-[9px] text-[#8A9098] font-mono">
+          <span className="text-[9px] text-[#858B93] font-mono">
             SECURE QR CODE
           </span>
         </div>

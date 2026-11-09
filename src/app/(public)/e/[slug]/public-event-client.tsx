@@ -474,9 +474,33 @@ export default function PublicEventClient({
     URL.revokeObjectURL(url);
   };
 
-  const isRegistrationClosed = event.registrationState === "closed" || event.lifecycle === "completed";
+  const isDeadlinePassed = new Date(event.endDate || event.startDate).getTime() < Date.now();
+  const isRegistrationClosed = event.registrationState === "closed" || event.lifecycle === "completed" || isDeadlinePassed;
   const isRegistrationFull = event.registrationState === "full" || event.registeredCount >= event.capacity;
   const isRegistrationUpcoming = event.registrationState === "upcoming" || event.lifecycle === "draft";
+  const isRegistrationOpen = !isRegistrationClosed && !isRegistrationFull && !isRegistrationUpcoming;
+
+  const registrationStatusBadge = isRegistrationFull ? (
+    <span className="rounded-full bg-[#17191C] text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+      Sold Out
+    </span>
+  ) : isDeadlinePassed ? (
+    <span className="rounded-full bg-[#34383D] text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+      Deadline Passed
+    </span>
+  ) : isRegistrationClosed ? (
+    <span className="rounded-full bg-[#8A9098] text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+      Closed
+    </span>
+  ) : isRegistrationUpcoming ? (
+    <span className="rounded-full bg-[#AEB3BA] text-[#17191C] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+      Opening Soon
+    </span>
+  ) : (
+    <span className="rounded-full bg-emerald-600 text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+      Open
+    </span>
+  );
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto pb-16">
@@ -500,6 +524,7 @@ export default function PublicEventClient({
             <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-bold text-white uppercase tracking-wider backdrop-blur-md border border-white/20">
               {event.lifecycle}
             </span>
+            {registrationStatusBadge}
           </div>
 
           {/* Bottom Title & Subtitle */}
@@ -516,8 +541,8 @@ export default function PublicEventClient({
           </div>
         </div>
 
-        {/* Operational Metadata Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#F4F5F6] dark:divide-[#262A2E] border-b border-[#F4F5F6] dark:border-[#262A2E] bg-[#F9FAFB] dark:bg-[#151719] text-xs text-[#656B73] dark:text-[#8A9098]">
+        {/* Operational Metadata Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#F4F5F6] dark:divide-[#262A2E] border-b border-[#F4F5F6] dark:border-[#262A2E] bg-[#F9FAFB] dark:bg-[#151719] text-xs text-[#656B73] dark:text-[#8A9098]">
           <div className="p-4 flex items-center gap-3">
             <Calendar className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
             <div>
@@ -528,20 +553,27 @@ export default function PublicEventClient({
           <div className="p-4 flex items-center gap-3">
             <MapPin className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
             <div>
-              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Venue Mode</div>
+              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Venue & Mode</div>
               <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3] line-clamp-1">
                 {event.venue} ({event.venueMode})
               </div>
             </div>
           </div>
           <div className="p-4 flex items-center gap-3">
+            <Clock className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
+            <div>
+              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Registration Closes</div>
+              <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">{formatDate(event.endDate || event.startDate)}</div>
+            </div>
+          </div>
+          <div className="p-4 flex items-center gap-3">
             <Users className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
             <div>
-              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Participation Format</div>
+              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Format & Fee</div>
               <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">
                 {event.hasTeams
-                  ? `Team (${event.minTeamSize || 2}-${event.maxTeamSize || 4} Members)`
-                  : "Individual Attendance"}
+                  ? `Team (${event.minTeamSize || 2}-${event.maxTeamSize || 4}) • Free`
+                  : "Individual • Free"}
               </div>
             </div>
           </div>
@@ -554,6 +586,26 @@ export default function PublicEventClient({
             <p className="mt-2 text-xs sm:text-sm text-[#656B73] dark:text-[#8A9098] leading-relaxed">
               {event.description}
             </p>
+          </div>
+
+          {/* Eligibility & Admission Criteria */}
+          <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div>
+              <span className="text-[10px] font-bold uppercase text-[#8A9098] tracking-wider">Eligibility Criteria</span>
+              <p className="font-semibold text-[#17191C] dark:text-[#F1F2F3] mt-0.5">
+                {event.hasTeams
+                  ? `Open to eligible teams of ${event.minTeamSize || 2} to ${event.maxTeamSize || 4} participants.`
+                  : "Open to all registered attendees and community members."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-[#17191C] text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                Free Admission
+              </span>
+              <span className="rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] px-3 py-1 text-xs font-semibold text-[#34383D] dark:text-[#E8EAED]">
+                Capacity: {event.capacity} Attendees
+              </span>
+            </div>
           </div>
 
           {/* If Event has Stages / Rounds, Display Agenda Schedule */}
@@ -577,6 +629,51 @@ export default function PublicEventClient({
               </div>
             </div>
           )}
+
+          {/* Organized by Section */}
+          <div className="border-t border-[#F0F1F2] dark:border-[#262A2E] pt-6 space-y-3">
+            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+              Organized by
+            </h3>
+            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <p className="font-bold text-[#17191C] dark:text-[#F1F2F3]">SketchHUB Event Operations</p>
+                <p className="text-[#656B73] dark:text-[#8A9098] mt-0.5">Official Host & Event Management Team</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                {event.contactEmail && (
+                  <a
+                    href={`mailto:${event.contactEmail}`}
+                    className="inline-flex items-center gap-1.5 text-[#34383D] dark:text-[#E8EAED] font-semibold hover:underline"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    <span>{event.contactEmail}</span>
+                  </a>
+                )}
+                {event.contactPhone && (
+                  <a
+                    href={`tel:${event.contactPhone}`}
+                    className="inline-flex items-center gap-1.5 text-[#34383D] dark:text-[#E8EAED] font-semibold hover:underline"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>{event.contactPhone}</span>
+                  </a>
+                )}
+                {event.communityLink && (
+                  <a
+                    href={event.communityLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[#34383D] dark:text-[#E8EAED] font-semibold hover:underline"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>Community Channel</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

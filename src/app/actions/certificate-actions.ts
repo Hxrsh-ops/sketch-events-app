@@ -95,3 +95,71 @@ export async function batchIssueCertificatesAction(
     };
   }
 }
+
+const IndividualIssueSchema = z.object({
+  participantId: z.string().min(1, "Participant ID is required"),
+  eventId: z.string().optional(),
+});
+
+/**
+ * Server Action: Issue an individual digital certificate to a checked-in attendee
+ */
+export async function issueIndividualCertificateAction(
+  rawData: unknown
+): Promise<ActionResult<CertificateRecord>> {
+  try {
+    const session = await verifyAdminSession();
+    if (!session.isAuthenticated || !session.user) {
+      return {
+        success: false,
+        error: "UNAUTHORIZED",
+        message: "You must be signed in as an administrator to issue certificates.",
+      };
+    }
+
+    if (!hasPermission(session.user.role, "certificates:issue")) {
+      return {
+        success: false,
+        error: "FORBIDDEN",
+        message: "You do not have permission to issue certificates.",
+      };
+    }
+
+    const parseResult = IndividualIssueSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return {
+        success: false,
+        error: "VALIDATION_FAILED",
+        message: parseResult.error.issues[0]?.message || "Invalid participant ID.",
+      };
+    }
+
+    const { participantId, eventId } = parseResult.data;
+
+    const cert = await SketchRepository.issueIndividualCertificate({
+      participantId,
+      actorName: session.user.name,
+      actorEmail: session.user.email,
+    });
+
+    revalidatePath("/certificates");
+    revalidatePath("/communications");
+    revalidatePath("/participants");
+    if (eventId) {
+      revalidatePath(`/events/${eventId}`);
+    }
+
+    return {
+      success: true,
+      data: cert,
+      message: `Successfully issued certificate ${cert.certificateNumber} to ${cert.recipientName}.`,
+    };
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Internal server error";
+    return {
+      success: false,
+      error: "ISSUANCE_FAILED",
+      message: errorMessage || "Failed to issue certificate.",
+    };
+  }
+}

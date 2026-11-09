@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -22,6 +23,10 @@ import {
   Play,
   CheckCheck,
   ShieldAlert,
+  Copy,
+  Check,
+  Share2,
+  Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -33,7 +38,7 @@ import { CustomDateTimePicker } from "@/components/ui/custom-datetime-picker";
 import { SlideOver } from "@/components/ui/slide-over";
 import { formatDate } from "@/lib/utils";
 import { Participant, EventItem, AdminRole, Round } from "@/types";
-import { updateEventAction, setEventLifecycleAction } from "@/app/actions/event-actions";
+import { updateEventAction, setEventLifecycleAction, deleteEventAction } from "@/app/actions/event-actions";
 import { toggleAttendanceAction } from "@/app/actions/participant-actions";
 
 interface EventDetailClientProps {
@@ -107,6 +112,67 @@ export default function EventDetailClient({
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastBody, setBroadcastBody] = useState("");
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Delete modal state
+  const router = useRouter();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteEvent = async () => {
+    setIsDeletingEvent(true);
+    setDeleteError(null);
+
+    try {
+      const res = await deleteEventAction({ id: event.id });
+      if (!res.success) {
+        setDeleteError(res.message);
+        setIsDeletingEvent(false);
+        return;
+      }
+      setIsDeleteModalOpen(false);
+      router.push("/events");
+    } catch (err: any) {
+      setDeleteError(err.message || "Failed to delete event.");
+      setIsDeletingEvent(false);
+    }
+  };
+
+  const handleCopyEventLink = async () => {
+    const publicUrl = `${window.location.origin}/e/${event.slug || event.id}`;
+
+    // Native mobile share if supported
+    if (typeof navigator !== "undefined" && navigator.share && /mobile|android|iphone/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: `Check out ${event.title} on SketchHUB`,
+          url: publicUrl,
+        });
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+        return;
+      } catch {
+        // User cancelled or share failed; proceed to clipboard copy
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch {
+      const input = document.createElement("input");
+      input.value = publicUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const percentFilled = Math.min(
     100,
@@ -293,7 +359,7 @@ export default function EventDetailClient({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <Link
           href="/events"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3] transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Event Directory</span>
@@ -333,7 +399,7 @@ export default function EventDetailClient({
               size="sm"
               disabled={isChangingLifecycle}
               onClick={() => handleSetLifecycle("completed")}
-              className="rounded-full border-[#E5E7EA] dark:border-[#30353A] gap-1.5 text-xs font-semibold h-9 px-3.5"
+              className="rounded-full border-[#E5E7E9]  gap-1.5 text-xs font-semibold h-9 px-3.5"
             >
               {isChangingLifecycle ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
               <span>Complete Event</span>
@@ -346,7 +412,7 @@ export default function EventDetailClient({
               size="sm"
               disabled={isChangingLifecycle}
               onClick={() => handleSetLifecycle("archived")}
-              className="rounded-full border-[#E5E7EA] dark:border-[#30353A] gap-1.5 text-xs font-semibold h-9 px-3.5 text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+              className="rounded-full border-[#E5E7E9]  gap-1.5 text-xs font-semibold h-9 px-3.5 text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
             >
               {isChangingLifecycle ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
               <span>Archive</span>
@@ -380,28 +446,68 @@ export default function EventDetailClient({
               setEditActionError(null);
               setIsEditModalOpen(true);
             }}
-            className="rounded-full border-[#E5E7EA] dark:border-[#30353A] gap-1.5 text-xs font-semibold h-9 px-3.5"
+            className="rounded-full border-[#E5E7E9]  gap-1.5 text-xs font-semibold h-9 px-3.5"
           >
             <Edit3 className="h-3.5 w-3.5" />
             <span>Edit Event</span>
           </Button>
 
-          {/* Public Page Link (Guarded: only published/live) */}
+          {/* Delete Event Button (Master Admin only) */}
+          {currentUserRole === "master_admin" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDeleteError(null);
+                setIsDeleteModalOpen(true);
+              }}
+              className="rounded-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 gap-1.5 text-xs font-semibold h-9 px-3.5 transition-colors"
+              title="Permanently delete this event"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Delete Event</span>
+            </Button>
+          )}
+
+          {/* Public Page & Copy Link Actions (Guarded: only published/live) */}
           {event.lifecycle === "published" || event.lifecycle === "live" ? (
-            <Link href={`/e/${event.slug}`} target="_blank">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-full border-[#E5E7EA] dark:border-[#30353A] gap-1.5 text-xs font-semibold h-9 px-3.5"
+                onClick={handleCopyEventLink}
+                className="rounded-full border-[#E5E7E9] gap-1.5 text-xs font-semibold h-9 px-3.5 bg-white hover:bg-[#F2F3F5] transition-colors"
+                title="Copy public event link to clipboard"
               >
-                <span>Public Page</span>
-                <ArrowUpRight className="h-3.5 w-3.5" />
+                {copiedLink ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-semibold">Link Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5 text-[#656B73]" />
+                    <span>Copy Event Link</span>
+                  </>
+                )}
               </Button>
-            </Link>
+
+              <Link href={`/e/${event.slug || event.id}`} target="_blank">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full border-[#E5E7E9] gap-1.5 text-xs font-semibold h-9 px-3.5 bg-white hover:bg-[#F2F3F5]"
+                  title="Open public event page in new tab"
+                >
+                  <span>Public Page</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
           ) : (
             <span
               title="Draft events cannot be accessed publicly until published"
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#E5E7EA] dark:border-[#30353A] px-3 h-9 text-[11px] font-semibold text-[#8A9098] dark:text-[#7D858F] cursor-not-allowed"
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#E5E7E9] px-3 h-9 text-[11px] font-semibold text-[#858B93] cursor-not-allowed"
             >
               Public Page (Unpublished)
             </span>
@@ -424,7 +530,7 @@ export default function EventDetailClient({
       {lifecycleFeedback && (
         <div
           role="alert"
-          className={`rounded-2xl p-3.5 text-xs font-semibold border flex items-center justify-between ${
+          className={`rounded-xl p-3.5 text-xs font-semibold border flex items-center justify-between ${
             lifecycleFeedback.type === "success"
               ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
               : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200"
@@ -438,7 +544,7 @@ export default function EventDetailClient({
       )}
 
       {/* Main Event Header Banner Card */}
-      <div className="overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[#E5E7E9]  bg-white shadow-sm">
         <div className="relative min-h-[200px] sm:min-h-[260px] w-full overflow-hidden bg-[#17191C]">
           <img
             src={event.heroImage || event.posterUrl || "/sketch-logo.png"}
@@ -449,7 +555,7 @@ export default function EventDetailClient({
           <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/40 to-transparent" />
 
           <div className="absolute top-4 left-4 flex gap-2">
-            <Badge className="bg-white/95 text-[#17191C] font-bold text-[10px] backdrop-blur-md">
+            <Badge className="bg-white/95 text-[#34383D] font-bold text-[10px] backdrop-blur-md">
               {event.category}
             </Badge>
             <span className="rounded-full bg-black/60 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-md border border-white/20">
@@ -477,32 +583,32 @@ export default function EventDetailClient({
         </div>
 
         {/* Quick Stats Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#F4F5F6] dark:divide-[#262A2E] border-b border-[#F4F5F6] dark:border-[#262A2E] bg-[#F9FAFB] dark:bg-[#151719] text-xs">
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#F4F5F6] dark:divide-[#262A2E] border-b border-[#F4F5F6]  bg-[#F9FAFB]  text-xs">
           <div className="p-4 space-y-1">
-            <span className="text-[#8A9098] dark:text-[#656B73] text-[10px] font-bold uppercase">Schedule</span>
-            <div className="font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-[#8A9098]" />
+            <span className="text-[#858B93]  text-[10px] font-bold uppercase">Schedule</span>
+            <div className="font-bold text-[#34383D]  flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-[#858B93]" />
               <span className="truncate">{formatDate(event.startDate)}</span>
             </div>
           </div>
           <div className="p-4 space-y-1">
-            <span className="text-[#8A9098] dark:text-[#656B73] text-[10px] font-bold uppercase">Venue</span>
-            <div className="font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-[#8A9098]" />
+            <span className="text-[#858B93]  text-[10px] font-bold uppercase">Venue</span>
+            <div className="font-bold text-[#34383D]  flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-[#858B93]" />
               <span className="truncate">{event.venue}</span>
             </div>
           </div>
           <div className="p-4 space-y-1">
-            <span className="text-[#8A9098] dark:text-[#656B73] text-[10px] font-bold uppercase">Capacity Meter</span>
-            <div className="font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-[#8A9098]" />
+            <span className="text-[#858B93]  text-[10px] font-bold uppercase">Capacity Meter</span>
+            <div className="font-bold text-[#34383D]  flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-[#858B93]" />
               <span>{event.registeredCount} / {event.capacity} ({percentFilled}%)</span>
             </div>
           </div>
           <div className="p-4 space-y-1">
-            <span className="text-[#8A9098] dark:text-[#656B73] text-[10px] font-bold uppercase">Desk Check-in</span>
-            <div className="font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[#25292F] dark:text-[#E8EAED]" />
+            <span className="text-[#858B93]  text-[10px] font-bold uppercase">Desk Check-in</span>
+            <div className="font-bold text-[#34383D]  flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-[#25292F] " />
               <span>{attendees.filter((a) => a.attendanceStatus === "checked_in").length} Checked In</span>
             </div>
           </div>
@@ -510,7 +616,7 @@ export default function EventDetailClient({
       </div>
 
       {/* Management Navigation Tabs */}
-      <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3 shadow-sm overflow-x-auto">
+      <div className="rounded-xl border border-[#E5E7E9]  bg-white p-3 shadow-sm overflow-x-auto">
         <AnimatedTabs
           tabs={MANAGEMENT_TABS}
           activeTab={activeTab}
@@ -533,50 +639,50 @@ export default function EventDetailClient({
           >
             {/* Left 7 Cols: Narrative & Configuration */}
             <div className="lg:col-span-7 space-y-5">
-              <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm space-y-4">
-                <h2 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">Event Specification</h2>
-                <p className="text-xs text-[#656B73] dark:text-[#989EA7] leading-relaxed">
+              <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-sm space-y-4">
+                <h2 className="text-sm font-bold text-[#34383D] ">Event Specification</h2>
+                <p className="text-xs text-[#858B93]  leading-relaxed">
                   {event.description || "No detailed description provided."}
                 </p>
 
-                <div className="pt-3 border-t border-[#F4F5F6] dark:border-[#262A2E] grid grid-cols-2 gap-3 text-xs">
+                <div className="pt-3 border-t border-[#F4F5F6]  grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <span className="text-[#8A9098] dark:text-[#656B73] block text-[10px] uppercase font-bold">Participation Mode</span>
-                    <p className="font-semibold text-[#17191C] dark:text-[#F1F2F3] capitalize">
+                    <span className="text-[#858B93]  block text-[10px] uppercase font-bold">Participation Mode</span>
+                    <p className="font-semibold text-[#34383D]  capitalize">
                       {event.hasTeams ? `Team-Based (${event.minTeamSize ?? 2}-${event.maxTeamSize ?? 4} Members)` : "Individual Registrations"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[#8A9098] dark:text-[#656B73] block text-[10px] uppercase font-bold">Competition Stages</span>
-                    <p className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">{event.hasRounds ? "Multi-Stage Progression Active" : "Single Unified Session"}</p>
+                    <span className="text-[#858B93]  block text-[10px] uppercase font-bold">Competition Stages</span>
+                    <p className="font-semibold text-[#34383D] ">{event.hasRounds ? "Multi-Stage Progression Active" : "Single Unified Session"}</p>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-[#F4F5F6] dark:border-[#262A2E] grid grid-cols-2 gap-3 text-xs">
+                <div className="pt-3 border-t border-[#F4F5F6]  grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <span className="text-[#8A9098] dark:text-[#656B73] block text-[10px] uppercase font-bold">Venue Mode</span>
-                    <p className="font-semibold text-[#17191C] dark:text-[#F1F2F3] capitalize">{event.venueMode}</p>
+                    <span className="text-[#858B93]  block text-[10px] uppercase font-bold">Venue Mode</span>
+                    <p className="font-semibold text-[#34383D]  capitalize">{event.venueMode}</p>
                   </div>
                   <div>
-                    <span className="text-[#8A9098] dark:text-[#656B73] block text-[10px] uppercase font-bold">Public URL Slug</span>
-                    <p className="font-mono text-xs text-[#17191C] dark:text-[#F1F2F3] truncate">/e/{event.slug}</p>
+                    <span className="text-[#858B93]  block text-[10px] uppercase font-bold">Public URL Slug</span>
+                    <p className="font-mono text-xs text-[#34383D]  truncate">/e/{event.slug}</p>
                   </div>
                 </div>
               </div>
 
               {/* Registration Capacity Progress Bar */}
-              <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm space-y-3">
+              <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">Registration Velocity</h3>
-                    <p className="text-xs text-[#656B73] dark:text-[#989EA7]">
+                    <h3 className="text-sm font-bold text-[#34383D] ">Registration Velocity</h3>
+                    <p className="text-xs text-[#858B93] ">
                       {Math.max(0, event.capacity - event.registeredCount)} seats remaining until automatic closing.
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">{percentFilled}% Filled</span>
+                  <span className="text-xs font-bold text-[#34383D] ">{percentFilled}% Filled</span>
                 </div>
 
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#F0F1F2] dark:bg-[#151719]">
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#EAECEF] ">
                   <div
                     style={{ width: `${percentFilled}%` }}
                     className={`h-full rounded-full transition-all duration-500 ${
@@ -589,20 +695,20 @@ export default function EventDetailClient({
 
             {/* Right 5 Cols: Operational Checklist & Fast CTAs */}
             <div className="lg:col-span-5 space-y-5">
-              <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">Operational Checklist</h3>
+              <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-sm space-y-4">
+                <h3 className="text-sm font-bold text-[#34383D] ">Operational Checklist</h3>
                 <div className="space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9FAFB] dark:bg-[#151719] border border-[#F4F5F6] dark:border-[#262A2E]">
-                    <span className="font-medium text-[#17191C] dark:text-[#F1F2F3]">Server-Side Invariants Active</span>
-                    <CheckCircle2 className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9FAFB]  border border-[#F4F5F6] ">
+                    <span className="font-medium text-[#34383D] ">Server-Side Invariants Active</span>
+                    <CheckCircle2 className="h-4 w-4 text-[#25292F] " />
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9FAFB] dark:bg-[#151719] border border-[#F4F5F6] dark:border-[#262A2E]">
-                    <span className="font-medium text-[#17191C] dark:text-[#F1F2F3]">Check-in Terminal Configured</span>
-                    <CheckCircle2 className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9FAFB]  border border-[#F4F5F6] ">
+                    <span className="font-medium text-[#34383D] ">Check-in Terminal Configured</span>
+                    <CheckCircle2 className="h-4 w-4 text-[#25292F] " />
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9FAFB] dark:bg-[#151719] border border-[#F4F5F6] dark:border-[#262A2E]">
-                    <span className="font-medium text-[#17191C] dark:text-[#F1F2F3]">Attendance Ledger Active</span>
-                    <CheckCircle2 className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9FAFB]  border border-[#F4F5F6] ">
+                    <span className="font-medium text-[#34383D] ">Attendance Ledger Active</span>
+                    <CheckCircle2 className="h-4 w-4 text-[#25292F] " />
                   </div>
                 </div>
 
@@ -630,7 +736,7 @@ export default function EventDetailClient({
             className="space-y-4"
           >
             {/* Search & Filter Strip */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-[#E5E7E9]  bg-white p-3.5 shadow-sm">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -639,7 +745,7 @@ export default function EventDetailClient({
                   className={`rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
                     registrationStatusFilter === "all"
                       ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                      : "bg-[#F4F5F6] dark:bg-[#151719] text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                      : "bg-[#F6F7F8]  text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                   }`}
                 >
                   All ({attendees.length})
@@ -651,7 +757,7 @@ export default function EventDetailClient({
                   className={`rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
                     registrationStatusFilter === "checked_in"
                       ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                      : "bg-[#F4F5F6] dark:bg-[#151719] text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                      : "bg-[#F6F7F8]  text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                   }`}
                 >
                   Checked In ({attendees.filter((a) => a.attendanceStatus === "checked_in").length})
@@ -663,7 +769,7 @@ export default function EventDetailClient({
                   className={`rounded-full px-3 py-1 text-xs font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] ${
                     registrationStatusFilter === "pending"
                       ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]"
-                      : "bg-[#F4F5F6] dark:bg-[#151719] text-[#656B73] dark:text-[#989EA7] hover:text-[#17191C] dark:hover:text-[#F1F2F3]"
+                      : "bg-[#F6F7F8]  text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                   }`}
                 >
                   Pending ({attendees.filter((a) => a.attendanceStatus === "not_checked_in").length})
@@ -671,22 +777,22 @@ export default function EventDetailClient({
               </div>
 
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098] dark:text-[#656B73]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#858B93] " />
                 <input
                   type="text"
                   placeholder="Search attendees..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] pl-8 pr-3 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] dark:placeholder:text-[#656B73] focus:bg-white dark:focus:bg-[#1B1E21] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+                  className="h-8 w-full rounded-full border border-[#E5E7E9]  bg-[#F6F7F8]  pl-8 pr-3 text-xs text-[#34383D]  placeholder:text-[#858B93] dark:placeholder:text-[#858B93] focus:bg-white dark:focus:bg-[#1B1E21] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
                 />
               </div>
             </div>
 
             {/* Registrations Data Table */}
-            <div className="overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-[#E5E7E9]  bg-white shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="border-b border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] text-[11px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+                  <thead className="border-b border-[#E5E7E9]  bg-[#F9FAFB]  text-[11px] font-semibold text-[#858B93] ">
                     <tr>
                       <th className="py-3.5 pl-5 pr-4">Attendee</th>
                       <th className="px-4 py-3.5">Registration ID</th>
@@ -699,7 +805,7 @@ export default function EventDetailClient({
                   <tbody className="divide-y divide-[#F4F5F6] dark:divide-[#262A2E]">
                     {filteredAttendees.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-10 text-center text-[#8A9098] dark:text-[#7D858F]">
+                        <td colSpan={6} className="py-10 text-center text-[#858B93] ">
                           No attendee registrations match your query.
                         </td>
                       </tr>
@@ -720,32 +826,32 @@ export default function EventDetailClient({
                                 setSelectedParticipant(p);
                               }
                             }}
-                            className="group cursor-pointer hover:bg-[#F4F5F6] dark:hover:bg-[#22262A] transition-colors focus-visible:outline-none focus-visible:bg-[#F4F5F6] dark:focus-visible:bg-[#22262A] focus-visible:ring-1 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
+                            className="group cursor-pointer hover:bg-[#F6F7F8] dark:hover:bg-[#22262A] transition-colors focus-visible:outline-none focus-visible:bg-[#F6F7F8] dark:focus-visible:bg-[#22262A] focus-visible:ring-1 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
                           >
                             <td className="py-3.5 pl-5 pr-4">
                               <div className="flex items-center gap-2.5">
-                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white dark:text-[#F1F2F3] font-bold text-[9px]">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white  font-bold text-[9px]">
                                   {p.name.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                  <p className="text-[15px] font-semibold text-[#17191C] dark:text-[#F1F2F3] group-hover:underline tracking-[-0.01em] leading-snug">{p.name}</p>
-                                  <p className="font-sans text-[12.5px] font-normal text-[#656B73] dark:text-[#989EA7] truncate max-w-[210px] mt-0.5" title={p.email}>{p.email}</p>
+                                  <p className="text-[15px] font-semibold text-[#34383D]  group-hover:underline tracking-[-0.01em] leading-snug">{p.name}</p>
+                                  <p className="font-sans text-[12.5px] font-normal text-[#858B93]  truncate max-w-[210px] mt-0.5" title={p.email}>{p.email}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3.5 font-mono text-[11px] tabular-nums tracking-tight text-[#7D858F] dark:text-[#8D949E] whitespace-nowrap select-all font-medium">
+                            <td className="px-4 py-3.5 font-mono text-[11px] tabular-nums tracking-tight text-[#7D858F]  whitespace-nowrap select-all font-medium">
                               {p.registrationId}
                             </td>
-                            <td className="px-4 py-3.5 text-[13px] text-[#656B73] dark:text-[#989EA7]">
+                            <td className="px-4 py-3.5 text-[13px] text-[#858B93] ">
                               {p.department || "General"} {p.year ? `(${p.year})` : ""}
                             </td>
-                            <td className="px-4 py-3.5 text-[13px] text-[#656B73] dark:text-[#989EA7]">
-                              {p.teamName || <span className="text-[#8A9098] dark:text-[#656B73] italic">Individual</span>}
+                            <td className="px-4 py-3.5 text-[13px] text-[#858B93] ">
+                              {p.teamName || <span className="text-[#858B93]  italic">Individual</span>}
                             </td>
                             <td className="px-4 py-3.5">
                               <span
                                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                                  isCheckedIn ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]" : "bg-[#F0F1F2] dark:bg-[#151719] text-[#656B73] dark:text-[#989EA7]"
+                                  isCheckedIn ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]" : "bg-[#EAECEF]  text-[#858B93] "
                                 }`}
                               >
                                 {isCheckedIn ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
@@ -758,7 +864,7 @@ export default function EventDetailClient({
                                 onClick={() => toggleCheckIn(p.id)}
                                 className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all ${
                                   isCheckedIn
-                                    ? "border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#989EA7] hover:bg-[#F4F5F6] dark:hover:bg-[#151719]"
+                                    ? "border border-[#E5E7E9]  bg-white text-[#858B93]  hover:bg-[#F6F7F8] dark:hover:bg-[#151719]"
                                     : "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] hover:bg-[#17191C] dark:hover:bg-white"
                                 }`}
                               >
@@ -786,16 +892,16 @@ export default function EventDetailClient({
             transition={{ duration: 0.15 }}
             className="max-w-2xl space-y-5"
           >
-            <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm space-y-5">
+            <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-sm space-y-5">
               <div>
-                <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">Adjust Event Capacity</h3>
-                <p className="text-xs text-[#656B73] dark:text-[#989EA7] mt-0.5">
+                <h3 className="text-base font-bold text-[#34383D] ">Adjust Event Capacity</h3>
+                <p className="text-xs text-[#858B93]  mt-0.5">
                   Update maximum available seats. When registrations reach capacity, public forms will display &quot;Registration Full&quot;.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block">
+                <label className="text-xs font-semibold text-[#34383D]  block">
                   Total Seat Limit
                 </label>
                 <div className="flex gap-3">
@@ -862,16 +968,16 @@ export default function EventDetailClient({
             className="space-y-5"
           >
             {event.hasRounds || rounds.length > 0 ? (
-              <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm space-y-6">
-                <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-3">
+              <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-3">
                   <div>
-                    <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">Competition Stages</h3>
-                    <p className="text-xs text-[#656B73] dark:text-[#989EA7]">
+                    <h3 className="text-base font-bold text-[#34383D] ">Competition Stages</h3>
+                    <p className="text-xs text-[#858B93] ">
                       Multi-round progression pipeline for {event.title}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-3 py-1 text-xs font-semibold text-[#25292F] dark:text-[#E8EAED]">
+                    <span className="rounded-full bg-[#EAECEF]  px-3 py-1 text-xs font-semibold text-[#25292F] ">
                       {rounds.filter((r) => r.status === "completed").length} of {rounds.length} Completed
                     </span>
                     <Link href="/rounds">
@@ -887,28 +993,28 @@ export default function EventDetailClient({
                     {rounds.map((round) => (
                       <div
                         key={round.id}
-                        className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-3"
+                        className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-3"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white dark:text-[#F1F2F3] text-xs font-bold">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#30353A] text-white  text-xs font-bold">
                             {round.order}
                           </span>
-                          <span className="text-[9px] font-bold uppercase rounded-full bg-[#EAECEF] dark:bg-[#22262A] px-2 py-0.5 text-[#17191C] dark:text-[#F1F2F3]">
+                          <span className="text-[9px] font-bold uppercase rounded-full bg-[#EAECEF]  px-2 py-0.5 text-[#34383D] ">
                             {round.status.replace("_", " ")}
                           </span>
                         </div>
-                        <h4 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">{round.name}</h4>
-                        <div className="text-[11px] text-[#656B73] dark:text-[#989EA7] space-y-1">
-                          <p>Venue: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.venue}</strong></p>
-                          <p>Eligible: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.eligibleCount}</strong></p>
-                          <p>Quota: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{round.advancedCount || 0} Teams Advance</strong></p>
+                        <h4 className="text-xs font-bold text-[#34383D] ">{round.name}</h4>
+                        <div className="text-[11px] text-[#858B93]  space-y-1">
+                          <p>Venue: <strong className="text-[#34383D] ">{round.venue}</strong></p>
+                          <p>Eligible: <strong className="text-[#34383D] ">{round.eligibleCount}</strong></p>
+                          <p>Quota: <strong className="text-[#34383D] ">{round.advancedCount || 0} Teams Advance</strong></p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-[#E5E7EA] dark:border-[#30353A] p-6 text-center space-y-2">
-                    <p className="text-xs text-[#656B73] dark:text-[#989EA7]">
+                  <div className="rounded-xl border border-dashed border-[#E5E7E9]  p-6 text-center space-y-2">
+                    <p className="text-xs text-[#858B93] ">
                       Multi-stage pipeline is enabled, but no rounds have been configured yet.
                     </p>
                     <Link href="/rounds">
@@ -920,10 +1026,10 @@ export default function EventDetailClient({
                 )}
               </div>
             ) : (
-              <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-8 text-center space-y-3">
-                <Trophy className="mx-auto h-8 w-8 text-[#8A9098] dark:text-[#656B73]" />
-                <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">Single-Stage Event</h3>
-                <p className="text-xs text-[#656B73] dark:text-[#989EA7] max-w-md mx-auto">
+              <div className="rounded-xl border border-[#E5E7E9]  bg-white p-8 text-center space-y-3">
+                <Trophy className="mx-auto h-8 w-8 text-[#858B93] " />
+                <h3 className="text-sm font-bold text-[#34383D] ">Single-Stage Event</h3>
+                <p className="text-xs text-[#858B93]  max-w-md mx-auto">
                   This event is configured as a single continuous session without progressive elimination rounds.
                 </p>
                 <Link href="/rounds">
@@ -946,34 +1052,34 @@ export default function EventDetailClient({
             transition={{ duration: 0.15 }}
             className="space-y-5 max-w-2xl"
           >
-            <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-sm space-y-4">
+            <div className="rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-sm space-y-4">
               <div>
-                <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">Event Communications & Re-dispatch</h3>
-                <p className="text-xs text-[#656B73] dark:text-[#989EA7]">
+                <h3 className="text-base font-bold text-[#34383D] ">Event Communications & Re-dispatch</h3>
+                <p className="text-xs text-[#858B93] ">
                   Trigger batch pass re-dispatches or compose operational updates to attendees.
                 </p>
               </div>
 
               <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719]">
+                <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB] ">
                   <div>
-                    <h4 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Batch QR Pass Re-dispatch</h4>
-                    <p className="text-[11px] text-[#656B73] dark:text-[#989EA7]">Re-send signed passes to all {event.registeredCount} confirmed attendees.</p>
+                    <h4 className="text-xs font-bold text-[#34383D] ">Batch QR Pass Re-dispatch</h4>
+                    <p className="text-[11px] text-[#858B93] ">Re-send signed passes to all {event.registeredCount} confirmed attendees.</p>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold"
+                    className="rounded-full border-[#E5E7E9]  text-xs font-semibold"
                     onClick={() => alert(`Batch pass re-dispatch simulated for ${event.registeredCount} attendees.`)}
                   >
                     Re-send Passes
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719]">
+                <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB] ">
                   <div>
-                    <h4 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">Operational Announcement</h4>
-                    <p className="text-[11px] text-[#656B73] dark:text-[#989EA7]">Send venue directions or schedule reminder.</p>
+                    <h4 className="text-xs font-bold text-[#34383D] ">Operational Announcement</h4>
+                    <p className="text-[11px] text-[#858B93] ">Send venue directions or schedule reminder.</p>
                   </div>
                   <Button
                     variant="charcoal"
@@ -999,34 +1105,34 @@ export default function EventDetailClient({
       >
         {selectedParticipant && (
           <div className="space-y-6">
-            <div className="overflow-hidden rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-5 text-center space-y-4">
-              <div className="flex justify-between items-center border-b border-[#E5E7EA] dark:border-[#30353A] pb-3 text-left">
+            <div className="overflow-hidden rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-5 text-center space-y-4">
+              <div className="flex justify-between items-center border-b border-[#E5E7E9]  pb-3 text-left">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73]">SKETCH PASS</span>
-                  <p className="font-mono text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">{selectedParticipant.registrationId}</p>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#858B93] ">SKETCH PASS</span>
+                  <p className="font-mono text-xs font-bold text-[#34383D] ">{selectedParticipant.registrationId}</p>
                 </div>
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase ${
-                    selectedParticipant.attendanceStatus === "checked_in" ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]" : "bg-[#EAECEF] dark:bg-[#22262A] text-[#17191C] dark:text-[#F1F2F3]"
+                    selectedParticipant.attendanceStatus === "checked_in" ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]" : "bg-[#EAECEF]  text-[#34383D] "
                   }`}
                 >
                   {selectedParticipant.attendanceStatus === "checked_in" ? "Verified" : "Valid Ticket"}
                 </span>
               </div>
 
-              <div className="my-3 flex flex-col items-center justify-center rounded-xl bg-white dark:bg-[#1B1E21] p-4 border border-[#E5E7EA] dark:border-[#30353A]">
+              <div className="my-3 flex flex-col items-center justify-center rounded-xl bg-white p-4 border border-[#E5E7E9] ">
                 <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-[#17191C] text-white">
                   <QrCode className="h-20 w-20 text-white" />
                 </div>
-                <span className="mt-2 font-mono text-[10px] text-[#8A9098] dark:text-[#656B73]">
+                <span className="mt-2 font-mono text-[10px] text-[#858B93] ">
                   {selectedParticipant.qrCredentialId}
                 </span>
               </div>
 
               <div className="space-y-0.5">
-                <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">{selectedParticipant.name}</h3>
-                <p className="text-xs text-[#656B73] dark:text-[#989EA7]">{selectedParticipant.email}</p>
-                <p className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+                <h3 className="text-sm font-bold text-[#34383D] ">{selectedParticipant.name}</h3>
+                <p className="text-xs text-[#858B93] ">{selectedParticipant.email}</p>
+                <p className="text-[11px] text-[#858B93] ">
                   {selectedParticipant.department || "General"} {selectedParticipant.year ? `• ${selectedParticipant.year}` : ""}
                 </p>
               </div>
@@ -1046,13 +1152,13 @@ export default function EventDetailClient({
       {/* Edit Event Information Dialog / Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-3">
-              <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">Edit Event Configuration</h3>
+          <div className="w-full max-w-lg rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-3">
+              <h3 className="text-base font-bold text-[#34383D] ">Edit Event Configuration</h3>
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="rounded-full p-1 text-[#656B73] dark:text-[#989EA7] hover:bg-[#F4F5F6] dark:hover:bg-[#151719]"
+                className="rounded-full p-1 text-[#858B93]  hover:bg-[#F6F7F8] dark:hover:bg-[#151719]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1066,7 +1172,7 @@ export default function EventDetailClient({
 
             <div className="space-y-3.5 text-xs max-h-[65vh] overflow-y-auto pr-1">
               <div>
-                <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Event Title *</label>
+                <label className="text-xs font-semibold text-[#34383D]  block mb-1">Event Title *</label>
                 <Input
                   value={editFormData.title}
                   onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
@@ -1089,7 +1195,7 @@ export default function EventDetailClient({
                 />
 
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Max Capacity</label>
+                  <label className="text-xs font-semibold text-[#34383D]  block mb-1">Max Capacity</label>
                   <Input
                     type="number"
                     value={editFormData.capacity}
@@ -1100,7 +1206,7 @@ export default function EventDetailClient({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Venue Location</label>
+                  <label className="text-xs font-semibold text-[#34383D]  block mb-1">Venue Location</label>
                   <Input
                     value={editFormData.venue}
                     onChange={(e) => setEditFormData({ ...editFormData, venue: e.target.value })}
@@ -1134,31 +1240,31 @@ export default function EventDetailClient({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Short Description</label>
+                <label className="text-xs font-semibold text-[#34383D]  block mb-1">Short Description</label>
                 <textarea
                   rows={2}
                   value={editFormData.shortDescription}
                   onChange={(e) => setEditFormData({ ...editFormData, shortDescription: e.target.value })}
-                  className="w-full rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#151719] p-2.5 text-xs text-[#17191C] dark:text-[#F1F2F3] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+                  className="w-full rounded-xl border border-[#E5E7E9]  bg-white  p-2.5 text-xs text-[#34383D]  focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Full Description</label>
+                <label className="text-xs font-semibold text-[#34383D]  block mb-1">Full Description</label>
                 <textarea
                   rows={4}
                   value={editFormData.description}
                   onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                  className="w-full rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#151719] p-2.5 text-xs text-[#17191C] dark:text-[#F1F2F3] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+                  className="w-full rounded-xl border border-[#E5E7E9]  bg-white  p-2.5 text-xs text-[#34383D]  focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
                 />
               </div>
 
               {/* Independent Artwork Controls */}
-              <div className="pt-2 border-t border-[#F4F5F6] dark:border-[#262A2E] space-y-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#7D858F] block">Artwork & Focal Points</span>
+              <div className="pt-2 border-t border-[#F4F5F6]  space-y-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#858B93]  block">Artwork & Focal Points</span>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Hero Image URL</label>
+                  <label className="text-xs font-semibold text-[#34383D]  block mb-1">Hero Image URL</label>
                   <Input
                     placeholder="https://..."
                     value={editFormData.heroImage}
@@ -1167,7 +1273,7 @@ export default function EventDetailClient({
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Directory Card Image URL</label>
+                  <label className="text-xs font-semibold text-[#34383D]  block mb-1">Directory Card Image URL</label>
                   <Input
                     placeholder="https://..."
                     value={editFormData.directoryImage}
@@ -1177,7 +1283,7 @@ export default function EventDetailClient({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-3 border-t border-[#E5E7EA] dark:border-[#30353A]">
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-[#E5E7E9] ">
               <Button
                 variant="outline"
                 size="sm"
@@ -1210,25 +1316,25 @@ export default function EventDetailClient({
       {/* Broadcast Announcement Modal */}
       {isDispatchModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E5E7EA] dark:border-[#30353A] pb-3">
-              <h3 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">Broadcast Event Update</h3>
+          <div className="w-full max-w-md rounded-xl border border-[#E5E7E9]  bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E5E7E9]  pb-3">
+              <h3 className="text-base font-bold text-[#34383D] ">Broadcast Event Update</h3>
               <button
                 type="button"
                 onClick={() => setIsDispatchModalOpen(false)}
-                className="rounded-full p-1 text-[#656B73] dark:text-[#989EA7] hover:bg-[#F4F5F6] dark:hover:bg-[#151719]"
+                className="rounded-full p-1 text-[#858B93]  hover:bg-[#F6F7F8] dark:hover:bg-[#151719]"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
-              <p className="text-[#656B73] dark:text-[#989EA7]">
-                Recipient Count: <strong className="text-[#17191C] dark:text-[#F1F2F3]">{event.registeredCount} Confirmed Attendees</strong>
+              <p className="text-[#858B93] ">
+                Recipient Count: <strong className="text-[#34383D] ">{event.registeredCount} Confirmed Attendees</strong>
               </p>
 
               <div>
-                <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Subject</label>
+                <label className="text-xs font-semibold text-[#34383D]  block mb-1">Subject</label>
                 <Input
                   placeholder="e.g. Schedule Update for Tomorrow"
                   value={broadcastSubject}
@@ -1237,18 +1343,18 @@ export default function EventDetailClient({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3] block mb-1">Message Content</label>
+                <label className="text-xs font-semibold text-[#34383D]  block mb-1">Message Content</label>
                 <textarea
                   rows={4}
                   placeholder="Enter announcement details..."
                   value={broadcastBody}
                   onChange={(e) => setBroadcastBody(e.target.value)}
-                  className="w-full rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#151719] p-2.5 text-xs text-[#17191C] dark:text-[#F1F2F3] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+                  className="w-full rounded-xl border border-[#E5E7E9]  bg-white  p-2.5 text-xs text-[#34383D]  focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-3 border-t border-[#E5E7EA] dark:border-[#30353A]">
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-[#E5E7E9] ">
               <Button
                 variant="outline"
                 size="sm"
@@ -1267,6 +1373,62 @@ export default function EventDetailClient({
                 }}
               >
                 Send Broadcast
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Deletion Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-xl space-y-4 text-zinc-900 dark:text-zinc-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-200">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white">Delete Event</h3>
+                <p className="text-xs text-zinc-500">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-zinc-600 dark:text-zinc-400 space-y-2">
+              <p>
+                Are you sure you want to permanently delete <strong>&quot;{event.title}&quot;</strong>?
+              </p>
+              {event.registeredCount > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800 text-[11px] leading-relaxed">
+                  ⚠️ <strong>Warning:</strong> This event currently has {event.registeredCount} registration(s). Deleting it will permanently purge all participant passes, tickets, and check-in records.
+                </div>
+              )}
+            </div>
+
+            {deleteError && (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDeletingEvent}
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="rounded-lg text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isDeletingEvent}
+                onClick={handleDeleteEvent}
+                className="rounded-lg text-xs font-semibold gap-1.5 bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                {isDeletingEvent ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                <span>{isDeletingEvent ? "Deleting..." : "Confirm & Delete"}</span>
               </Button>
             </div>
           </div>

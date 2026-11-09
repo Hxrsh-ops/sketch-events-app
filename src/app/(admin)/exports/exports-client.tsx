@@ -374,22 +374,25 @@ export default function ExportsClient({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
-              Exports & Data Reports
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / EXPORTS
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C]">
+              Exports &amp; Data Reports
             </h1>
             <Badge variant="outline" className="text-[10px] uppercase font-semibold">
               {isPreview ? "Preview Mode" : "Production Live"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#989EA7]">
+          <p className="mt-1 text-xs sm:text-sm text-[#777E86]">
             Generate client-side CSV rosters, structured JSON archives, and compliance logs from current operational dataset.
           </p>
         </div>
 
         {/* Global Export Scope Filter */}
         <div className="w-full sm:w-72">
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#8A9098] dark:text-[#656B73] mb-1">
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#858B93] mb-1">
             Export Event Scope
           </label>
           <CustomSelect
@@ -402,15 +405,15 @@ export default function ExportsClient({
 
       {/* Success Receipt Banner */}
       {lastExportMessage && (
-        <div className="rounded-2xl border border-[#17191C] dark:border-[#30353A] bg-[#17191C] dark:bg-[#22262A] text-white p-4 text-xs flex items-center justify-between shadow-sm">
+        <div className="rounded-xl border border-[#E5E7E9] bg-[#F6F7F8] text-[#17191C] p-4 text-xs flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-white" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#17191C]" />
             <span className="font-medium">{lastExportMessage}</span>
           </div>
           <button
             type="button"
             onClick={() => setLastExportMessage(null)}
-            className="text-[11px] text-white/60 hover:text-white underline ml-3"
+            className="text-[11px] text-[#777E86] hover:text-[#17191C] underline ml-3 font-medium"
           >
             Dismiss
           </button>
@@ -418,11 +421,11 @@ export default function ExportsClient({
       )}
 
       {/* Privacy Notice Banner */}
-      <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 text-xs text-[#17191C] dark:text-[#F1F2F3] flex items-start gap-3 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-        <ShieldAlert className="h-5 w-5 text-[#25292F] dark:text-[#E8EAED] shrink-0 mt-0.5" />
+      <div className="rounded-xl border border-[#E5E7E9]  bg-white p-4 text-xs text-[#34383D]  flex items-start gap-3 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <ShieldAlert className="h-5 w-5 text-[#25292F]  shrink-0 mt-0.5" />
         <div>
-          <strong className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">Privacy & Data Integrity Notice:</strong>
-          <p className="mt-0.5 text-[#656B73] dark:text-[#989EA7] leading-relaxed">
+          <strong className="font-semibold text-[#34383D] ">Privacy & Data Integrity Notice:</strong>
+          <p className="mt-0.5 text-[#858B93]  leading-relaxed">
             All files are generated client-side from the active preview dataset. Generated files are formatted with RFC 4180 compliant CSV quoting and ISO 8601 timestamps. No external database writes or third-party tracking occur.
           </p>
         </div>
@@ -431,26 +434,26 @@ export default function ExportsClient({
       {/* Export Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Template 1: Attendance Roster */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
-              <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-2.5 py-0.5 text-[10px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+              <span className="rounded-full bg-[#EAECEF]  px-2.5 py-0.5 text-[10px] font-semibold text-[#858B93] ">
                 CSV
               </span>
             </div>
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+            <h3 className="text-sm font-bold text-[#34383D] ">
               Attendance & Check-in Roster
             </h3>
-            <p className="text-xs text-[#656B73] dark:text-[#989EA7] mt-1.5 leading-relaxed">
+            <p className="text-xs text-[#858B93]  mt-1.5 leading-relaxed">
               Complete check-in records with verification timestamps, attendance statuses, departments, and QR pass identifiers for the selected event scope.
             </p>
           </div>
 
-          <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
-            <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+          <div className="border-t border-[#F4F5F6]  pt-3 flex items-center justify-between">
+            <span className="text-[11px] text-[#858B93] ">
               Scope: {selectedEventId === "all" ? "All Events" : "Selected Event"}
             </span>
             <Button
@@ -466,38 +469,38 @@ export default function ExportsClient({
         </div>
 
         {/* Template 2: Participant Directory */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
                 <Users className="h-5 w-5" />
               </div>
               <div className="flex gap-1.5">
-                <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-2.5 py-0.5 text-[10px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+                <span className="rounded-full bg-[#EAECEF]  px-2.5 py-0.5 text-[10px] font-semibold text-[#858B93] ">
                   CSV
                 </span>
-                <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-2.5 py-0.5 text-[10px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+                <span className="rounded-full bg-[#EAECEF]  px-2.5 py-0.5 text-[10px] font-semibold text-[#858B93] ">
                   JSON
                 </span>
               </div>
             </div>
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+            <h3 className="text-sm font-bold text-[#34383D] ">
               Registered Participants Directory
             </h3>
-            <p className="text-xs text-[#656B73] dark:text-[#989EA7] mt-1.5 leading-relaxed">
+            <p className="text-xs text-[#858B93]  mt-1.5 leading-relaxed">
               Full student registration archive with names, university email addresses, departments, academic years, and team affiliations.
             </p>
           </div>
 
-          <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
-            <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+          <div className="border-t border-[#F4F5F6]  pt-3 flex items-center justify-between">
+            <span className="text-[11px] text-[#858B93] ">
               <span className="font-mono tabular-nums font-semibold">{participants.length}</span> total preview records
             </span>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold gap-1"
+                className="rounded-full border-[#E5E7E9]  text-xs font-semibold gap-1"
                 onClick={() => exportParticipants("json")}
               >
                 <FileCode className="h-3.5 w-3.5" />
@@ -517,26 +520,26 @@ export default function ExportsClient({
         </div>
 
         {/* Template 3: Teams & Rosters */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
-              <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-2.5 py-0.5 text-[10px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+              <span className="rounded-full bg-[#EAECEF]  px-2.5 py-0.5 text-[10px] font-semibold text-[#858B93] ">
                 CSV
               </span>
             </div>
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+            <h3 className="text-sm font-bold text-[#34383D] ">
               Teams & Roster Registry
             </h3>
-            <p className="text-xs text-[#656B73] dark:text-[#989EA7] mt-1.5 leading-relaxed">
+            <p className="text-xs text-[#858B93]  mt-1.5 leading-relaxed">
               Hackathon and design sprint team rosters, captain contacts, slot capacity, and roster completeness indicators.
             </p>
           </div>
 
-          <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
-            <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+          <div className="border-t border-[#F4F5F6]  pt-3 flex items-center justify-between">
+            <span className="text-[11px] text-[#858B93] ">
               <span className="font-mono tabular-nums font-semibold">{teams.length}</span> team records
             </span>
             <Button
@@ -552,26 +555,26 @@ export default function ExportsClient({
         </div>
 
         {/* Template 4: Certificates Ledger */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
                 <Award className="h-5 w-5" />
               </div>
-              <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-2.5 py-0.5 text-[10px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+              <span className="rounded-full bg-[#EAECEF]  px-2.5 py-0.5 text-[10px] font-semibold text-[#858B93] ">
                 CSV
               </span>
             </div>
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+            <h3 className="text-sm font-bold text-[#34383D] ">
               Certificate Issuance & Verification Log
             </h3>
-            <p className="text-xs text-[#656B73] dark:text-[#989EA7] mt-1.5 leading-relaxed">
+            <p className="text-xs text-[#858B93]  mt-1.5 leading-relaxed">
               Issued credentials serials, recipient names, event titles, and issuance dates for verified participants.
             </p>
           </div>
 
-          <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
-            <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+          <div className="border-t border-[#F4F5F6]  pt-3 flex items-center justify-between">
+            <span className="text-[11px] text-[#858B93] ">
               {certificates.length} issued credentials
             </span>
             <Button
@@ -587,26 +590,26 @@ export default function ExportsClient({
         </div>
 
         {/* Template 5: System Audit Trail */}
-        <div className="rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none md:col-span-2">
+        <div className="rounded-xl border border-[#E5E7E9]  bg-white p-5 shadow-sm flex flex-col justify-between space-y-4 transition-all duration-200 ease-out hover:border-[#CBD0D6] dark:hover:border-[#4A515A] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.35)] motion-reduce:transition-none motion-reduce:transform-none md:col-span-2">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F5F6] dark:bg-[#151719] text-[#25292F] dark:text-[#E8EAED]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F7F8]  text-[#25292F] ">
                 <Clock className="h-5 w-5" />
               </div>
-              <span className="rounded-full bg-[#F0F1F2] dark:bg-[#151719] px-2.5 py-0.5 text-[10px] font-semibold text-[#656B73] dark:text-[#989EA7]">
+              <span className="rounded-full bg-[#EAECEF]  px-2.5 py-0.5 text-[10px] font-semibold text-[#858B93] ">
                 JSON
               </span>
             </div>
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3]">
+            <h3 className="text-sm font-bold text-[#34383D] ">
               Administrative Audit Log Archive
             </h3>
-            <p className="text-xs text-[#656B73] dark:text-[#989EA7] mt-1.5 leading-relaxed">
+            <p className="text-xs text-[#858B93]  mt-1.5 leading-relaxed">
               Complete JSON log containing actor identities, action descriptors, target entities, and payloads for security and compliance reviews.
             </p>
           </div>
 
-          <div className="border-t border-[#F4F5F6] dark:border-[#262A2E] pt-3 flex items-center justify-between">
-            <span className="text-[11px] text-[#8A9098] dark:text-[#656B73]">
+          <div className="border-t border-[#F4F5F6]  pt-3 flex items-center justify-between">
+            <span className="text-[11px] text-[#858B93] ">
               {auditLogs.length} recent activity events
             </span>
             <Button

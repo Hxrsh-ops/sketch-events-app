@@ -69,6 +69,13 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
               <div style="font-size:18px;font-weight:800;letter-spacing:0.02em;color:#111827;font-family:monospace;margin-top:2px;">${escapeHtml(
                 payload.registration_id
               )}</div>
+              ${
+                payload.ticket_number
+                  ? `<div style="margin-top:6px;font-size:12px;font-weight:700;color:#374151;font-family:monospace;">TICKET #: ${escapeHtml(
+                      payload.ticket_number
+                    )}</div>`
+                  : ""
+              }
               ${teamBadgeHtml}
 
               <hr style="border:none;border-top:1px solid #E5E7EA;margin:16px 0;" />
@@ -90,6 +97,17 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
             </td>
           </tr>
         </table>
+
+        ${
+          payload.qr_code_data_url
+            ? `<div style="text-align:center;margin:16px 0 20px 0;">
+                <img src="${escapeHtml(
+                  payload.qr_code_data_url
+                )}" alt="Entry QR Code" width="160" height="160" style="display:inline-block;border-radius:12px;border:1px solid #E5E7EA;padding:8px;background:#FFFFFF;" />
+                <div style="font-size:11px;color:#6B7280;margin-top:6px;">Scan at check-in desk</div>
+              </div>`
+            : ""
+        }
 
         <div style="background:#F3F4F6;border-radius:8px;padding:12px 16px;text-align:center;margin-bottom:20px;">
           <span style="font-size:11px;color:#6B7280;text-transform:uppercase;font-weight:700;letter-spacing:0.05em;">QR Credential ID:</span>

@@ -12,6 +12,7 @@ import { RegistrationSubmission } from "@/types";
 import { RegistrationMode } from "@/types/database";
 import { generateTicketBearerToken } from "@/lib/ticket/rotating-qr";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import QRCode from "qrcode";
 
 /**
  * Standard Result Type for Server Actions
@@ -508,11 +509,23 @@ export async function registerForEventAction(
 
         liveTicketUrl = `${appUrl}/tickets/${rawToken}`;
 
+        let qrCodeDataUrl: string | undefined;
+        try {
+          qrCodeDataUrl = await QRCode.toDataURL(liveTicketUrl || regResult.qrCredentialId || issuedTicketNumber, {
+            margin: 1,
+            width: 200,
+            color: { dark: "#17191C", light: "#FFFFFF" },
+          });
+        } catch {
+          // non-critical
+        }
+
         await SketchRepository.updateOutboxTicketPassPayload({
           eventId: authoritativeEventId,
           recipientEmail: normalizedEmail,
           liveTicketUrl,
           ticketNumber: issuedTicketNumber,
+          qrCodeDataUrl,
         });
 
         // Reconcile tickets for individual team members if team registration
@@ -538,11 +551,24 @@ export async function registerForEventAction(
                       ticketNumber: memberTicketNum,
                     });
                     const memberLiveUrl = `${appUrl}/tickets/${memberTokens.rawToken}`;
+
+                    let memberQrDataUrl: string | undefined;
+                    try {
+                      memberQrDataUrl = await QRCode.toDataURL(memberLiveUrl || member.registration_id || memberTicketNum, {
+                        margin: 1,
+                        width: 200,
+                        color: { dark: "#17191C", light: "#FFFFFF" },
+                      });
+                    } catch {
+                      // non-critical
+                    }
+
                     await SketchRepository.updateOutboxTicketPassPayload({
                       eventId: authoritativeEventId,
                       recipientEmail: member.email,
                       liveTicketUrl: memberLiveUrl,
                       ticketNumber: memberTicketNum,
+                      qrCodeDataUrl: memberQrDataUrl,
                     });
                   }
                 }

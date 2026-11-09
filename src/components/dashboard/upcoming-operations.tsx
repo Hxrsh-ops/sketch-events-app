@@ -107,59 +107,53 @@ export function UpcomingOperations({
   }
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#363C46] bg-white dark:bg-gradient-to-b dark:from-[#282D34] dark:to-[#1A1D22] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
+    <div className="flex h-full flex-col justify-between rounded-xl border border-[#E5E7E9] bg-white p-5 shadow-xs">
       <div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BellRing className="h-4 w-4 text-[#25292F] dark:text-white/90" />
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-white">
+            <BellRing className="h-4 w-4 text-[#777E86]" />
+            <h3 className="text-sm font-semibold text-[#34383D]">
               Operations Dispatch
             </h3>
           </div>
-          <span className="rounded-full bg-[#F0F1F2] dark:bg-white/10 border border-[#E5E7EA] dark:border-white/15 px-2 py-0.5 text-[10px] font-medium text-[#5E646E] dark:text-white/80">
-            {operations.length} {operations.length === 1 ? "Pending" : "Pending"}
+          <span className="rounded-md bg-[#F6F7F8] border border-[#E5E7E9] px-2 py-0.5 text-[10px] font-medium text-[#858B93]">
+            {operations.length} Pending
           </span>
         </div>
 
         {/* Dispatch Items List */}
         {operations.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-[#E5E7EA] dark:border-[#363C46] p-6 text-center text-xs text-[#8A9098] dark:text-white/50">
+          <div className="mt-4 rounded-lg border border-dashed border-[#E5E7E9] p-6 text-center text-xs text-[#858B93]">
             All operational queues clear. No immediate dispatches required.
           </div>
         ) : (
-          <div className="mt-4 space-y-2.5">
+          <div className="mt-4 space-y-2">
             {operations.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-[#F0F1F2] dark:border-[#363C46] bg-[#F8F9FA] dark:bg-[#181B1F] p-3 transition-colors hover:border-[#CBD0D6] dark:hover:border-[#48515E] hover:bg-white dark:hover:bg-[#20252C]"
+                className="rounded-lg border border-[#E5E7E9] bg-[#F6F7F8] p-3 transition-colors hover:bg-[#EAECEF]"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#5E646E] dark:text-white/70">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#858B93]">
                     {item.event}
                   </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                      item.priority === "High"
-                        ? "bg-[#EA4F3C]/10 text-[#EA4F3C]"
-                        : "bg-[#F0F1F2] dark:bg-white/10 border border-[#E5E7EA] dark:border-white/15 text-[#5E646E] dark:text-white/80"
-                    }`}
-                  >
+                  <span className="rounded-md border border-[#E5E7E9] bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#34383D]">
                     {item.priority}
                   </span>
                 </div>
 
-                <p className="mt-1 text-xs font-semibold text-[#17191C] dark:text-white">
+                <p className="mt-1 text-xs font-semibold text-[#34383D]">
                   {item.action}
                 </p>
 
-                <div className="mt-2 flex items-center justify-between text-[11px] text-[#828892] dark:text-white/60">
+                <div className="mt-2 flex items-center justify-between text-[11px] text-[#858B93]">
                   <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+                    <Clock className="h-3 w-3 text-[#777E86]" />
                     {item.dueTime}
                   </span>
                   <Link
                     href={item.href}
-                    className="flex items-center gap-1 font-semibold text-[#17191C] dark:text-white hover:underline"
+                    className="flex items-center gap-1 font-medium text-[#34383D] hover:underline"
                   >
                     <span>{item.actionLabel || "Execute"}</span>
                     <ArrowRight className="h-3 w-3" />
@@ -171,15 +165,15 @@ export function UpcomingOperations({
         )}
       </div>
 
-      <div className="mt-4 border-t border-[#F0F1F2] dark:border-[#262A2E] pt-3">
+      <div className="mt-4 border-t border-[#E5E7E9] pt-3">
         <Link href="/attendance">
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-between h-8 text-xs font-semibold text-[#656B73] dark:text-[#A6ADB5] hover:text-[#17191C] dark:hover:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] rounded-xl px-2"
+            className="w-full justify-between h-8 text-xs font-medium text-[#858B93] hover:text-[#34383D] hover:bg-[#F6F7F8] rounded-lg px-2"
           >
             <span>View All Operational Queues</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3.5 w-3.5 text-[#777E86]" />
           </Button>
         </Link>
       </div>

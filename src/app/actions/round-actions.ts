@@ -48,7 +48,7 @@ export async function createRoundAction(rawData: unknown): Promise<ActionResult<
       };
     }
 
-    if (!hasPermission(session.user.role, "events:edit")) {
+    if (!hasPermission(session.user.role, "rounds:manage")) {
       return {
         success: false,
         error: "FORBIDDEN",
@@ -124,7 +124,7 @@ export async function updateRoundAction(rawData: unknown): Promise<ActionResult<
       };
     }
 
-    if (!hasPermission(session.user.role, "events:edit")) {
+    if (!hasPermission(session.user.role, "rounds:manage")) {
       return {
         success: false,
         error: "FORBIDDEN",
@@ -208,7 +208,7 @@ export async function deleteRoundAction(rawData: unknown): Promise<ActionResult<
       };
     }
 
-    if (!hasPermission(session.user.role, "events:edit")) {
+    if (!hasPermission(session.user.role, "rounds:manage")) {
       return {
         success: false,
         error: "FORBIDDEN",
@@ -292,7 +292,7 @@ export async function setRoundStatusAction(rawData: unknown): Promise<ActionResu
       };
     }
 
-    if (!hasPermission(session.user.role, "events:edit")) {
+    if (!hasPermission(session.user.role, "rounds:manage")) {
       return {
         success: false,
         error: "FORBIDDEN",
@@ -380,7 +380,7 @@ export async function reorderRoundsAction(rawData: unknown): Promise<ActionResul
       };
     }
 
-    if (!hasPermission(session.user.role, "events:edit")) {
+    if (!hasPermission(session.user.role, "rounds:manage")) {
       return {
         success: false,
         error: "FORBIDDEN",

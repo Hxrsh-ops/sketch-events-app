@@ -1,8 +1,23 @@
 import { SketchRepository } from "@/lib/supabase/repository";
+import { verifyAdminSession } from "@/lib/auth/session";
+import { AccessDenied } from "@/components/auth/access-denied";
 import { CommunicationJob, EventItem, Participant } from "@/types";
 import CommunicationsClient from "./communications-client";
 
 export default async function CommunicationsPage() {
+  const session = await verifyAdminSession();
+
+  // Strict RBAC: Communications is restricted to master_admin and event_manager
+  if (session.user?.role !== "master_admin" && session.user?.role !== "event_manager") {
+    return (
+      <AccessDenied
+        currentRole={session.user?.role}
+        requiredRoles={["master_admin", "event_manager"]}
+        moduleName="Communications & Outbox Delivery"
+      />
+    );
+  }
+
   let jobs: CommunicationJob[] = [];
   let events: EventItem[] = [];
   let participants: Participant[] = [];

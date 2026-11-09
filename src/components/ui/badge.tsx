@@ -3,28 +3,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-ring",
+  "inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-medium border transition-colors select-none",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315]",
+          "border-[#E5E7E9] bg-[#F6F7F8] text-[#17191C] font-semibold",
         secondary:
-          "border-transparent bg-[#F0F1F2] dark:bg-[#22262A] text-[#17191C] dark:text-[#F1F2F3]",
+          "border-[#E5E7E9] bg-[#F6F7F8] text-[#777E86]",
         destructive:
-          "border-transparent bg-[#F0F1F2] dark:bg-[#2A2F35] text-[#17191C] dark:text-[#F1F2F3] font-semibold",
+          "border-rose-200/80 bg-rose-50/80 text-rose-700",
         outline:
-          "border border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5] bg-white dark:bg-[#1B1E21]",
+          "border-[#E5E7E9] text-[#777E86] bg-white",
         success:
-          "border-transparent bg-[#EAECEF] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3] font-semibold",
+          "border-emerald-200/80 bg-emerald-50/80 text-emerald-800",
         warning:
-          "border-transparent bg-[#F0F1F2] dark:bg-[#22262A] text-[#17191C] dark:text-[#F1F2F3]",
+          "border-amber-200/80 bg-amber-50/80 text-amber-800",
         info:
-          "border-transparent bg-[#F0F1F2] dark:bg-[#22262A] text-[#17191C] dark:text-[#F1F2F3]",
+          "border-slate-200/80 bg-slate-50/80 text-slate-700",
         brandSoft:
-          "border-transparent bg-[#EAECEF] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3]",
+          "border-[#E5E7E9] bg-[#F6F7F8] text-[#17191C]",
         forestSoft:
-          "border-transparent bg-[#EAECEF] dark:bg-[#25292F] text-[#17191C] dark:text-[#F1F2F3]",
+          "border-[#E5E7E9] bg-[#F6F7F8] text-[#17191C]",
       },
     },
     defaultVariants: {

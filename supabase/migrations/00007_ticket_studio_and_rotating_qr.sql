@@ -126,6 +126,15 @@ DECLARE
     v_template_version_id UUID;
     v_ticket_id UUID;
 BEGIN
+    -- 0. Authorization check: restrict ticket issuance strictly to service_role
+    IF auth.role() <> 'service_role' THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'FORBIDDEN',
+            'message', 'Ticket issuance is strictly restricted to administrative service role.'
+        );
+    END IF;
+
     -- 1. Fetch registration
     SELECT * INTO v_reg
     FROM public.registrations
@@ -198,8 +207,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.issue_or_reconcile_ticket(UUID, TEXT, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.issue_or_reconcile_ticket(UUID, TEXT, TEXT) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.issue_or_reconcile_ticket(UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.issue_or_reconcile_ticket(UUID, TEXT, TEXT) TO service_role;
 
 -- ------------------------------------------------------------------------------
 -- 5. SAFE LIVE TICKET BEARER LOOKUP RPC (ZERO PII EXPOSURE)
@@ -229,6 +238,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+    IF p_bearer_token_hash IS NULL OR length(trim(p_bearer_token_hash)) < 32 THEN
+        RETURN;
+    END IF;
+
     RETURN QUERY
     SELECT
         t.id AS ticket_id,
@@ -266,7 +279,7 @@ GRANT EXECUTE ON FUNCTION public.get_ticket_by_bearer_hash(TEXT) TO anon, authen
 CREATE OR REPLACE FUNCTION public.verify_rotating_qr_token(
     p_ticket_id UUID,
     p_event_id UUID,
-    p_actor_id UUID,
+    p_actor_id UUID DEFAULT NULL,
     p_method TEXT DEFAULT 'camera'
 )
 RETURNS JSONB
@@ -275,26 +288,43 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+    v_effective_actor_id UUID;
     v_actor RECORD;
     v_ticket RECORD;
     v_reg RECORD;
     v_event RECORD;
     v_now TIMESTAMPTZ := timezone('utc', now());
+    v_checkin_method check_in_method;
 BEGIN
-    -- 1. Validate caller authorization
-    IF p_actor_id IS NULL THEN
-        RETURN jsonb_build_object('success', false, 'error', 'ACTOR_REQUIRED', 'message', 'Scanner authorization required.');
+    -- 0. Authorization check: restrict rotating QR verification strictly to service_role
+    IF auth.role() <> 'service_role' THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'FORBIDDEN',
+            'message', 'Rotating QR token verification is strictly restricted to administrative service role.'
+        );
     END IF;
 
+    -- 1. Determine effective actor identity securely (enforce verified administrator actor)
+    v_effective_actor_id := p_actor_id;
+    IF v_effective_actor_id IS NULL THEN
+        SELECT id INTO v_effective_actor_id
+        FROM public.admin_profiles
+        WHERE role IN ('master_admin'::admin_role, 'event_manager'::admin_role)
+        ORDER BY created_at ASC
+        LIMIT 1;
+    END IF;
+
+    -- 2. Validate actor authorization in admin_profiles
     SELECT id, role, full_name, email INTO v_actor
     FROM public.admin_profiles
-    WHERE id = p_actor_id;
+    WHERE id = v_effective_actor_id;
 
-    IF NOT FOUND OR v_actor.role NOT IN ('master_admin', 'event_manager', 'attendance_staff') THEN
+    IF NOT FOUND OR v_actor.role NOT IN ('master_admin'::admin_role, 'event_manager'::admin_role, 'attendance_staff'::admin_role) THEN
         RETURN jsonb_build_object('success', false, 'error', 'UNAUTHORIZED_ACTOR', 'message', 'Unauthorized attendance agent.');
     END IF;
 
-    -- 2. Lock and verify ticket
+    -- 3. Lock and verify ticket
     SELECT * INTO v_ticket
     FROM public.tickets
     WHERE id = p_ticket_id
@@ -317,7 +347,7 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'TICKET_CANCELLED', 'message', 'This ticket has been cancelled.');
     END IF;
 
-    -- 3. Cross-event boundary check
+    -- 4. Cross-event boundary check
     IF v_ticket.event_id <> p_event_id THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -326,7 +356,7 @@ BEGIN
         );
     END IF;
 
-    -- 4. Lock and verify registration
+    -- 5. Lock and verify registration
     SELECT * INTO v_reg
     FROM public.registrations
     WHERE id = v_ticket.registration_id
@@ -340,7 +370,7 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'REGISTRATION_CANCELLED', 'message', 'Attendee registration is cancelled.');
     END IF;
 
-    -- 5. Duplicate check-in protection
+    -- 6. Duplicate check-in protection
     IF v_reg.attendance_status = 'checked_in' THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -352,12 +382,18 @@ BEGIN
         );
     END IF;
 
-    -- 6. Perform atomic check-in
+    -- 7. Perform atomic check-in
     UPDATE public.registrations
     SET attendance_status = 'checked_in',
         checked_in_at = v_now,
         updated_at = v_now
     WHERE id = v_reg.id;
+
+    -- Safe enum resolution for check_in_method
+    v_checkin_method := CASE
+        WHEN p_method IN ('camera', 'manual', 'simulation') THEN p_method::check_in_method
+        ELSE 'camera'::check_in_method
+    END;
 
     -- Insert attendance record
     INSERT INTO public.attendance_records (
@@ -369,8 +405,8 @@ BEGIN
     ) VALUES (
         v_reg.id,
         v_ticket.event_id,
-        p_actor_id,
-        COALESCE(p_method, 'camera')::check_in_method,
+        v_effective_actor_id,
+        v_checkin_method,
         v_now
     );
 
@@ -389,7 +425,7 @@ BEGIN
         target,
         details
     ) VALUES (
-        p_actor_id,
+        v_effective_actor_id,
         v_actor.full_name,
         v_actor.email,
         'ROTATING_QR_CHECK_IN',
@@ -399,7 +435,7 @@ BEGIN
             'registration_id', v_reg.id,
             'event_id', v_ticket.event_id,
             'attendee_name', v_reg.attendee_name,
-            'method', p_method
+            'method', v_checkin_method::text
         )
     );
 
@@ -414,8 +450,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.verify_rotating_qr_token(UUID, UUID, UUID, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.verify_rotating_qr_token(UUID, UUID, UUID, TEXT) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.verify_rotating_qr_token(UUID, UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.verify_rotating_qr_token(UUID, UUID, UUID, TEXT) TO service_role;
 
 -- ------------------------------------------------------------------------------
 -- 7. TICKET REVOCATION RPC
@@ -423,8 +459,8 @@ GRANT EXECUTE ON FUNCTION public.verify_rotating_qr_token(UUID, UUID, UUID, TEXT
 
 CREATE OR REPLACE FUNCTION public.revoke_ticket(
     p_ticket_id UUID,
-    p_actor_id UUID,
-    p_reason TEXT
+    p_actor_id UUID DEFAULT NULL,
+    p_reason TEXT DEFAULT 'Revoked by administration'
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -432,15 +468,34 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+    v_effective_actor_id UUID;
     v_actor RECORD;
     v_ticket RECORD;
     v_now TIMESTAMPTZ := timezone('utc', now());
 BEGIN
+    -- 1. Determine effective actor identity securely (prevent IDOR / actor spoofing)
+    IF auth.role() = 'service_role' THEN
+        v_effective_actor_id := p_actor_id;
+        IF v_effective_actor_id IS NULL THEN
+            SELECT id INTO v_effective_actor_id
+            FROM public.admin_profiles
+            WHERE role = 'master_admin'::admin_role
+            ORDER BY created_at ASC
+            LIMIT 1;
+        END IF;
+    ELSE
+        v_effective_actor_id := auth.uid();
+        IF v_effective_actor_id IS NULL THEN
+            RETURN jsonb_build_object('success', false, 'error', 'UNAUTHORIZED', 'message', 'Authentication required.');
+        END IF;
+    END IF;
+
+    -- 2. Validate actor authorization in admin_profiles
     SELECT id, role, full_name, email INTO v_actor
     FROM public.admin_profiles
-    WHERE id = p_actor_id;
+    WHERE id = v_effective_actor_id;
 
-    IF NOT FOUND OR v_actor.role NOT IN ('master_admin', 'event_manager') THEN
+    IF NOT FOUND OR v_actor.role NOT IN ('master_admin'::admin_role, 'event_manager'::admin_role) THEN
         RETURN jsonb_build_object('success', false, 'error', 'UNAUTHORIZED_ACTOR', 'message', 'Unauthorized revocation agent.');
     END IF;
 
@@ -456,7 +511,7 @@ BEGIN
     UPDATE public.tickets
     SET status = 'revoked',
         revoked_at = v_now,
-        revoked_by = p_actor_id,
+        revoked_by = v_effective_actor_id,
         revocation_reason = COALESCE(trim(p_reason), 'Revoked by administration.'),
         updated_at = v_now
     WHERE id = p_ticket_id;
@@ -470,7 +525,7 @@ BEGIN
         target,
         details
     ) VALUES (
-        p_actor_id,
+        v_effective_actor_id,
         v_actor.full_name,
         v_actor.email,
         'TICKET_REVOKED',
@@ -490,7 +545,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.revoke_ticket(UUID, UUID, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.revoke_ticket(UUID, UUID, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.revoke_ticket(UUID, UUID, TEXT) TO authenticated, service_role;
 
 -- ------------------------------------------------------------------------------

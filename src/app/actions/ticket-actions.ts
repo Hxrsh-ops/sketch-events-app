@@ -40,6 +40,14 @@ export async function listTicketTemplatesAction(): Promise<ActionResult<TicketTe
       };
     }
 
+    if (!hasPermission(session.user.role, "events:edit")) {
+      return {
+        success: false,
+        error: "FORBIDDEN",
+        message: "Your role does not have permission to view ticket templates.",
+      };
+    }
+
     const templates = await SketchRepository.listTicketTemplates();
     return { success: true, data: templates };
   } catch (err: any) {
@@ -64,6 +72,14 @@ export async function getTicketTemplateAction(templateId: string): Promise<
         success: false,
         error: "UNAUTHORIZED",
         message: "You must be signed in to view ticket templates.",
+      };
+    }
+
+    if (!hasPermission(session.user.role, "events:edit")) {
+      return {
+        success: false,
+        error: "FORBIDDEN",
+        message: "Your role does not have permission to view ticket templates.",
       };
     }
 

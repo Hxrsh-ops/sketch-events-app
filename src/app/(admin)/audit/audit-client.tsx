@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { SlideOver } from "@/components/ui/slide-over";
+import { EmptyState } from "@/components/feedback/feedback-states";
 import { MOCK_RECENT_ACTIVITY } from "@/lib/mock-data";
 import { AuditLogEntry } from "@/types";
 import { getStoredAuditLogs } from "@/lib/registration-store";
@@ -108,22 +109,25 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C] dark:text-[#F1F2F3]">
-              Audit Trails & Records
+          <span className="text-[11px] font-semibold tracking-wider text-[#858B93] uppercase">
+            SKETCHHUB WORKSPACE / AUDIT &amp; RECORDS
+          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#17191C]">
+              Audit Trails &amp; Records
             </h1>
             <Badge
               variant="outline"
               className={`text-[10px] uppercase font-semibold ${
                 isPreview
-                  ? "border-[#E5E7EA] dark:border-[#30353A] text-[#656B73] dark:text-[#A6ADB5]"
-                  : "border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20"
+                  ? "border-[#E5E7E9] text-[#858B93]"
+                  : "border-emerald-300 text-emerald-700 bg-emerald-50/50"
               }`}
             >
               {isPreview ? "Preview Mode" : "Production Live"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-[#656B73] dark:text-[#8A9098]">
+          <p className="mt-1 text-xs sm:text-sm text-[#777E86]">
             Comprehensive record of administrative operations, capacity overrides, manual attendance validations, and certificate batches.
           </p>
         </div>
@@ -132,7 +136,7 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
           variant="outline"
           size="sm"
           onClick={handleExportAuditCsv}
-          className="rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold gap-1.5 h-9 dark:bg-[#1B1E21] dark:text-[#F1F2F3] dark:hover:bg-[#22262A]"
+          className="rounded-full border-[#E5E7E9] text-xs font-semibold gap-1.5 h-9"
         >
           <Download className="h-3.5 w-3.5" />
           <span>Export Audit CSV</span>
@@ -140,7 +144,7 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
       </div>
 
       {/* Filter & Search */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-[#E5E7E9] bg-white p-3.5 shadow-sm">
         <AnimatedTabs
           tabs={filterTabs}
           activeTab={activeTab}
@@ -149,22 +153,22 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
         />
 
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9098]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#858B93]" />
           <input
             type="text"
             placeholder="Search audit trail by actor or action..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-[#F4F5F6] dark:bg-[#151719] pl-9 pr-4 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] transition-all focus:bg-white dark:focus:bg-[#111315] focus:outline-none focus:ring-1 focus:ring-[#25292F] dark:focus:ring-[#8A9098] focus:border-[#25292F] dark:focus:border-[#8A9098]"
+            className="h-9 w-full rounded-full border border-[#E5E7E9] bg-[#F6F7F8] pl-9 pr-4 text-xs text-[#17191C] placeholder:text-[#858B93] transition-all focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#17191C]"
           />
         </div>
       </div>
 
       {/* Audit Table */}
-      <div className="overflow-hidden rounded-[20px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[#E5E7E9] bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-[#17191C] dark:text-[#F1F2F3]">
-            <thead className="border-b border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] text-[11px] font-semibold text-[#656B73] dark:text-[#8A9098]">
+          <table className="w-full text-left text-xs text-[#17191C]">
+            <thead className="border-b border-[#E5E7E9] bg-[#F9FAFB] text-[11px] font-semibold text-[#858B93]">
               <tr>
                 <th className="py-3.5 pl-6 pr-4">Timestamp</th>
                 <th className="px-4 py-3.5">Administrator</th>
@@ -173,11 +177,24 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
                 <th className="px-4 py-3.5 pr-6">Audit Payload / Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F4F5F6] dark:divide-[#262A2E]">
+            <tbody className="divide-y divide-[#F4F5F6]">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-xs text-[#8A9098]">
-                    No audit records match your query.
+                  <td colSpan={5} className="p-8">
+                    <EmptyState
+                      icon={Shield}
+                      title="No audit entries found"
+                      description={
+                        searchQuery || activeTab !== "all"
+                          ? "No audit records match your search or filter criteria."
+                          : "No administrative activity recorded yet."
+                      }
+                      actionLabel={searchQuery || activeTab !== "all" ? "Reset Filter" : undefined}
+                      onAction={() => {
+                        setSearchQuery("");
+                        setActiveTab("all");
+                      }}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -193,30 +210,30 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
                         setSelectedLog(log);
                       }
                     }}
-                    className="hover:bg-[#F4F5F6] dark:hover:bg-[#25292F] transition-colors duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:bg-[#F4F5F6] dark:focus-visible:bg-[#25292F] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
+                    className="hover:bg-[#F6F7F8] dark:hover:bg-[#E3E5E8] text-[#34383D] transition-colors duration-150 ease-out cursor-pointer focus-visible:outline-none focus-visible:bg-[#F6F7F8] dark:focus-visible:bg-[#E3E5E8] text-[#34383D] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
                   >
-                    <td className="py-3.5 pl-6 pr-4 text-[#7D858F] dark:text-[#8D949E] font-mono text-[11px] tabular-nums whitespace-nowrap">
+                    <td className="py-3.5 pl-6 pr-4 text-[#858B93]  font-mono text-[11px] tabular-nums whitespace-nowrap">
                       {log.timestamp}
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6 border border-[#E5E7EA] dark:border-[#30353A] bg-[#25292F] text-white">
-                          <AvatarFallback className="bg-[#25292F] dark:bg-[#30353A] text-white text-[9px] font-bold">
+                        <Avatar className="h-6 w-6 border border-[#E5E7E9]  bg-[#E3E5E8] text-[#34383D] text-white">
+                          <AvatarFallback className="bg-[#E3E5E8] text-[#34383D] dark:bg-[#30353A] text-white text-[9px] font-bold">
                             {log.actorName.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-semibold text-[13.5px] text-[#17191C] dark:text-[#F1F2F3]">{log.actorName}</span>
+                        <span className="font-semibold text-[13.5px] text-[#34383D] ">{log.actorName}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="rounded-full bg-[#F0F1F2] dark:bg-[#22262A] px-2.5 py-0.5 text-[11px] font-semibold text-[#25292F] dark:text-[#E8EAED]">
+                      <span className="rounded-full bg-[#EAECEF]  px-2.5 py-0.5 text-[11px] font-semibold text-[#25292F] ">
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-[13px] font-medium text-[#17191C] dark:text-[#F1F2F3]">
+                    <td className="px-4 py-3.5 text-[13px] font-medium text-[#34383D] ">
                       {log.target}
                     </td>
-                    <td className="px-4 py-3.5 pr-6 text-[12.5px] text-[#656B73] dark:text-[#989EA7] max-w-sm truncate" title={log.details}>
+                    <td className="px-4 py-3.5 pr-6 text-[12.5px] text-[#858B93]  max-w-sm truncate" title={log.details}>
                       {log.details}
                     </td>
                   </tr>
@@ -237,32 +254,32 @@ export default function AuditClient({ initialLogs, isPreview }: AuditClientProps
       >
         {selectedLog && (
           <div className="space-y-4 text-xs">
-            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 space-y-2">
+            <div className="rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB]  p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-[#8A9098]">Action:</span>
-                <span className="font-bold text-[#17191C] dark:text-[#F1F2F3]">{selectedLog.action}</span>
+                <span className="text-[#858B93]">Action:</span>
+                <span className="font-bold text-[#34383D] ">{selectedLog.action}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8A9098]">Actor:</span>
-                <span className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                <span className="text-[#858B93]">Actor:</span>
+                <span className="font-semibold text-[#34383D] ">
                   {selectedLog.actorName} ({selectedLog.actorEmail})
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8A9098]">Target:</span>
-                <span className="text-[#17191C] dark:text-[#F1F2F3]">{selectedLog.target}</span>
+                <span className="text-[#858B93]">Target:</span>
+                <span className="text-[#34383D] ">{selectedLog.target}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8A9098]">Timestamp:</span>
-                <span className="font-mono text-[#656B73] dark:text-[#8A9098]">{selectedLog.timestamp}</span>
+                <span className="text-[#858B93]">Timestamp:</span>
+                <span className="font-mono text-[#858B93] ">{selectedLog.timestamp}</span>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-4 space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A9098]">
+            <div className="rounded-xl border border-[#E5E7E9]  bg-white p-4 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#858B93]">
                 Audit Description & Notes
               </span>
-              <p className="text-xs text-[#656B73] dark:text-[#8A9098] leading-relaxed pt-1">
+              <p className="text-xs text-[#858B93]  leading-relaxed pt-1">
                 {selectedLog.details}
               </p>
             </div>

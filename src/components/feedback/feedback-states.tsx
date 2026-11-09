@@ -3,12 +3,16 @@ import { AlertCircle, FolderOpen, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import Link from "next/link";
+
 interface EmptyStateProps {
   title: string;
   description: string;
   icon?: React.ComponentType<{ className?: string }>;
   actionLabel?: string;
   onAction?: () => void;
+  actionHref?: string;
+  actionNode?: React.ReactNode;
   className?: string;
 }
 
@@ -18,32 +22,46 @@ export function EmptyState({
   icon: Icon = FolderOpen,
   actionLabel,
   onAction,
+  actionHref,
+  actionNode,
   className,
 }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center p-8 sm:p-12 rounded-3xl border border-dashed border-[#CBD0D6] dark:border-[#353B42] bg-[#FAFAFA]/50 dark:bg-[#151719]/50",
+        "flex flex-col items-center justify-center text-center p-8 sm:p-12 rounded-xl border border-dashed border-[#E5E7E9] bg-white shadow-xs",
         className
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EAECEF] dark:bg-[#25292F] text-[#656B73] dark:text-[#A6ADB5] mb-4">
-        <Icon className="h-6 w-6" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F6F7F8] border border-[#E5E7E9] text-[#777E86] mb-3.5">
+        <Icon className="h-5 w-5" />
       </div>
-      <h3 className="text-sm sm:text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">{title}</h3>
-      <p className="mt-1 text-xs text-[#8A9098] dark:text-[#7D858F] max-w-sm leading-relaxed">
+      <h3 className="text-sm font-semibold text-[#17191C]">{title}</h3>
+      <p className="mt-1 text-xs text-[#858B93] max-w-sm leading-relaxed">
         {description}
       </p>
-      {actionLabel && onAction && (
+      {actionNode ? (
+        <div className="mt-4">{actionNode}</div>
+      ) : actionHref && actionLabel ? (
+        <Link href={actionHref}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4 rounded-lg text-xs font-semibold"
+          >
+            {actionLabel}
+          </Button>
+        </Link>
+      ) : actionLabel && onAction ? (
         <Button
           onClick={onAction}
           variant="outline"
           size="sm"
-          className="mt-4 rounded-xl text-xs font-semibold"
+          className="mt-4 rounded-lg text-xs font-semibold"
         >
           {actionLabel}
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

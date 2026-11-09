@@ -63,6 +63,7 @@ export const TicketPassPayloadSchema = z.object({
   bearer_token: z.string().optional(),
   live_ticket_url: z.string().optional(),
   ticket_number: z.string().optional(),
+  qr_code_data_url: z.string().optional(),
   background_image_url: z.string().optional(),
 });
 
