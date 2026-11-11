@@ -545,6 +545,15 @@ export function updateStoredCommunication(job: CommunicationJob): void {
   notifySubscribers();
 }
 
+export function deleteStoredCommunications(jobIds: string[]): void {
+  const idSet = new Set(jobIds);
+  const current = getStoredCommunications();
+  const next = current.filter((j) => !idSet.has(j.id));
+  memoryCommunications = next;
+  writeStorage(STORAGE_KEY_COMMUNICATIONS, next);
+  notifySubscribers();
+}
+
 // ==========================================
 // AUDIT LOGS REPOSITORY (PREVIEW)
 // ==========================================

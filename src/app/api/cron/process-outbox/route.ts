@@ -6,6 +6,7 @@ import { EmailOutboxWorker } from "@/lib/email/worker";
 const DEFAULT_BATCH_SIZE = 10;
 const MAX_BATCH_SIZE = 50;
 const DEFAULT_STUCK_TIMEOUT_MINUTES = 10;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Timing-safe string comparison to protect against side-channel timing attacks.
@@ -69,7 +70,8 @@ function parseBatchSize(request: NextRequest): number {
  * POST /api/cron/process-outbox
  *
  * Secure entry point for background processing of queued email jobs.
- * Intended to be invoked periodically by a scheduled worker daemon or cron service.
+ * Intended to be invoked periodically by a scheduled worker daemon or cron service,
+ * or scoped to a single job via ?job_id=<uuid>[&recipient=<email>].
  */
 export async function POST(request: NextRequest) {
   const expectedSecret = getServerCronSecret();
@@ -111,11 +113,72 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 3. Execute bounded outbox batch processing
+  // 3. Parse optional single-job scope (?job_id=<uuid>&recipient=<email>)
+  const rawJobId =
+    request.nextUrl.searchParams.get("job_id") ??
+    request.nextUrl.searchParams.get("jobId");
+
+  let scopedJobId: string | null = null;
+  let expectedRecipientEmail: string | undefined;
+
+  if (rawJobId !== null) {
+    const trimmedJobId = rawJobId.trim();
+    if (!UUID_REGEX.test(trimmedJobId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "INVALID_JOB_ID",
+          message: "When provided, job_id must be a valid UUID.",
+        },
+        { status: 400 }
+      );
+    }
+    scopedJobId = trimmedJobId;
+
+    const rawRecipient = request.nextUrl.searchParams.get("recipient");
+    if (rawRecipient !== null) {
+      const trimmedRecipient = rawRecipient.trim();
+      if (!trimmedRecipient || !trimmedRecipient.includes("@")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "INVALID_RECIPIENT",
+            message: "When provided, recipient must be a valid email address.",
+          },
+          { status: 400 }
+        );
+      }
+      expectedRecipientEmail = trimmedRecipient;
+    }
+  }
+
+  // 4. Execute scoped single-job or bounded outbox batch processing
   const batchSize = parseBatchSize(request);
 
   try {
     const worker = new EmailOutboxWorker();
+
+    if (scopedJobId) {
+      const singleResult = await worker.processSingleJob(scopedJobId, {
+        expectedRecipientEmail,
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          mode: "single",
+          jobId: scopedJobId,
+          recovered: 0,
+          claimed: singleResult.claimed,
+          processed: singleResult.processed,
+          succeeded: singleResult.succeeded,
+          failed: singleResult.failed,
+          terminalFailures: singleResult.terminalFailures,
+          timestamp: new Date().toISOString(),
+        },
+        { status: 200 }
+      );
+    }
 
     // Step A: Recover jobs stuck in 'processing' due to earlier worker crashes or timeouts
     const recovered = await worker.recoverStuckJobs(DEFAULT_STUCK_TIMEOUT_MINUTES);

@@ -17,6 +17,12 @@ function sanitizeRedirect(dest: string | null): string {
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Cron worker endpoints authenticate via CRON_SECRET rather than browser session cookies.
+  if (pathname.startsWith("/api/cron/")) {
+    return NextResponse.next();
+  }
+
   const isLoginPage = pathname === "/login";
   const isPublicRoute =
     pathname.startsWith("/e/") ||
@@ -25,6 +31,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/verify") ||
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/sketch-logo.png") ||

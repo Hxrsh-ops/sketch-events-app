@@ -210,11 +210,13 @@ export interface CommunicationJob {
   recipientCount: number;
   recipientEmail?: string;
   recipientName?: string;
-  status: "queued" | "processing" | "sent" | "failed";
+  status: "queued" | "processing" | "sent" | "failed" | "cancelled";
   attempts?: number;
   lastError?: string;
   scheduledAt: string;
   deliveredAt?: string;
+  archivedAt?: string;
+  cancelledAt?: string;
 }
 
 export interface UpcomingOperation {

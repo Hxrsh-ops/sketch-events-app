@@ -15,7 +15,11 @@ export class ResendEmailAdapter implements EmailProviderAdapter {
   }
 
   async sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-    if (!this.apiKey || this.apiKey === "your-resend-api-key-here") {
+    if (
+      !this.apiKey ||
+      this.apiKey === "your-resend-api-key-here" ||
+      this.apiKey.includes("your_resend_api_key")
+    ) {
       return {
         success: false,
         error: "RESEND_API_KEY_UNCONFIGURED: Cannot dispatch live email without valid Resend credentials.",
@@ -23,10 +27,23 @@ export class ResendEmailAdapter implements EmailProviderAdapter {
       };
     }
 
+    if (!this.fromAddress || !this.fromAddress.includes("@")) {
+      return {
+        success: false,
+        error: "EMAIL_FROM_UNCONFIGURED: Cannot dispatch live email without a valid sender address.",
+        retryable: false,
+      };
+    }
+
     try {
+      const sanitizedToName = options.toName
+        ? options.toName.replace(/[\r\n<>"]/g, "").trim()
+        : "";
+      const toField = sanitizedToName ? `${sanitizedToName} <${options.to}>` : options.to;
+
       const payload: Record<string, unknown> = {
         from: this.fromAddress,
-        to: options.toName ? `${options.toName} <${options.to}>` : options.to,
+        to: toField,
         subject: options.subject,
         html: options.html,
         text: options.text,
@@ -49,6 +66,7 @@ export class ResendEmailAdapter implements EmailProviderAdapter {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -71,9 +89,12 @@ export class ResendEmailAdapter implements EmailProviderAdapter {
         messageId: (data as any)?.id,
       };
     } catch (err: any) {
+      const isTimeout = err?.name === "TimeoutError" || err?.name === "AbortError";
       return {
         success: false,
-        error: `Network/Transport failure: ${err instanceof Error ? err.message : "Unknown error"}`,
+        error: isTimeout
+          ? "Resend Transport Timeout: Connection timed out after 10000ms"
+          : `Network/Transport failure: ${err instanceof Error ? err.message : "Unknown error"}`,
         retryable: true,
       };
     }
@@ -103,6 +124,14 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
       return {
         success: false,
         error: "BREVO_API_KEY_UNCONFIGURED: Cannot dispatch live email without valid Brevo credentials.",
+        retryable: false,
+      };
+    }
+
+    if (!this.fromAddress || !this.fromAddress.includes("@")) {
+      return {
+        success: false,
+        error: "EMAIL_FROM_UNCONFIGURED: Cannot dispatch live email without a valid sender address.",
         retryable: false,
       };
     }

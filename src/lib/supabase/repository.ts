@@ -39,6 +39,7 @@ import {
   getStoredCommunications,
   saveCommunication,
   updateStoredCommunication,
+  deleteStoredCommunications,
   getStoredAuditLogs,
   saveAuditLog,
   getAllParticipants,
@@ -47,6 +48,29 @@ import {
   removeStoredEvent,
   cancelStoredRegistration,
 } from "@/lib/registration-store";
+
+const OUTBOX_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function partitionOutboxJobIds(cleanIds: string[]): {
+  validIds: string[];
+  invalidSkipped: Array<{ id: string; reason: string }>;
+  invalidSet: Set<string>;
+} {
+  const validIds: string[] = [];
+  const invalidSkipped: Array<{ id: string; reason: string }> = [];
+  const invalidSet = new Set<string>();
+
+  for (const id of cleanIds) {
+    if (OUTBOX_UUID_REGEX.test(id)) {
+      validIds.push(id);
+    } else {
+      invalidSet.add(id);
+      invalidSkipped.push({ id, reason: "Invalid dispatch ID format (expected UUID)" });
+    }
+  }
+
+  return { validIds, invalidSkipped, invalidSet };
+}
 
 export interface RegisterResult {
   success: boolean;
@@ -1623,6 +1647,7 @@ export class SketchRepository {
    * Append an entry to the immutable audit log
    */
   static async logAudit(params: {
+    actorId?: string;
     actorName: string;
     actorEmail: string;
     action: string;
@@ -1646,6 +1671,7 @@ export class SketchRepository {
     if (!supabase) return;
 
     const { error } = await supabase.from("audit_logs").insert({
+      ...(params.actorId ? { actor_id: params.actorId } : {}),
       actor_name: params.actorName,
       actor_email: params.actorEmail,
       action: params.action,
@@ -2007,9 +2033,27 @@ export class SketchRepository {
       const supabase = createAdminClient() || (await createClient());
       if (!supabase) return [];
 
-      let query = (supabase as any)
-        .from("communications_outbox")
-        .select(`
+      const buildQuery = (includeLifecycleCols: boolean) => {
+        const cols = includeLifecycleCols
+          ? `
+          id,
+          event_id,
+          recipient_email,
+          recipient_name,
+          subject,
+          template_type,
+          status,
+          attempts,
+          last_error,
+          scheduled_at,
+          delivered_at,
+          archived_at,
+          cancelled_at,
+          events (
+            title
+          )
+        `
+          : `
           id,
           event_id,
           recipient_email,
@@ -2024,14 +2068,26 @@ export class SketchRepository {
           events (
             title
           )
-        `)
-        .order("created_at", { ascending: false });
+        `;
 
-      if (eventId && eventId !== "all") {
-        query = query.eq("event_id", eventId);
+        let q = (supabase as any)
+          .from("communications_outbox")
+          .select(cols)
+          .order("created_at", { ascending: false });
+
+        if (eventId && eventId !== "all") {
+          q = q.eq("event_id", eventId);
+        }
+        return q;
+      };
+
+      let { data, error } = await buildQuery(true);
+      if (error && (error.code === "42703" || String(error.message || "").includes("archived_at"))) {
+        const fallback = await buildQuery(false);
+        data = fallback.data;
+        error = fallback.error;
       }
 
-      const { data, error } = await query;
       if (error) {
         console.error("[SketchRepository] listOutboxJobs error:", error);
         return [];
@@ -2051,6 +2107,8 @@ export class SketchRepository {
         lastError: row.last_error || undefined,
         scheduledAt: row.scheduled_at,
         deliveredAt: row.delivered_at,
+        archivedAt: row.archived_at || undefined,
+        cancelledAt: row.cancelled_at || undefined,
       }));
     } catch (err) {
       console.error("[SketchRepository] listOutboxJobs exception:", err);
@@ -2152,43 +2210,619 @@ export class SketchRepository {
   /**
    * Retry an eligible failed communication outbox job
    */
-  static async retryFailedCommunication(jobId: string): Promise<{ success: boolean; message?: string }> {
+  static async retryFailedCommunication(
+    jobId: string,
+    actor?: { actorId?: string; actorName?: string; actorEmail?: string }
+  ): Promise<{ success: boolean; message?: string }> {
     if (this.isPreview()) {
       const comms = getStoredCommunications();
       const found = comms.find((c) => c.id === jobId);
-      if (found) {
-        updateStoredCommunication({ ...found, status: "queued" });
-        return { success: true, message: "Delivery retried in preview store." };
+      if (!found) {
+        return { success: false, message: "Job not found in preview store." };
       }
-      return { success: false, message: "Job not found in preview store." };
+      if (found.status !== "failed") {
+        return { success: false, message: `Cannot retry a job in "${found.status}" state.` };
+      }
+      updateStoredCommunication({
+        ...found,
+        status: "queued",
+        attempts: 0,
+        lastError: undefined,
+        archivedAt: undefined,
+        scheduledAt: new Date().toISOString(),
+      });
+      await this.logAudit({
+        actorId: actor?.actorId,
+        actorName: actor?.actorName || "Administrator",
+        actorEmail: actor?.actorEmail || "admin@sketch.org",
+        action: "Retried Failed Outbox Dispatch",
+        target: jobId,
+        details: { jobId, subject: found.subject },
+      });
+      return { success: true, message: "Delivery retried in preview store." };
     }
 
     try {
+      const cleanId = typeof jobId === "string" ? jobId.trim() : "";
+      if (!cleanId) {
+        return { success: false, message: "A valid communication job ID is required." };
+      }
+
       const supabase = createAdminClient();
       if (!supabase) {
         return { success: false, message: "Storage client unavailable." };
       }
 
-      const { data, error } = await (supabase as any)
+      const nowIso = new Date().toISOString();
+      let { data, error } = await (supabase as any)
         .from("communications_outbox")
         .update({
           status: "queued",
-          scheduled_at: new Date().toISOString(),
+          attempts: 0,
+          scheduled_at: nowIso,
           last_error: null,
+          archived_at: null,
+          archived_by: null,
         })
-        .eq("id", jobId)
-        .in("status", ["failed", "dead_letter"])
-        .select("id")
+        .eq("id", cleanId)
+        .eq("status", "failed")
+        .select("id, subject")
         .single();
+
+      if (error && (error.code === "42703" || String(error.message || "").includes("archived_at"))) {
+        const fallback = await (supabase as any)
+          .from("communications_outbox")
+          .update({
+            status: "queued",
+            attempts: 0,
+            scheduled_at: nowIso,
+            last_error: null,
+          })
+          .eq("id", cleanId)
+          .eq("status", "failed")
+          .select("id, subject")
+          .single();
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error || !data) {
         return { success: false, message: error?.message || "Job not eligible for retry or already sent." };
       }
 
+      await this.logAudit({
+        actorId: actor?.actorId,
+        actorName: actor?.actorName || "Administrator",
+        actorEmail: actor?.actorEmail || "admin@sketch.org",
+        action: "Retried Failed Outbox Dispatch",
+        target: cleanId,
+        details: { jobId: cleanId, subject: data.subject },
+      });
+
       return { success: true };
     } catch (err: any) {
       console.error("[SketchRepository] retryFailedCommunication error:", err);
       return { success: false, message: err?.message || "Failed to retry delivery." };
+    }
+  }
+
+  /**
+   * Cancel eligible queued communication outbox jobs atomically.
+   * Never cancels jobs already claimed ('processing'), 'sent', 'failed', or 'cancelled'.
+   */
+  static async cancelOutboxJobs(params: {
+    jobIds: string[];
+    actorId?: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<{
+    success: boolean;
+    processedIds: string[];
+    skipped: Array<{ id: string; reason: string }>;
+    message?: string;
+  }> {
+    const cleanIds = Array.from(new Set(params.jobIds.map((id) => id.trim()).filter(Boolean)));
+    if (cleanIds.length === 0) {
+      return { success: false, processedIds: [], skipped: [], message: "No dispatch IDs provided." };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    if (this.isPreview()) {
+      const comms = getStoredCommunications();
+      const map = new Map(comms.map((c) => [c.id, c]));
+      const processedIds: string[] = [];
+      const skipped: Array<{ id: string; reason: string }> = [];
+
+      for (const id of cleanIds) {
+        const job = map.get(id);
+        if (!job) {
+          skipped.push({ id, reason: "Record not found" });
+        } else if (job.status !== "queued") {
+          skipped.push({ id, reason: `Cannot cancel record with status "${job.status}"` });
+        } else {
+          updateStoredCommunication({ ...job, status: "cancelled", cancelledAt: nowIso });
+          processedIds.push(id);
+        }
+      }
+
+      if (processedIds.length > 0) {
+        await this.logAudit({
+          actorId: params.actorId,
+          actorName: params.actorName || "Administrator",
+          actorEmail: params.actorEmail || "admin@sketch.org",
+          action: "Cancelled Outbox Dispatch",
+          target: processedIds.length === 1 ? processedIds[0] : `${processedIds.length} dispatches`,
+          details: { processedIds, skippedCount: skipped.length, timestamp: nowIso },
+        });
+      }
+
+      return {
+        success: processedIds.length > 0,
+        processedIds,
+        skipped,
+        message:
+          processedIds.length > 0
+            ? `Cancelled ${processedIds.length} queued dispatch(es).`
+            : skipped[0]?.reason || "No eligible queued dispatches were cancelled.",
+      };
+    }
+
+    try {
+      const supabase = createAdminClient();
+      if (!supabase) {
+        return { success: false, processedIds: [], skipped: [], message: "Storage client unavailable." };
+      }
+
+      const { validIds, invalidSkipped, invalidSet } = partitionOutboxJobIds(cleanIds);
+      if (validIds.length === 0) {
+        return {
+          success: false,
+          processedIds: [],
+          skipped: invalidSkipped,
+          message: invalidSkipped[0]?.reason || "No valid dispatch IDs provided.",
+        };
+      }
+
+      const { data: existingRows, error: fetchErr } = await (supabase as any)
+        .from("communications_outbox")
+        .select("id, status, subject")
+        .in("id", validIds);
+
+      if (fetchErr) {
+        return { success: false, processedIds: [], skipped: invalidSkipped, message: fetchErr.message };
+      }
+
+      const existingMap = new Map<string, any>((existingRows || []).map((r: any) => [r.id, r]));
+
+      // Atomic guarded update: only rows still in 'queued' state can transition to 'cancelled'
+      const { data: updatedRows, error: updateErr } = await (supabase as any)
+        .from("communications_outbox")
+        .update({
+          status: "cancelled",
+          cancelled_at: nowIso,
+          cancelled_by: params.actorId || null,
+        })
+        .in("id", validIds)
+        .eq("status", "queued")
+        .select("id, subject");
+
+      if (updateErr) {
+        const msg = String(updateErr.message || "");
+        if (msg.includes("cancelled") || updateErr.code === "22P02" || updateErr.code === "42703") {
+          return {
+            success: false,
+            processedIds: [],
+            skipped: invalidSkipped,
+            message:
+              "Outbox cancellation requires migration 00010_communications_outbox_management.sql to be applied.",
+          };
+        }
+        return { success: false, processedIds: [], skipped: invalidSkipped, message: updateErr.message };
+      }
+
+      const processedIds = (updatedRows || []).map((r: any) => r.id);
+      const processedSet = new Set<string>(processedIds);
+      const skipped: Array<{ id: string; reason: string }> = [];
+
+      for (const id of cleanIds) {
+        if (processedSet.has(id)) continue;
+        if (invalidSet.has(id)) {
+          skipped.push({ id, reason: "Invalid dispatch ID format (expected UUID)" });
+          continue;
+        }
+        const row = existingMap.get(id);
+        if (!row) {
+          skipped.push({ id, reason: "Record not found" });
+        } else if (row.status === "queued") {
+          skipped.push({ id, reason: "Record was claimed by delivery worker before cancellation" });
+        } else {
+          skipped.push({ id, reason: `Cannot cancel record with status "${row.status}"` });
+        }
+      }
+
+      if (processedIds.length > 0) {
+        await this.logAudit({
+          actorId: params.actorId,
+          actorName: params.actorName || "Administrator",
+          actorEmail: params.actorEmail || "admin@sketch.org",
+          action: "Cancelled Outbox Dispatch",
+          target: processedIds.length === 1 ? processedIds[0] : `${processedIds.length} dispatches`,
+          details: { processedIds, skippedCount: skipped.length, timestamp: nowIso },
+        });
+      }
+
+      return {
+        success: processedIds.length > 0,
+        processedIds,
+        skipped,
+        message:
+          processedIds.length > 0
+            ? `Cancelled ${processedIds.length} queued dispatch(es).`
+            : skipped[0]?.reason || "No eligible queued dispatches were cancelled.",
+      };
+    } catch (err: any) {
+      console.error("[SketchRepository] cancelOutboxJobs error:", err);
+      return { success: false, processedIds: [], skipped: [], message: err?.message || "Failed to cancel jobs." };
+    }
+  }
+
+  /**
+   * Permanently delete eligible queued or failed outbox records atomically.
+   * Strictly rejects/skips sent, processing, and cancelled records.
+   */
+  static async deleteOutboxJobs(params: {
+    jobIds: string[];
+    actorId?: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<{
+    success: boolean;
+    processedIds: string[];
+    skipped: Array<{ id: string; reason: string }>;
+    message?: string;
+  }> {
+    const cleanIds = Array.from(new Set(params.jobIds.map((id) => id.trim()).filter(Boolean)));
+    if (cleanIds.length === 0) {
+      return { success: false, processedIds: [], skipped: [], message: "No dispatch IDs provided." };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    if (this.isPreview()) {
+      const comms = getStoredCommunications();
+      const map = new Map(comms.map((c) => [c.id, c]));
+      const processedIds: string[] = [];
+      const deletedRecords: Array<Record<string, unknown>> = [];
+      const skipped: Array<{ id: string; reason: string }> = [];
+
+      for (const id of cleanIds) {
+        const job = map.get(id);
+        if (!job) {
+          skipped.push({ id, reason: "Record not found" });
+        } else if (job.status !== "queued" && job.status !== "failed") {
+          skipped.push({ id, reason: `Records with status "${job.status}" cannot be deleted` });
+        } else {
+          processedIds.push(id);
+          deletedRecords.push({
+            id: job.id,
+            eventId: job.eventId,
+            recipientEmail: job.recipientEmail || null,
+            recipientName: job.recipientName || null,
+            subject: job.subject,
+            templateType: job.type,
+            status: job.status,
+            attempts: job.attempts ?? 0,
+            lastError: job.lastError || null,
+          });
+        }
+      }
+
+      if (processedIds.length > 0) {
+        deleteStoredCommunications(processedIds);
+        await this.logAudit({
+          actorId: params.actorId,
+          actorName: params.actorName || "Administrator",
+          actorEmail: params.actorEmail || "admin@sketch.org",
+          action: "Deleted Outbox Dispatch",
+          target: processedIds.length === 1 ? processedIds[0] : `${processedIds.length} dispatches`,
+          details: {
+            processedIds,
+            deletedRecords,
+            deletedCount: processedIds.length,
+            skippedCount: skipped.length,
+            timestamp: nowIso,
+          },
+        });
+      }
+
+      return {
+        success: processedIds.length > 0,
+        processedIds,
+        skipped,
+        message:
+          processedIds.length > 0
+            ? `Deleted ${processedIds.length} outbox record(s).`
+            : skipped[0]?.reason || "No eligible records were deleted.",
+      };
+    }
+
+    try {
+      const supabase = createAdminClient();
+      if (!supabase) {
+        return { success: false, processedIds: [], skipped: [], message: "Storage client unavailable." };
+      }
+
+      const { validIds, invalidSkipped, invalidSet } = partitionOutboxJobIds(cleanIds);
+      if (validIds.length === 0) {
+        return {
+          success: false,
+          processedIds: [],
+          skipped: invalidSkipped,
+          message: invalidSkipped[0]?.reason || "No valid dispatch IDs provided.",
+        };
+      }
+
+      const { data: existingRows, error: fetchErr } = await (supabase as any)
+        .from("communications_outbox")
+        .select("id, status")
+        .in("id", validIds);
+
+      if (fetchErr) {
+        return { success: false, processedIds: [], skipped: invalidSkipped, message: fetchErr.message };
+      }
+
+      const existingMap = new Map<string, any>((existingRows || []).map((r: any) => [r.id, r]));
+
+      // Single atomic database transaction: deletes eligible rows AND records full audit snapshot;
+      // rolls back deletion automatically if audit_logs insert fails.
+      const actorUuid = params.actorId && OUTBOX_UUID_REGEX.test(params.actorId) ? params.actorId : null;
+      const { data: rpcData, error: rpcErr } = await (supabase as any).rpc("delete_outbox_jobs_with_audit", {
+        p_job_ids: validIds,
+        p_actor_id: actorUuid,
+        p_actor_name: params.actorName || "Administrator",
+        p_actor_email: params.actorEmail || "admin@sketch.org",
+      });
+
+      if (rpcErr) {
+        const msg = String(rpcErr.message || "");
+        if (
+          rpcErr.code === "42883" ||
+          rpcErr.code === "PGRST202" ||
+          msg.includes("delete_outbox_jobs_with_audit")
+        ) {
+          return {
+            success: false,
+            processedIds: [],
+            skipped: invalidSkipped,
+            message:
+              "Atomic outbox deletion requires migration 00010_communications_outbox_management.sql to be applied.",
+          };
+        }
+        console.error("[SketchRepository] deleteOutboxJobs atomic RPC failed:", rpcErr);
+        return {
+          success: false,
+          processedIds: [],
+          skipped: invalidSkipped,
+          message: rpcErr.message || "Outbox deletion failed and was rolled back.",
+        };
+      }
+
+      const processedIds: string[] = Array.isArray(rpcData?.processed_ids) ? rpcData.processed_ids : [];
+      const processedSet = new Set<string>(processedIds);
+      const skipped: Array<{ id: string; reason: string }> = [];
+
+      for (const id of cleanIds) {
+        if (processedSet.has(id)) continue;
+        if (invalidSet.has(id)) {
+          skipped.push({ id, reason: "Invalid dispatch ID format (expected UUID)" });
+          continue;
+        }
+        const row = existingMap.get(id);
+        if (!row) {
+          skipped.push({ id, reason: "Record not found" });
+        } else if (row.status === "queued" || row.status === "failed") {
+          skipped.push({ id, reason: "Record state changed concurrently (e.g., claimed by worker)" });
+        } else {
+          skipped.push({ id, reason: `Records with status "${row.status}" cannot be deleted` });
+        }
+      }
+
+      return {
+        success: processedIds.length > 0,
+        processedIds,
+        skipped,
+        message:
+          processedIds.length > 0
+            ? `Deleted ${processedIds.length} outbox record(s).`
+            : skipped[0]?.reason || "No eligible records were deleted.",
+      };
+    } catch (err: any) {
+      console.error("[SketchRepository] deleteOutboxJobs error:", err);
+      return { success: false, processedIds: [], skipped: [], message: err?.message || "Failed to delete records." };
+    }
+  }
+
+  /**
+   * Archive or unarchive sent/failed outbox records without deleting history.
+   * Preserves status, delivered_at, attempts, and last_error.
+   */
+  static async archiveOutboxJobs(params: {
+    jobIds: string[];
+    archive: boolean;
+    actorId?: string;
+    actorName?: string;
+    actorEmail?: string;
+  }): Promise<{
+    success: boolean;
+    processedIds: string[];
+    skipped: Array<{ id: string; reason: string }>;
+    message?: string;
+  }> {
+    const cleanIds = Array.from(new Set(params.jobIds.map((id) => id.trim()).filter(Boolean)));
+    if (cleanIds.length === 0) {
+      return { success: false, processedIds: [], skipped: [], message: "No dispatch IDs provided." };
+    }
+
+    const nowIso = new Date().toISOString();
+    const actionLabel = params.archive ? "Archived Outbox Dispatch" : "Unarchived Outbox Dispatch";
+
+    if (this.isPreview()) {
+      const comms = getStoredCommunications();
+      const map = new Map(comms.map((c) => [c.id, c]));
+      const processedIds: string[] = [];
+      const skipped: Array<{ id: string; reason: string }> = [];
+
+      for (const id of cleanIds) {
+        const job = map.get(id);
+        if (!job) {
+          skipped.push({ id, reason: "Record not found" });
+          continue;
+        }
+        if (params.archive) {
+          if (job.archivedAt) {
+            skipped.push({ id, reason: "Record is already archived" });
+          } else if (job.status !== "sent" && job.status !== "failed") {
+            skipped.push({ id, reason: `Only sent or failed records can be archived (status is "${job.status}")` });
+          } else {
+            updateStoredCommunication({ ...job, archivedAt: nowIso });
+            processedIds.push(id);
+          }
+        } else {
+          if (!job.archivedAt) {
+            skipped.push({ id, reason: "Record is not archived" });
+          } else {
+            updateStoredCommunication({ ...job, archivedAt: undefined });
+            processedIds.push(id);
+          }
+        }
+      }
+
+      if (processedIds.length > 0) {
+        await this.logAudit({
+          actorId: params.actorId,
+          actorName: params.actorName || "Administrator",
+          actorEmail: params.actorEmail || "admin@sketch.org",
+          action: actionLabel,
+          target: processedIds.length === 1 ? processedIds[0] : `${processedIds.length} dispatches`,
+          details: { processedIds, skippedCount: skipped.length, archive: params.archive, timestamp: nowIso },
+        });
+      }
+
+      return {
+        success: processedIds.length > 0,
+        processedIds,
+        skipped,
+        message:
+          processedIds.length > 0
+            ? `${params.archive ? "Archived" : "Unarchived"} ${processedIds.length} dispatch(es).`
+            : skipped[0]?.reason || "No eligible dispatches were updated.",
+      };
+    }
+
+    try {
+      const supabase = createAdminClient();
+      if (!supabase) {
+        return { success: false, processedIds: [], skipped: [], message: "Storage client unavailable." };
+      }
+
+      const { validIds, invalidSkipped, invalidSet } = partitionOutboxJobIds(cleanIds);
+      if (validIds.length === 0) {
+        return {
+          success: false,
+          processedIds: [],
+          skipped: invalidSkipped,
+          message: invalidSkipped[0]?.reason || "No valid dispatch IDs provided.",
+        };
+      }
+
+      const { data: existingRows, error: fetchErr } = await (supabase as any)
+        .from("communications_outbox")
+        .select("id, status, archived_at")
+        .in("id", validIds);
+
+      if (fetchErr) {
+        if (fetchErr.code === "42703" || String(fetchErr.message || "").includes("archived_at")) {
+          return {
+            success: false,
+            processedIds: [],
+            skipped: invalidSkipped,
+            message:
+              "Outbox archival requires migration 00010_communications_outbox_management.sql to be applied.",
+          };
+        }
+        return { success: false, processedIds: [], skipped: invalidSkipped, message: fetchErr.message };
+      }
+
+      const existingMap = new Map<string, any>((existingRows || []).map((r: any) => [r.id, r]));
+
+      let updateQuery = (supabase as any)
+        .from("communications_outbox")
+        .update(
+          params.archive
+            ? { archived_at: nowIso, archived_by: params.actorId || null }
+            : { archived_at: null, archived_by: null }
+        )
+        .in("id", validIds);
+
+      if (params.archive) {
+        updateQuery = updateQuery.in("status", ["sent", "failed"]).is("archived_at", null);
+      } else {
+        updateQuery = updateQuery.not("archived_at", "is", null);
+      }
+
+      const { data: updatedRows, error: updateErr } = await updateQuery.select("id");
+      if (updateErr) {
+        return { success: false, processedIds: [], skipped: invalidSkipped, message: updateErr.message };
+      }
+
+      const processedIds = (updatedRows || []).map((r: any) => r.id);
+      const processedSet = new Set<string>(processedIds);
+      const skipped: Array<{ id: string; reason: string }> = [];
+
+      for (const id of cleanIds) {
+        if (processedSet.has(id)) continue;
+        if (invalidSet.has(id)) {
+          skipped.push({ id, reason: "Invalid dispatch ID format (expected UUID)" });
+          continue;
+        }
+        const row = existingMap.get(id);
+        if (!row) {
+          skipped.push({ id, reason: "Record not found" });
+        } else if (params.archive) {
+          if (row.archived_at) {
+            skipped.push({ id, reason: "Record is already archived" });
+          } else {
+            skipped.push({ id, reason: `Only sent or failed records can be archived (status is "${row.status}")` });
+          }
+        } else {
+          skipped.push({ id, reason: "Record is not archived" });
+        }
+      }
+
+      if (processedIds.length > 0) {
+        await this.logAudit({
+          actorId: params.actorId,
+          actorName: params.actorName || "Administrator",
+          actorEmail: params.actorEmail || "admin@sketch.org",
+          action: actionLabel,
+          target: processedIds.length === 1 ? processedIds[0] : `${processedIds.length} dispatches`,
+          details: { processedIds, skippedCount: skipped.length, archive: params.archive, timestamp: nowIso },
+        });
+      }
+
+      return {
+        success: processedIds.length > 0,
+        processedIds,
+        skipped,
+        message:
+          processedIds.length > 0
+            ? `${params.archive ? "Archived" : "Unarchived"} ${processedIds.length} dispatch(es).`
+            : skipped[0]?.reason || "No eligible dispatches were updated.",
+      };
+    } catch (err: any) {
+      console.error("[SketchRepository] archiveOutboxJobs error:", err);
+      return { success: false, processedIds: [], skipped: [], message: err?.message || "Failed to update archive state." };
     }
   }
 

@@ -48,7 +48,9 @@ describe("Email Lifecycle Hardening: Idempotency, Status Semantics & Local Verif
         }),
         from: vi.fn().mockReturnValue({
           update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ error: null }),
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
           }),
         }),
       };

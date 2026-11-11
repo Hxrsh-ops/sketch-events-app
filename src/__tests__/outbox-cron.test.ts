@@ -3,11 +3,11 @@ import { NextRequest } from "next/server";
 import { POST, GET } from "@/app/api/cron/process-outbox/route";
 import { resetServerEnvCache } from "@/lib/env.server";
 import { resetAppEnvCache } from "@/lib/env";
-import { EmailOutboxWorker } from "@/lib/email/worker";
 
 const mockConstructor = vi.fn();
 const mockRecoverStuckJobs = vi.fn();
 const mockProcessBatch = vi.fn();
+const mockProcessSingleJob = vi.fn();
 
 vi.mock("@/lib/email/worker", () => {
   return {
@@ -17,6 +17,7 @@ vi.mock("@/lib/email/worker", () => {
       }
       recoverStuckJobs = mockRecoverStuckJobs;
       processBatch = mockProcessBatch;
+      processSingleJob = mockProcessSingleJob;
     },
   };
 });
@@ -36,6 +37,13 @@ describe("Slice 4.1: Secure Outbox Worker Invocation & Cron Endpoint", () => {
       claimed: 0,
       processed: 0,
       succeeded: 0,
+      failed: 0,
+      terminalFailures: 0,
+    });
+    mockProcessSingleJob.mockResolvedValue({
+      claimed: 1,
+      processed: 1,
+      succeeded: 1,
       failed: 0,
       terminalFailures: 0,
     });
@@ -280,6 +288,62 @@ describe("Slice 4.1: Secure Outbox Worker Invocation & Cron Endpoint", () => {
       expect(json.error).toBe("WORKER_EXECUTION_FAILED");
       expect(json.message).toBe("An internal server error occurred during outbox processing.");
       expect(JSON.stringify(json)).not.toContain("Supabase RPC connection timed out");
+    });
+  });
+
+  describe("6. Scoped Single-Record Processing (?job_id=...)", () => {
+    const targetJobId = "df68a1ec-2c87-4f80-8781-a02994bc568b";
+
+    it("rejects malformed job_id with 400 and never falls back to processBatch", async () => {
+      process.env.CRON_SECRET = validSecret;
+
+      const req = new NextRequest("http://localhost:3000/api/cron/process-outbox?job_id=not-a-uuid", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${validSecret}`,
+        },
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json.error).toBe("INVALID_JOB_ID");
+      expect(mockProcessBatch).not.toHaveBeenCalled();
+      expect(mockRecoverStuckJobs).not.toHaveBeenCalled();
+      expect(mockProcessSingleJob).not.toHaveBeenCalled();
+    });
+
+    it("processes ONLY the specified job_id and does not call recoverStuckJobs or processBatch", async () => {
+      process.env.CRON_SECRET = validSecret;
+
+      const req = new NextRequest(
+        `http://localhost:3000/api/cron/process-outbox?job_id=${targetJobId}&recipient=tharikadheena@gmail.com`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${validSecret}`,
+          },
+        }
+      );
+
+      const response = await POST(req);
+      expect(response.status).toBe(200);
+      const rawText = await response.text();
+      expect(rawText).not.toContain("tharikadheena@gmail.com");
+
+      const json = JSON.parse(rawText);
+      expect(json.success).toBe(true);
+      expect(json.mode).toBe("single");
+      expect(json.jobId).toBe(targetJobId);
+      expect(json.recovered).toBe(0);
+      expect(json.claimed).toBe(1);
+      expect(json.succeeded).toBe(1);
+
+      expect(mockProcessSingleJob).toHaveBeenCalledWith(targetJobId, {
+        expectedRecipientEmail: "tharikadheena@gmail.com",
+      });
+      expect(mockRecoverStuckJobs).not.toHaveBeenCalled();
+      expect(mockProcessBatch).not.toHaveBeenCalled();
     });
   });
 });

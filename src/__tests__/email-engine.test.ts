@@ -101,6 +101,7 @@ describe("Email Engine: Provider Adapters", () => {
   let testAdapter: TestEmailAdapter;
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     testAdapter = new TestEmailAdapter();
   });
 
@@ -147,6 +148,81 @@ describe("Email Engine: Provider Adapters", () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain("RESEND_API_KEY_UNCONFIGURED");
     expect(result.retryable).toBe(false);
+
+    const resendExample = new ResendEmailAdapter("re_your_resend_api_key_here", "test@sketch.org");
+    const resExample = await resendExample.sendEmail({
+      to: "test@example.com",
+      subject: "Test",
+      html: "<p>Hello</p>",
+    });
+    expect(resExample.success).toBe(false);
+    expect(resExample.error).toContain("RESEND_API_KEY_UNCONFIGURED");
+    expect(resExample.retryable).toBe(false);
+  });
+
+  it("ResendEmailAdapter formats payload, sanitizes recipient name, and handles success and timeouts", async () => {
+    let capturedHeaders: any = null;
+    let capturedBody: any = null;
+
+    vi.spyOn(global, "fetch").mockImplementationOnce(async (_url: any, init: any) => {
+      capturedHeaders = init.headers;
+      capturedBody = JSON.parse(init.body);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: "re_msg_12345" }),
+      } as any;
+    });
+
+    const resend = new ResendEmailAdapter("re_live_mock_key", "SketchHUB <onboarding@resend.dev>");
+    const okRes = await resend.sendEmail({
+      to: "tharikadheen@gmail.com",
+      toName: "Tharika <Admin>\r\n",
+      subject: "Pass Ready",
+      html: "<p>Hi</p>",
+      text: "Hi",
+      idempotencyKey: "outbox-123",
+    });
+
+    expect(okRes.success).toBe(true);
+    expect(okRes.messageId).toBe("re_msg_12345");
+    expect(capturedHeaders["Idempotency-Key"]).toBe("outbox-123");
+    expect(capturedBody.to).toBe("Tharika Admin <tharikadheen@gmail.com>");
+
+    const timeoutErr = new Error("Request timed out");
+    timeoutErr.name = "TimeoutError";
+    vi.spyOn(global, "fetch").mockRejectedValueOnce(timeoutErr);
+
+    const timeoutRes = await resend.sendEmail({
+      to: "tharikadheen@gmail.com",
+      subject: "Pass Ready",
+      html: "<p>Hi</p>",
+    });
+    expect(timeoutRes.success).toBe(false);
+    expect(timeoutRes.retryable).toBe(true);
+    expect(timeoutRes.error).toContain("Timeout");
+  });
+
+  it("EmailOutboxWorker disallows EMAIL_PROVIDER='test' in production mode without custom adapter", async () => {
+    const originalEnv = { ...process.env };
+    const { resetAppEnvCache } = await import("@/lib/env");
+    const { resetServerEnvCache } = await import("@/lib/env.server");
+
+    try {
+      process.env.APP_MODE = "production";
+      process.env.NEXT_PUBLIC_APP_MODE = "production";
+      process.env.NEXT_PUBLIC_SUPABASE_URL = "https://fvnkhzlbvxemwlkmwhbz.supabase.co";
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_test_key";
+      process.env.EMAIL_PROVIDER = "test";
+      resetAppEnvCache();
+      resetServerEnvCache();
+
+      expect(() => new EmailOutboxWorker()).toThrowError(/EMAIL_PROVIDER='test' is disallowed/);
+    } finally {
+      process.env = originalEnv;
+      resetAppEnvCache();
+      resetServerEnvCache();
+    }
   });
 
   it("BrevoEmailAdapter rejects live dispatch if API key is missing or placeholder", async () => {
@@ -376,4 +452,3 @@ describe("Email Engine: Provider Adapters", () => {
     }
   });
 });
-

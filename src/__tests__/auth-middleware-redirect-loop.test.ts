@@ -76,5 +76,26 @@ describe("Middleware Authentication & Redirect Loop Invariants", () => {
       // Never redirect to / when error is present on login page
       expect(res.headers.get("location")).not.toBe("http://localhost:3000/");
     });
+
+    it("exempts /api/cron/process-outbox from /login redirects so CRON_SECRET auth handles it", async () => {
+      const postReq = new NextRequest("http://localhost:3000/api/cron/process-outbox", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer some-cron-secret",
+        },
+      });
+
+      const postRes = await updateSession(postReq);
+      expect(postRes.status).toBe(200);
+      expect(postRes.headers.get("location")).toBeNull();
+
+      const getReq = new NextRequest("http://localhost:3000/api/cron/process-outbox", {
+        method: "GET",
+      });
+
+      const getRes = await updateSession(getReq);
+      expect(getRes.status).toBe(200);
+      expect(getRes.headers.get("location")).toBeNull();
+    });
   });
 });

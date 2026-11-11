@@ -19,6 +19,18 @@ export interface ServerAppEnv extends AppEnv {
 
 let cachedServerEnv: ServerAppEnv | null = null;
 
+function sanitizeEnvValue(raw: string | undefined | null): string | undefined {
+  if (!raw) return undefined;
+  let val = raw.trim();
+  if (
+    (val.startsWith('"') && val.endsWith('"')) ||
+    (val.startsWith("'") && val.endsWith("'"))
+  ) {
+    val = val.slice(1, -1).trim();
+  }
+  return val || undefined;
+}
+
 /**
  * Retrieves the privileged server environment configuration.
  * Protected by Next.js `server-only` build-time boundary.
@@ -29,12 +41,12 @@ export function getServerEnv(): ServerAppEnv {
   const base = getAppEnv();
   const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseServiceRoleKey = rawServiceKey ? sanitizeSupabaseKey(rawServiceKey) : undefined;
-  const emailProvider = process.env.EMAIL_PROVIDER || "resend";
-  const resendApiKey = process.env.RESEND_API_KEY?.trim();
-  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
-  const mailpitUrl = process.env.MAILPIT_URL?.trim();
-  const emailFrom = process.env.EMAIL_FROM?.trim() || "SKETCH Events <events@sketchevents.org>";
-  const cronSecret = process.env.CRON_SECRET?.trim();
+  const emailProvider = sanitizeEnvValue(process.env.EMAIL_PROVIDER) || "resend";
+  const resendApiKey = sanitizeEnvValue(process.env.RESEND_API_KEY);
+  const brevoApiKey = sanitizeEnvValue(process.env.BREVO_API_KEY);
+  const mailpitUrl = sanitizeEnvValue(process.env.MAILPIT_URL);
+  const emailFrom = sanitizeEnvValue(process.env.EMAIL_FROM) || "SKETCH Events <events@sketchevents.org>";
+  const cronSecret = sanitizeEnvValue(process.env.CRON_SECRET);
 
   // Validate service-role key sanity in production
   if (base.mode === "production" && supabaseServiceRoleKey) {
@@ -73,8 +85,12 @@ export function getServerEnv(): ServerAppEnv {
  * Returns null if unset, blank, or placeholder.
  */
 export function getServerCronSecret(): string | null {
-  const secret = (process.env.CRON_SECRET || getServerEnv().cronSecret)?.trim();
-  if (!secret || secret === "your-cron-secret-here") {
+  const secret = sanitizeEnvValue(process.env.CRON_SECRET) || getServerEnv().cronSecret;
+  if (
+    !secret ||
+    secret === "your-cron-secret-here" ||
+    secret === "your-secure-random-32-byte-hex-secret-here"
+  ) {
     return null;
   }
   return secret;

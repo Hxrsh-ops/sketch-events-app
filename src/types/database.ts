@@ -19,7 +19,7 @@ export type RegistrationMode = "individual" | "team";
 export type RegistrationStatus = "registered" | "waitlisted" | "cancelled";
 export type AttendanceStatus = "not_checked_in" | "checked_in";
 export type CheckInMethod = "camera" | "manual" | "simulation";
-export type CommunicationStatus = "queued" | "processing" | "sent" | "failed";
+export type CommunicationStatus = "queued" | "processing" | "sent" | "failed" | "cancelled";
 
 export interface Database {
   public: {
@@ -366,6 +366,10 @@ export interface Database {
           last_error: string | null;
           scheduled_at: string;
           delivered_at: string | null;
+          archived_at: string | null;
+          archived_by: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -381,6 +385,10 @@ export interface Database {
           last_error?: string | null;
           scheduled_at?: string;
           delivered_at?: string | null;
+          archived_at?: string | null;
+          archived_by?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
           created_at?: string;
         };
         Update: {
@@ -395,6 +403,10 @@ export interface Database {
           attempts?: number;
           last_error?: string | null;
           delivered_at?: string | null;
+          archived_at?: string | null;
+          archived_by?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
         };
       };
       audit_logs: {
@@ -454,6 +466,15 @@ export interface Database {
           p_max_attempts?: number;
         };
         Returns: Database["public"]["Tables"]["communications_outbox"]["Row"][];
+      };
+      delete_outbox_jobs_with_audit: {
+        Args: {
+          p_job_ids: string[];
+          p_actor_id?: string | null;
+          p_actor_name?: string;
+          p_actor_email?: string;
+        };
+        Returns: Json;
       };
     };
     Enums: {

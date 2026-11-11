@@ -11,7 +11,7 @@ export interface EmailDeliveryJob {
   subject: string;
   templateType: "ticket_pass" | "reminder" | "announcement" | "certificate";
   payload: Record<string, unknown>;
-  status: "queued" | "processing" | "sent" | "failed";
+  status: "queued" | "processing" | "sent" | "failed" | "cancelled";
   attempts: number;
   lastError: string | null;
   scheduledAt: string;
