@@ -218,47 +218,14 @@ function LoginForm() {
         throw new Error("Authentication service is unavailable. Please check Supabase environment configuration.");
       }
 
-      // Derive absolute callback URL
-      const callbackUrl = new URL("/api/auth/callback", window.location.origin);
+      // Initiate Google OAuth via server-side /api/auth/google handler so direct
+      // Google OAuth displays our app's own domain (not *.supabase.co) when configured,
+      // and falls back cleanly to Supabase OAuth otherwise.
+      const initiateUrl = new URL("/api/auth/google", window.location.origin);
       if (redirectTarget && redirectTarget !== "/") {
-        callbackUrl.searchParams.set("redirect", redirectTarget);
+        initiateUrl.searchParams.set("redirect", redirectTarget);
       }
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: callbackUrl.toString(),
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
-      });
-
-      if (error) {
-        const errorMsg = error.message || "";
-        const isBackendDown =
-          errorMsg.toLowerCase().includes("fetch failed") ||
-          errorMsg.toLowerCase().includes("paused") ||
-          errorMsg.toLowerCase().includes("network") ||
-          errorMsg.toLowerCase().includes("503");
-
-        if (isBackendDown) {
-          setErrorMessage(
-            "Backend Service Unavailable: Unable to reach Supabase to initiate Google OAuth. The project may be paused or offline."
-          );
-        } else {
-          setErrorMessage(
-            `Google OAuth initialization failed: ${error.message}. Ensure Google provider is enabled in the Supabase Dashboard.`
-          );
-        }
-        setGoogleLoading(false);
-        return;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      }
+      window.location.href = initiateUrl.toString();
     } catch (err: any) {
       setErrorMessage(err.message || "Google OAuth initialization failed.");
       setGoogleLoading(false);

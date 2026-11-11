@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getAppEnv } from "@/lib/env";
 import { sanitizeInternalRedirect } from "@/lib/auth/redirect";
+import {
+  GOOGLE_OAUTH_TX_COOKIE,
+  exchangeGoogleCodeForIdToken,
+  getGoogleOAuthConfig,
+  timingSafeStringEqual,
+  verifyGoogleOAuthTxToken,
+} from "@/lib/auth/google-oauth";
 import { AdminRole } from "@/types";
 
 const ALLOWED_ADMIN_ROLES: AdminRole[] = [
@@ -11,26 +18,37 @@ const ALLOWED_ADMIN_ROLES: AdminRole[] = [
   "analyst",
 ];
 
+function clearTxCookieIfPresent(response: NextResponse, hasTxCookie: boolean): NextResponse {
+  if (hasTxCookie) {
+    response.cookies.delete({ name: GOOGLE_OAUTH_TX_COOKIE, path: "/" });
+  }
+  return response;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
+  const stateParam = searchParams.get("state");
   const rawRedirect = searchParams.get("redirect");
-  const redirectTarget = sanitizeInternalRedirect(rawRedirect, "/");
+  let redirectTarget = sanitizeInternalRedirect(rawRedirect, "/");
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
+
+  const txCookie = request.cookies.get(GOOGLE_OAUTH_TX_COOKIE)?.value;
+  const hasTxCookie = Boolean(txCookie);
 
   // Handle OAuth provider errors / cancellation directly
   if (error) {
     const errorUrl = new URL("/login", origin);
     errorUrl.searchParams.set("error", "oauth_provider_error");
     errorUrl.searchParams.set("details", errorDescription || error);
-    return NextResponse.redirect(errorUrl);
+    return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
   }
 
   if (!code) {
     const errorUrl = new URL("/login", origin);
     errorUrl.searchParams.set("error", "missing_auth_code");
-    return NextResponse.redirect(errorUrl);
+    return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
   }
 
   const env = getAppEnv();
@@ -39,7 +57,7 @@ export async function GET(request: NextRequest) {
   if (env.mode === "preview" || !env.supabaseUrl) {
     const errorUrl = new URL("/login", origin);
     errorUrl.searchParams.set("error", "preview_oauth_unsupported");
-    return NextResponse.redirect(errorUrl);
+    return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
   }
 
   try {
@@ -47,22 +65,77 @@ export async function GET(request: NextRequest) {
     if (!supabase) {
       const errorUrl = new URL("/login", origin);
       errorUrl.searchParams.set("error", "auth_client_unavailable");
-      return NextResponse.redirect(errorUrl);
+      return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
     }
 
-    // Safe diagnostic: log endpoint origin, key prefix and presence of code (NO secrets/tokens logged)
-    if (process.env.NODE_ENV !== "production" || process.env.DEBUG_AUTH) {
-      console.info("[OAuth Callback] Exchanging code for session...", {
-        endpoint: env.supabaseUrl ? new URL(env.supabaseUrl).origin : "missing",
-        hasCode: !!code,
-        keyPrefix: env.supabaseAnonKey ? env.supabaseAnonKey.slice(0, 15) : "missing",
-        keyLength: env.supabaseAnonKey?.length ?? 0,
+    let exchangeData: { user: { id: string; email?: string | null } | null } | null = null;
+    let exchangeError: { message?: string; status?: number; code?: string } | null = null;
+
+    if (hasTxCookie) {
+      // Direct Google OAuth transaction path (Option B):
+      // Verify CSRF state & signed transaction cookie, exchange code with Google, then sign in via ID token.
+      const tx = verifyGoogleOAuthTxToken(txCookie);
+      if (!tx || !stateParam || !timingSafeStringEqual(tx.state, stateParam)) {
+        const errorUrl = new URL("/login", origin);
+        errorUrl.searchParams.set("error", "auth_exchange_failed");
+        errorUrl.searchParams.set("details", "Invalid or expired Google OAuth state. Please try signing in again.");
+        return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
+      }
+
+      redirectTarget = sanitizeInternalRedirect(tx.redirectTarget, "/");
+
+      const googleConfig = getGoogleOAuthConfig();
+      if (!googleConfig.isConfigured || !googleConfig.clientId || !googleConfig.clientSecret) {
+        const errorUrl = new URL("/login", origin);
+        errorUrl.searchParams.set("error", "auth_client_unavailable");
+        return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
+      }
+
+      const callbackUri = new URL("/api/auth/callback", origin).toString();
+      const tokenRes = await exchangeGoogleCodeForIdToken({
+        code,
+        clientId: googleConfig.clientId,
+        clientSecret: googleConfig.clientSecret,
+        redirectUri: callbackUri,
       });
-    }
 
-    // Exchange auth code for session
-    const { data: exchangeData, error: exchangeError } =
-      await supabase.auth.exchangeCodeForSession(code);
+      if (tokenRes.error || !tokenRes.idToken) {
+        console.error("[OAuth Callback] Direct Google token exchange failed:", {
+          message: tokenRes.error,
+          isNetworkError: tokenRes.isNetworkError,
+        });
+        const errorUrl = new URL("/login", origin);
+        errorUrl.searchParams.set(
+          "error",
+          tokenRes.isNetworkError ? "backend_unavailable" : "auth_exchange_failed"
+        );
+        errorUrl.searchParams.set("details", tokenRes.error || "Google token exchange failed");
+        return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
+      }
+
+      const idTokenRes = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: tokenRes.idToken,
+        nonce: tx.rawNonce,
+      });
+      exchangeData = idTokenRes.data as any;
+      exchangeError = idTokenRes.error as any;
+    } else {
+      // Standard Supabase PKCE OAuth path:
+      // Safe diagnostic: log endpoint origin, key prefix and presence of code (NO secrets/tokens logged)
+      if (process.env.NODE_ENV !== "production" || process.env.DEBUG_AUTH) {
+        console.info("[OAuth Callback] Exchanging code for session...", {
+          endpoint: env.supabaseUrl ? new URL(env.supabaseUrl).origin : "missing",
+          hasCode: !!code,
+          keyPrefix: env.supabaseAnonKey ? env.supabaseAnonKey.slice(0, 15) : "missing",
+          keyLength: env.supabaseAnonKey?.length ?? 0,
+        });
+      }
+
+      const pkceRes = await supabase.auth.exchangeCodeForSession(code);
+      exchangeData = pkceRes.data as any;
+      exchangeError = pkceRes.error as any;
+    }
 
     if (exchangeError || !exchangeData?.user) {
       const errorMsg = exchangeError?.message || "User object missing from session";
@@ -87,7 +160,7 @@ export async function GET(request: NextRequest) {
       const errorUrl = new URL("/login", origin);
       errorUrl.searchParams.set("error", isBackendDown ? "backend_unavailable" : "auth_exchange_failed");
       errorUrl.searchParams.set("details", errorMsg);
-      return NextResponse.redirect(errorUrl);
+      return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
     }
 
     const userId = exchangeData.user.id;
@@ -123,7 +196,7 @@ export async function GET(request: NextRequest) {
       const errorUrl = new URL("/login", origin);
       errorUrl.searchParams.set("error", "backend_unavailable");
       errorUrl.searchParams.set("details", "Database error verifying administrator profile.");
-      return NextResponse.redirect(errorUrl);
+      return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
     }
 
     // 2. Identity Mapping: If not found by ID, but verified Google email matches an existing admin profile
@@ -191,12 +264,12 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      return redirectRes;
+      return clearTxCookieIfPresent(redirectRes, hasTxCookie);
     }
 
     // 4. Authorized Administrator Confirmed. Redirect to destination!
     const successUrl = new URL(redirectTarget, origin);
-    return NextResponse.redirect(successUrl);
+    return clearTxCookieIfPresent(NextResponse.redirect(successUrl), hasTxCookie);
   } catch (err: any) {
     const errMessage = err?.message || String(err);
     const isNetworkOrDns =
@@ -217,6 +290,6 @@ export async function GET(request: NextRequest) {
       isNetworkOrDns ? "backend_unavailable" : "auth_exchange_failed"
     );
     errorUrl.searchParams.set("details", errMessage);
-    return NextResponse.redirect(errorUrl);
+    return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
   }
 }
