@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import QRCode from "qrcode";
 import {
   Calendar,
   MapPin,
@@ -88,6 +89,38 @@ export default function PublicEventClient({
     isExisting?: boolean;
     isMockPreview?: boolean;
   } | null>(null);
+  const [confirmationQrDataUrl, setConfirmationQrDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!registrationResult) {
+      setConfirmationQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    const qrPayload =
+      registrationResult.liveTicketUrl && typeof window !== "undefined"
+        ? `${window.location.origin}${registrationResult.liveTicketUrl}`
+        : registrationResult.qrCredentialId || registrationResult.registrationId;
+
+    QRCode.toDataURL(qrPayload, {
+      width: 220,
+      margin: 1,
+      color: {
+        dark: "#111315",
+        light: "#FFFFFF",
+      },
+    })
+      .then((url) => {
+        if (!cancelled) setConfirmationQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setConfirmationQrDataUrl(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [registrationResult]);
 
   const handleFieldChange = (fieldId: string, value: unknown) => {
     setFormValues((prev) => ({
@@ -763,55 +796,117 @@ export default function PublicEventClient({
             </div>
 
             {/* Live Visual Pass Card */}
-            <div className="max-w-md mx-auto overflow-hidden rounded-3xl border-2 border-[#17191C] dark:border-[#30353A] bg-[#17191C] text-white p-6 shadow-xl relative">
-              <div className="absolute top-0 right-0 p-8 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_70%)] pointer-events-none" />
+            <div
+              className="max-w-md mx-auto overflow-hidden rounded-3xl border border-[#2C3136] bg-[#111315] text-white shadow-[0_24px_60px_-15px_rgba(0,0,0,0.45)] relative"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 15% 12%, rgba(226, 184, 87, 0.16) 0%, transparent 48%), radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
+                backgroundSize: "100% 100%, 18px 18px",
+              }}
+            >
+              <div className="absolute inset-[1px] rounded-[23px] ring-1 ring-inset ring-white/10 pointer-events-none" />
 
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">
-                    {Boolean(registrationResult.isMockPreview ?? isPreview)
-                      ? "SKETCH PREVIEW PASS"
-                      : "SKETCH OFFICIAL PASS"}
+              {/* Top Club Header */}
+              <div className="p-6 pb-5 relative z-10">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src="/assets/sketch-isometric-mark.png"
+                      alt="SKETCH"
+                      className="h-6 w-6 rounded-md object-contain bg-white/10 p-0.5 border border-white/15"
+                    />
+                    <span className="text-xs font-extrabold tracking-[0.22em] uppercase text-white">
+                      SKETCH
+                    </span>
+                    <span className="h-3.5 w-[1px] bg-white/20" />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E2B857]">
+                      {Boolean(registrationResult.isMockPreview ?? isPreview)
+                        ? "PREVIEW"
+                        : "CONFIRMED"}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[11px] font-semibold tracking-wider text-white/80 bg-white/[0.06] px-2.5 py-1 rounded-md border border-white/10">
+                    {registrationResult.ticketNumber || registrationResult.registrationId}
                   </span>
-                  <p className="font-mono text-xs font-bold text-white mt-0.5">
-                    {registrationResult.registrationId}
+                </div>
+
+                {/* Event Title & Schedule */}
+                <div className="mt-5 space-y-1.5">
+                  <h4 className="text-xl font-extrabold tracking-tight text-white leading-snug">
+                    {event.title}
+                  </h4>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/70">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-[#E2B857]" />
+                      {formatDate(event.startDate)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-[#E2B857]" />
+                      {event.venue}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Real QR Code Container */}
+                <div className="mt-6 flex flex-col items-center justify-center">
+                  <div className="p-3.5 rounded-2xl bg-white shadow-xl border border-white/80 flex flex-col items-center">
+                    {confirmationQrDataUrl ? (
+                      <img
+                        src={confirmationQrDataUrl}
+                        alt="Registration Pass QR Code"
+                        className="w-36 h-36 object-contain"
+                      />
+                    ) : (
+                      <div className="w-36 h-36 flex items-center justify-center text-[11px] font-mono text-neutral-500">
+                        Generating QR...
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-3 text-[10px] font-mono uppercase tracking-[0.18em] text-white/55">
+                    {registrationResult.liveTicketUrl
+                      ? "Tap below for 30s live rotating gate QR"
+                      : `REF • ${registrationResult.registrationId}`}
                   </p>
                 </div>
-                <Badge variant="secondary" className="bg-white text-[#17191C] font-bold text-[10px]">
-                  {Boolean(registrationResult.isMockPreview ?? isPreview)
-                    ? "PREVIEW PASS"
-                    : "VERIFIED ENTRY"}
-                </Badge>
               </div>
 
-              {/* QR Code Frame */}
-              <div className="my-5 flex flex-col items-center justify-center rounded-2xl bg-white p-4 text-[#17191C]">
-                <div className="w-36 h-36 border-2 border-[#17191C] p-2 flex flex-col justify-between">
-                  <div className="flex justify-between">
-                    <div className="w-7 h-7 bg-[#17191C] p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-[#17191C]" /></div></div>
-                    <div className="w-7 h-7 bg-[#17191C] p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-[#17191C]" /></div></div>
-                  </div>
-                  <div className="text-[9px] font-mono font-bold text-center">SKETCH PASS</div>
-                  <div className="flex justify-between items-end">
-                    <div className="w-7 h-7 bg-[#17191C] p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-[#17191C]" /></div></div>
-                    <div className="w-5 h-5 border border-dashed border-[#17191C]" />
-                  </div>
+              {/* Perforated Ticket Tear Divider */}
+              <div className="relative flex items-center justify-between px-0 my-0">
+                <div className="w-4 h-4 -ml-2 rounded-full bg-white dark:bg-[#16191D] border border-[#2C3136]" />
+                <div className="flex-1 border-t border-dashed border-white/20 mx-2" />
+                <div className="w-4 h-4 -mr-2 rounded-full bg-white dark:bg-[#16191D] border border-[#2C3136]" />
+              </div>
+
+              {/* Bottom Pass Holder Stub */}
+              <div className="px-6 py-4 bg-black/25 flex items-end justify-between gap-4 relative z-10">
+                <div className="min-w-0">
+                  <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/45 block mb-0.5">
+                    Holder
+                  </span>
+                  <p className="text-sm font-bold text-white truncate">
+                    {registrationResult.attendeeName}
+                  </p>
                 </div>
-                <span className="mt-2 font-mono text-xs font-bold text-[#17191C]">
-                  {registrationResult.registrationId}
-                </span>
-                <span className="text-[10px] text-[#8A9098]">
-                  Hash: {registrationResult.qrCredentialId}
-                </span>
-              </div>
-
-              <div className="space-y-1 text-center border-t border-white/10 pt-3">
-                <h4 className="text-base font-bold text-white">{registrationResult.attendeeName}</h4>
                 {registrationResult.teamName && (
-                  <p className="text-xs font-medium text-white/80">Team: {registrationResult.teamName}</p>
+                  <div className="min-w-0 text-right">
+                    <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/45 block mb-0.5">
+                      Team
+                    </span>
+                    <p className="text-xs font-semibold text-[#E2B857] truncate">
+                      {registrationResult.teamName}
+                    </p>
+                  </div>
                 )}
-                <p className="text-xs text-white/70">{event.title}</p>
-                <p className="text-[11px] text-white/50">{event.venue}</p>
+                {!registrationResult.teamName && (
+                  <div className="text-right shrink-0">
+                    <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/45 block mb-0.5">
+                      Registration
+                    </span>
+                    <p className="text-[11px] font-mono font-semibold text-white/80">
+                      {registrationResult.registrationId}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
