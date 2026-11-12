@@ -351,15 +351,15 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-3 gap-2.5 pt-2">
             <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 text-center">
-              <div className="font-bold text-xs text-[#34383D] ">Resend</div>
+              <div className="font-bold text-xs text-[#34383D] ">Brevo</div>
               <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-400 block mt-1">
                 {isProduction ? "Configured & Live Verified" : "Preview Adapter"}
               </span>
             </div>
             <div className="p-3 rounded-xl border border-[#E5E7E9] dark:border-[#2C3136] bg-white dark:bg-[#181B1E] opacity-75 text-center">
-              <div className="font-medium text-xs text-[#34383D] ">Brevo</div>
+              <div className="font-medium text-xs text-[#34383D] ">Resend</div>
               <span className="text-[9px] text-[#858B93]  block mt-1">
-                Implemented (Awaiting Setup)
+                Supported (Optional)
               </span>
             </div>
             <div className="p-3 rounded-xl border border-[#E5E7E9] dark:border-[#2C3136] bg-white dark:bg-[#181B1E] opacity-60 text-center">
@@ -370,8 +370,8 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="border-t border-[#F4F5F6]  pt-2 text-[11px] text-[#858B93]  space-y-1">
-            <p>• <strong>Resend:</strong> Primary adapter configured; single-recipient test confirmed delivered to owner inbox.</p>
-            <p>• <strong>Brevo:</strong> Multi-tier adapter code-complete with error classification; pending live API credentials &amp; real-account verification.</p>
+            <p>• <strong>Brevo:</strong> Active primary transactional email adapter; verified live delivery via Brevo REST API.</p>
+            <p>• <strong>Resend:</strong> Multi-tier adapter available when a custom verified domain is configured.</p>
             <p>• <strong>Mailpit:</strong> Zero-dependency SMTP adapter ready for isolated offline development.</p>
           </div>
         </div>

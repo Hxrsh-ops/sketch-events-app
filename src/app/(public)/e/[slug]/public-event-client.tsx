@@ -61,12 +61,57 @@ export default function PublicEventClient({
     ? MOCK_ROUNDS.filter((r) => r.eventId === event.id)
     : [];
 
-  // Active form schema for this event
+  // Active form schema for this event (auto-injects Team Name if event.hasTeams and missing)
   const formSchema: RegistrationFormSchema = useMemo(() => {
-    if (event.registrationForm && event.registrationForm.sections?.length > 0) {
-      return event.registrationForm;
+    const baseSchema =
+      event.registrationForm && event.registrationForm.sections?.length > 0
+        ? event.registrationForm
+        : event.hasTeams
+        ? HACKATHON_TEAM_TEMPLATE
+        : STANDARD_INDIVIDUAL_TEMPLATE;
+
+    if (!event.hasTeams) {
+      return baseSchema;
     }
-    return event.hasTeams ? HACKATHON_TEAM_TEMPLATE : STANDARD_INDIVIDUAL_TEMPLATE;
+
+    const hasTeamNameField = baseSchema.sections.some((sec) =>
+      sec.fields.some(
+        (f) =>
+          f.id.toLowerCase().includes("team_name") ||
+          f.label.toLowerCase().includes("team name")
+      )
+    );
+
+    if (hasTeamNameField) {
+      return baseSchema;
+    }
+
+    return {
+      ...baseSchema,
+      sections: [
+        {
+          id: "auto_team_identity",
+          title: "Team Identity",
+          description:
+            event.minTeamSize === 1
+              ? "Enter your team name (or your solo/alias name if participating individually)."
+              : "Enter your team name for roster grouping and pass generation.",
+          fields: [
+            {
+              id: "team_name",
+              type: "text",
+              label: "Team Name",
+              placeholder:
+                event.minTeamSize === 1
+                  ? "e.g., Team Apex or Solo"
+                  : "e.g., Team Apex",
+              required: true,
+            },
+          ],
+        },
+        ...baseSchema.sections,
+      ],
+    };
   }, [event]);
 
   // Registration journey state: "form" | "review" | "confirmed"
