@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
+import { ParticipantQrCode } from "@/components/ticket/participant-qr-code";
 import { Participant, EventItem } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { toggleAttendanceAction, cancelRegistrationAction } from "@/app/actions/participant-actions";
@@ -557,20 +558,13 @@ export default function ParticipantsClient({
                 </Badge>
               </div>
 
-              {/* QR Representation */}
+              {/* Real Scannable QR Pass */}
               <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-white border border-[#E5E7E9] text-[#34383D]">
-                <div className="w-32 h-32 border border-[#E5E7E9] p-2 flex flex-col justify-between rounded-md">
-                  <div className="flex justify-between">
-                    <div className="w-6 h-6 bg-[#34383D] p-0.5"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-[#34383D]" /></div></div>
-                    <div className="w-6 h-6 bg-[#34383D] p-0.5"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-[#34383D]" /></div></div>
-                  </div>
-                  <div className="text-[8px] font-mono font-bold text-center text-[#858B93]">SKETCH PASS</div>
-                  <div className="flex justify-between items-end">
-                    <div className="w-6 h-6 bg-[#34383D] p-0.5"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-[#34383D]" /></div></div>
-                    <div className="w-4 h-4 border border-dashed border-[#858B93]" />
-                  </div>
-                </div>
-                <span className="mt-1.5 font-mono text-xs font-bold text-[#34383D]">
+                <ParticipantQrCode
+                  value={selectedParticipant.qrCredentialId || selectedParticipant.registrationId}
+                  size={136}
+                />
+                <span className="mt-2 font-mono text-xs font-bold text-[#34383D]">
                   {selectedParticipant.registrationId}
                 </span>
               </div>

@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
+import { ParticipantQrCode } from "@/components/ticket/participant-qr-code";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDateTimePicker } from "@/components/ui/custom-datetime-picker";
 import { SlideOver } from "@/components/ui/slide-over";
@@ -1121,9 +1122,10 @@ export default function EventDetailClient({
               </div>
 
               <div className="my-3 flex flex-col items-center justify-center rounded-xl bg-white p-4 border border-[#E5E7E9] ">
-                <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-[#17191C] text-white">
-                  <QrCode className="h-20 w-20 text-white" />
-                </div>
+                <ParticipantQrCode
+                  value={selectedParticipant.qrCredentialId || selectedParticipant.registrationId}
+                  size={136}
+                />
                 <span className="mt-2 font-mono text-[10px] text-[#858B93] ">
                   {selectedParticipant.qrCredentialId}
                 </span>

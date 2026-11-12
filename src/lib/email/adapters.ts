@@ -141,13 +141,35 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
       const senderName = fromParts?.[1]?.trim() || "SKETCH Events";
       const senderEmail = fromParts?.[2]?.trim() || this.fromAddress;
 
+      let htmlContent = options.html;
+      const attachments: Array<{ name: string; content: string }> = [];
+
+      // Gmail strips inline `data:image/...;base64,...` URLs. Convert embedded QR data URLs
+      // into a CID inline attachment so Gmail renders the QR code cleanly and also attaches it.
+      const dataUrlMatch = htmlContent.match(
+        /src="(data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+))"/i
+      );
+      if (dataUrlMatch) {
+        const ext = dataUrlMatch[2].toLowerCase() === "jpeg" ? "jpg" : dataUrlMatch[2].toLowerCase();
+        const fileName = `entry-qr.${ext}`;
+        attachments.push({
+          name: fileName,
+          content: dataUrlMatch[3],
+        });
+        htmlContent = htmlContent.replace(dataUrlMatch[1], `cid:${fileName}`);
+      }
+
       const payload: Record<string, unknown> = {
         sender: { name: senderName, email: senderEmail },
         to: [{ email: options.to, name: options.toName || options.to }],
         subject: options.subject,
-        htmlContent: options.html,
+        htmlContent,
         textContent: options.text,
       };
+
+      if (attachments.length > 0) {
+        payload.attachment = attachments;
+      }
 
       if (options.replyTo) {
         payload.replyTo = { email: options.replyTo };

@@ -27,6 +27,8 @@ import {
   Check,
   RefreshCw,
   Plus,
+  Loader2,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { SlideOver } from "@/components/ui/slide-over";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
+import { ParticipantQrCode } from "@/components/ticket/participant-qr-code";
 import {
   getStoredEvents,
   getAllParticipants,
@@ -149,6 +152,7 @@ export default function AttendanceClient({
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [isScanningActive, setIsScanningActive] = useState(false);
+  const [isVerifyingQr, setIsVerifyingQr] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -319,6 +323,9 @@ export default function AttendanceClient({
   ) => {
     const trimmedCode = code.trim();
     if (!trimmedCode) return;
+
+    setIsVerifyingQr(true);
+    try {
 
     // 1. Check if scanned code is a Rotating Live QR Pass (format: <serializedPayload>.<signature>)
     const isRotatingToken =
@@ -533,11 +540,14 @@ export default function AttendanceClient({
       timestamp: "Just now",
       method,
     };
-    setCheckInLog((prev) => {
-      const updated = [newLogEntry, ...prev.slice(0, 19)];
-      saveCheckInLog(updated);
-      return updated;
-    });
+      setCheckInLog((prev) => {
+        const updated = [newLogEntry, ...prev.slice(0, 19)];
+        saveCheckInLog(updated);
+        return updated;
+      });
+    } finally {
+      setIsVerifyingQr(false);
+    }
   };
 
   // Manual search submit
@@ -960,14 +970,79 @@ export default function AttendanceClient({
                 </div>
               )}
 
-              {/* Camera active status watermark */}
+              {/* Camera active status watermark + live scan feedback HUD */}
               {isCameraActive && (
-                <div className="absolute bottom-3 left-4 z-10 flex items-center gap-2 text-[11px] font-mono text-white/70">
-                  <span className="h-2 w-2 rounded-full bg-white animate-ping" />
-                  <span>LIVE FEED • 1080p SCANNER ACTIVE</span>
+                <div className="absolute bottom-3 left-4 right-4 z-10 flex items-center justify-between gap-2 text-[11px] font-mono">
+                  <div className="flex items-center gap-2 text-white/80 bg-black/55 backdrop-blur-xs px-2.5 py-1 rounded-full">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>{isVerifyingQr ? "VERIFYING PASS..." : "LIVE SCANNER ACTIVE"}</span>
+                  </div>
+                  {scanOutcome.status !== "idle" && !isVerifyingQr && (
+                    <span
+                      className={`px-2.5 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider ${
+                        scanOutcome.status === "accepted"
+                          ? "bg-emerald-500 text-white"
+                          : scanOutcome.status === "already_checked_in"
+                          ? "bg-amber-500 text-black"
+                          : "bg-rose-500 text-white"
+                      }`}
+                    >
+                      {scanOutcome.status === "accepted"
+                        ? "Entered ✓"
+                        : scanOutcome.status === "already_checked_in"
+                        ? "Already In"
+                        : "Failed ✕"}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Immediate Inline Scan Status Banner (Visible directly below viewfinder on mobile) */}
+            {(isVerifyingQr || scanOutcome.status !== "idle") && (
+              <div
+                className={`mb-4 rounded-xl border p-3.5 text-xs flex items-start justify-between gap-3 ${
+                  isVerifyingQr
+                    ? "border-blue-500/30 bg-blue-50/70 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200"
+                    : scanOutcome.status === "accepted"
+                    ? "border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-950/35 text-emerald-900 dark:text-emerald-200"
+                    : scanOutcome.status === "already_checked_in"
+                    ? "border-amber-500/40 bg-amber-50/80 dark:bg-amber-950/35 text-amber-900 dark:text-amber-200"
+                    : "border-rose-500/40 bg-rose-50/80 dark:bg-rose-950/35 text-rose-900 dark:text-rose-200"
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  {isVerifyingQr ? (
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0 mt-0.5" />
+                  ) : scanOutcome.status === "accepted" ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  ) : scanOutcome.status === "already_checked_in" ? (
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <div className="font-bold">
+                      {isVerifyingQr
+                        ? "Scanning & Verifying QR Pass..."
+                        : scanOutcome.status === "accepted"
+                        ? `Checked In & Entered${scanOutcome.participant ? `: ${scanOutcome.participant.name}` : ""}`
+                        : scanOutcome.status === "already_checked_in"
+                        ? `Already Checked In${scanOutcome.participant ? `: ${scanOutcome.participant.name}` : ""}`
+                        : "Scan Failed / Invalid Pass"}
+                    </div>
+                    {!isVerifyingQr && (
+                      <p className="mt-0.5 opacity-90 leading-relaxed">{scanOutcome.message}</p>
+                    )}
+                  </div>
+                </div>
+                {!isVerifyingQr && scanOutcome.timestamp && (
+                  <span className="shrink-0 font-mono text-[10px] opacity-75">
+                    {scanOutcome.timestamp}
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Camera Settings / Switcher Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#858B93]  pt-2">
@@ -1405,26 +1480,12 @@ export default function AttendanceClient({
                 </Badge>
               </div>
 
-              {/* QR Code Simulation Graphic */}
+              {/* Real Scannable QR Pass */}
               <div className="my-6 flex flex-col items-center justify-center p-4 rounded-xl bg-white text-[#34383D]">
-                {/* Clean Vector QR Representation */}
-                <div className="relative p-2 bg-white rounded-xl">
-                  <div className="w-40 h-40 border-4 border-[#17191C] p-2 flex flex-col justify-between">
-                    <div className="flex justify-between">
-                      <div className="w-8 h-8 bg-[#17191C] p-1"><div className="w-full h-full bg-white p-1"><div className="w-full h-full bg-[#17191C]" /></div></div>
-                      <div className="w-8 h-8 bg-[#17191C] p-1"><div className="w-full h-full bg-white p-1"><div className="w-full h-full bg-[#17191C]" /></div></div>
-                    </div>
-                    <div className="flex justify-center items-center py-2">
-                      <div className="text-[9px] font-mono font-bold tracking-tight text-center">
-                        SKETCH<br />SECURE PASS
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <div className="w-8 h-8 bg-[#17191C] p-1"><div className="w-full h-full bg-white p-1"><div className="w-full h-full bg-[#17191C]" /></div></div>
-                      <div className="w-6 h-6 border-2 border-dashed border-[#17191C]" />
-                    </div>
-                  </div>
-                </div>
+                <ParticipantQrCode
+                  value={inspectorParticipant.qrCredentialId || inspectorParticipant.registrationId}
+                  size={160}
+                />
                 <span className="mt-2 font-mono text-xs font-bold tracking-wider text-[#34383D]">
                   {inspectorParticipant.registrationId}
                 </span>
