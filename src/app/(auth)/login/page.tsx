@@ -124,6 +124,7 @@ function LoginForm() {
       const isRecoveryFlow =
         modeParam === "reset" ||
         typeParam === "recovery" ||
+        Boolean(codeParam) ||
         (typeof window !== "undefined" && window.location.hash.includes("type=recovery"));
 
       if (isRecoveryFlow && supabase) {
@@ -335,7 +336,7 @@ function LoginForm() {
         throw new Error("Authentication service is unavailable.");
       }
 
-      const resetUrl = new URL("/login?mode=reset", window.location.origin).toString();
+      const resetUrl = new URL("/login", window.location.origin).toString();
       const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
         redirectTo: resetUrl,
       });

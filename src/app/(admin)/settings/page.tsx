@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { CustomSwitch } from "@/components/ui/custom-switch";
 import { ThemeSegmentedControl } from "@/components/theme/theme-toggle";
 import { getAppEnv } from "@/lib/env";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/auth-context";
 import { AccessDenied } from "@/components/auth/access-denied";
 
@@ -41,6 +42,46 @@ export default function SettingsPage() {
   const [gracePeriod, setGracePeriod] = useState("30");
   const [defaultCapacity, setDefaultCapacity] = useState("200");
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const handleUpdateAccountPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordFeedback(null);
+    if (newPassword.length < 8) {
+      setPasswordFeedback({ type: "error", text: "Password must be at least 8 characters long." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: "error", text: "Passwords do not match." });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const supabase = createClient();
+      if (!supabase) {
+        throw new Error("Authentication client is unavailable.");
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setPasswordFeedback({ type: "error", text: error.message });
+        return;
+      }
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordFeedback({
+        type: "success",
+        text: "Account password updated. You can now sign in with your email and password on any browser or mobile device.",
+      });
+    } catch (err: any) {
+      setPasswordFeedback({ type: "error", text: err?.message || "Failed to update password." });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const initialIsProd = (() => {
     try {
       return getAppEnv().mode === "production";
@@ -427,6 +468,77 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Account Password Management */}
+        <div className="rounded-xl border border-[#E5E7E9] bg-white p-6 space-y-5 lg:col-span-2">
+          <div className="flex items-center gap-3 pb-4 border-b border-[#E5E7E9]">
+            <div className="p-2.5 rounded-lg bg-[#F6F7F8] text-[#17191C]">
+              <Key className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#17191C]">Administrator Account Password</h2>
+              <p className="text-xs text-[#777E86]">
+                Set or update an email login password for {user?.email || "your account"} (useful for mobile browsers where Google OAuth is unavailable).
+              </p>
+            </div>
+          </div>
+
+          {passwordFeedback && (
+            <div
+              className={`rounded-lg border px-4 py-3 text-xs font-medium ${
+                passwordFeedback.type === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-rose-200 bg-rose-50 text-rose-700"
+              }`}
+            >
+              {passwordFeedback.text}
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateAccountPassword} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div className="space-y-1.5">
+              <label htmlFor="settings-new-password" className="text-xs font-medium text-[#17191C]">
+                New Password
+              </label>
+              <Input
+                id="settings-new-password"
+                type="password"
+                minLength={8}
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimum 8 characters"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="settings-confirm-password" className="text-xs font-medium text-[#17191C]">
+                Confirm Password
+              </label>
+              <Input
+                id="settings-confirm-password"
+                type="password"
+                minLength={8}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
+              />
+            </div>
+
+            <div>
+              <Button
+                type="submit"
+                variant="charcoal"
+                loading={passwordLoading}
+                className="w-full sm:w-auto gap-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>Save Password</span>
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
