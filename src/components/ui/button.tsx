@@ -60,6 +60,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }), loading && "cursor-wait opacity-70")}
         ref={ref}
         disabled={disabled || loading}
+        suppressHydrationWarning
         {...props}
       >
         {loading ? (
