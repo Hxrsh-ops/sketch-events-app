@@ -82,11 +82,11 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
           className="relative w-full text-left focus:outline-none group"
           aria-label="Open universal search dialog"
         >
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF] group-hover:text-[#111827] transition-colors" />
-          <div className="flex items-center h-[42px] w-full rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] pl-10 pr-16 text-[13px] text-[#6B7280] group-hover:bg-white group-hover:border-[#D1D5DB] group-hover:shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all select-none">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF] group-hover:text-[#111827] dark:group-hover:text-[#F1F3F5] transition-colors" />
+          <div className="flex items-center h-[42px] w-full rounded-lg border border-[#E5E7EB] dark:border-[#2A3039] bg-[#F9FAFB] dark:bg-[#1B1F25] pl-10 pr-16 text-[13px] text-[#6B7280] dark:text-[#9CA3AF] group-hover:bg-white dark:group-hover:bg-[#20252C] group-hover:border-[#D1D5DB] dark:group-hover:border-[#373E49] group-hover:shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all select-none">
             Search events, participants, records...
           </div>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded border border-[#E5E7EB] bg-white px-2 py-0.5 text-[11px] font-mono font-medium text-[#9CA3AF] shadow-xs select-none pointer-events-none">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded border border-[#E5E7EB] dark:border-[#2E343E] bg-white dark:bg-[#252A32] px-2 py-0.5 text-[11px] font-mono font-medium text-[#9CA3AF] shadow-xs select-none pointer-events-none">
             <Command className="h-3 w-3" />
             <span>K</span>
           </div>

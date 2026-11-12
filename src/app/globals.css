@@ -232,27 +232,54 @@
   background-color: #1D2126;
 }
 
-/* Low-specificity dark mode fallbacks for legacy light utility classes (excludes ticket renderers) */
+/* Low-specificity dark mode overrides for legacy light utility classes (excludes ticket renderers) */
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-white {
-  background-color: #16191D;
+  background-color: #15181C;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-white/"] {
+  background-color: rgba(21, 24, 28, 0.88);
 }
 
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F8F9FA\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFAFA\] {
-  background-color: #0F1114;
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F9FAFB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFAFA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAF9F7\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFBFB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F9F8F6\] {
+  background-color: #0D0F12;
 }
 
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F2F3F4\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F6F7F8\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F2F3F5\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F3F4F6\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F4F5F6\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F0F1F2\] {
-  background-color: #1B1E23;
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F6F7F8\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F0F1F2\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F1F2F3\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#EFEEEA\] {
+  background-color: #1C2026;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E3E5E8\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E5E7E9\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E5E7EA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E5E7EB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E8EAED\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#EAECEF\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E2E5E9\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#D9DCE0\] {
+  background-color: #252A32;
 }
 
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7E9\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7EA\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D9DCE0\] {
-  border-color: #25292F;
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7EB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D9DCE0\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D1D5DB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).divide-\[\#E5E7E9\] > :not([hidden]) ~ :not([hidden]),
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).divide-\[\#E5E7EB\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #262B33;
 }
 
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111827\],
@@ -265,17 +292,33 @@
 
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#4E545B\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#656B73\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#6B7280\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#777E86\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#858B93\] {
-  color: #9AA0A6;
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#858B93\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#9CA3AF\] {
+  color: #9BA3AE;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#17191C\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#25292F\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#34383D\] {
+  border-color: #323842;
+}
+
+:where(.dark) ::-webkit-scrollbar-thumb {
+  background: #2D333B;
+}
+
+:where(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #3B424D;
 }
 
 :where(.dark) input:not(.unified-ticket-wrapper *),
 :where(.dark) textarea:not(.unified-ticket-wrapper *),
 :where(.dark) select:not(.unified-ticket-wrapper *) {
-  background-color: #13161A;
+  background-color: #121519;
   color: #F1F3F5;
-  border-color: #2A2F37;
+  border-color: #2A3038;
 }
 
 /* Clean Form Focus & Selection */
