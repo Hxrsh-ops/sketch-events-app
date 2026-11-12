@@ -233,7 +233,9 @@
 }
 
 /* Low-specificity dark mode overrides for legacy light utility classes (excludes ticket renderers) */
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-white {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-white,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-white"]:hover,
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:bg-white"] {
   background-color: #15181C;
 }
 
@@ -246,7 +248,11 @@
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFAFA\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAF9F7\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFBFB\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F9F8F6\] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F9F8F6\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-gray-50,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-slate-50,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-zinc-50,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-neutral-50 {
   background-color: #0D0F12;
 }
 
@@ -257,8 +263,12 @@
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F6F7F8\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F0F1F2\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F1F2F3\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#EFEEEA\] {
-  background-color: #1C2026;
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#EFEEEA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-gray-100,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-slate-100,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-zinc-100,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-neutral-100 {
+  background-color: #1B1F25;
 }
 
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E3E5E8\],
@@ -272,34 +282,137 @@
   background-color: #252A32;
 }
 
+/* Dark mode hover & group-hover surfaces so rows/buttons never flash bright white */
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-[#F"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-[#E"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-[#D"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-gray-"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-slate-"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-zinc-"]:hover,
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:bg-[#E"],
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:bg-[#F"] {
+  background-color: #20252C;
+}
+
+/* Dark mode semantic status tints (emerald, amber, rose/red, blue/slate) */
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-emerald-50"] {
+  background-color: rgba(16, 185, 129, 0.14);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-emerald-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-emerald-300"] {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-emerald-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-emerald-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-emerald-900"] {
+  color: #6EE7B7;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-amber-50"] {
+  background-color: rgba(245, 158, 11, 0.14);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-amber-100"]:hover {
+  background-color: rgba(245, 158, 11, 0.22);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-amber-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-amber-300"] {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-amber-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-amber-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-amber-900"] {
+  color: #FCD34D;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-rose-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-red-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FEE2E2\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FEF2F2\] {
+  background-color: rgba(244, 63, 94, 0.14);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-rose-100"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-red-100"]:hover {
+  background-color: rgba(244, 63, 94, 0.22);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-rose-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-rose-300"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-red-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-red-300"] {
+  border-color: rgba(244, 63, 94, 0.35);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-rose-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-rose-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-rose-900"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-red-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-red-800"] {
+  color: #FDA4AF;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-blue-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-sky-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-indigo-50"] {
+  background-color: rgba(59, 130, 246, 0.14);
+}
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-blue-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-blue-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-indigo-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-slate-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-slate-800"] {
+  color: #CBD5E1;
+}
+
+/* Borders & Dividers */
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7E9\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7EA\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7EB\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D9DCE0\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D1D5DB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-slate-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-gray-200"],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).divide-\[\#E5E7E9\] > :not([hidden]) ~ :not([hidden]),
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).divide-\[\#E5E7EB\] > :not([hidden]) ~ :not([hidden]) {
   border-color: #262B33;
 }
 
+/* Primary & Secondary Typography (including hover/group-hover dark text!) */
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-black,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#000000\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111315\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111827\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#17191C\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#34383D\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#18181B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#191A1C\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#25282B\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111315\] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#25292F\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#30353A\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#34383D\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#374151\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-black"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-[#111"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-[#171"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-[#343"]:hover,
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:text-black"],
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:text-[#111"],
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:text-[#171"] {
   color: #F1F3F5;
 }
 
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#424850\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#4A515A\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#4E545B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#65666A\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#656B73\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#6B7280\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#777E86\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#7D858F\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#858B93\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#8A9098\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#9CA3AF\] {
   color: #9BA3AE;
 }
 
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#17191C\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#18181B\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#25292F\],
 :where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#34383D\] {
   border-color: #323842;
