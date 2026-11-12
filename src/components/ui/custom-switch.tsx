@@ -60,10 +60,10 @@ export function CustomSwitch({
         onKeyDown={handleKeyDown}
         className={cn(
           "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none",
-          "focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED] focus-visible:ring-offset-2",
+          "focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-emerald-400 focus-visible:ring-offset-2",
           checked
-            ? "bg-[#25292F] dark:bg-[#E8EAED]"
-            : "bg-[#E5E7EA] dark:bg-[#30353A]"
+            ? "bg-emerald-600 dark:bg-emerald-500"
+            : "bg-[#D1D5DB] dark:bg-[#2A3038]"
         )}
       >
         <motion.span
@@ -72,8 +72,8 @@ export function CustomSwitch({
           className={cn(
             "pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out",
             checked
-              ? "translate-x-5 bg-white dark:bg-[#111315]"
-              : "translate-x-0 bg-white dark:bg-[#A6ADB5]"
+              ? "translate-x-5 bg-white"
+              : "translate-x-0 bg-white dark:bg-[#9CA3AF]"
           )}
         />
       </button>

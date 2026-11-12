@@ -190,21 +190,24 @@ export default function NewEventPage() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("Image exceeds 5 MB limit. Please select a smaller file.");
+    const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+    if (file.size > MAX_IMAGE_BYTES) {
+      setUploadError("Image exceeds the 4 MB limit. Please select a smaller image.");
       return;
     }
 
     setUploadError(null);
     const reader = new FileReader();
     reader.onload = (loadEvt) => {
-      const dataUrl = loadEvt.target?.result as string;
-      if (dataUrl) {
+      const rawDataUrl = loadEvt.target?.result as string;
+      if (!rawDataUrl) return;
+
+      const applyOptimizedImage = (finalDataUrl: string) => {
         if (target === "directory") {
           setFormData((prev) => ({
             ...prev,
-            directoryImage: dataUrl,
-            posterUrl: dataUrl, // legacy compatibility
+            directoryImage: finalDataUrl,
+            posterUrl: finalDataUrl, // legacy compatibility
             isDirectoryCustomUpload: true,
             directoryCustomFileName: file.name,
           }));
@@ -212,13 +215,37 @@ export default function NewEventPage() {
         } else {
           setFormData((prev) => ({
             ...prev,
-            heroImage: dataUrl,
+            heroImage: finalDataUrl,
             isHeroCustomUpload: true,
             heroCustomFileName: file.name,
           }));
           setHeroArtworkMode("upload");
         }
-      }
+      };
+
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const maxDimension = 1600;
+          const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            applyOptimizedImage(rawDataUrl);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const outputMime = file.type === "image/png" ? "image/webp" : "image/jpeg";
+          const compressed = canvas.toDataURL(outputMime, 0.84);
+          applyOptimizedImage(compressed.length < rawDataUrl.length ? compressed : rawDataUrl);
+        } catch {
+          applyOptimizedImage(rawDataUrl);
+        }
+      };
+      img.onerror = () => applyOptimizedImage(rawDataUrl);
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -284,8 +311,8 @@ export default function NewEventPage() {
       }
 
       if (formData.participationMode === "team") {
-        if (formData.minTeamSize < 2) {
-          errs.minTeamSize = "Minimum team size must be at least 2.";
+        if (formData.minTeamSize < 1) {
+          errs.minTeamSize = "Minimum team size must be at least 1.";
         }
         if (formData.maxTeamSize < formData.minTeamSize) {
           errs.maxTeamSize = "Maximum team size cannot be less than minimum size.";
@@ -757,7 +784,7 @@ export default function NewEventPage() {
                                   : "Upload Directory Card Image"}
                               </div>
                               <p className="text-[11px] text-[#858B93] ">
-                                JPEG, PNG, or WebP &lt; 5MB.
+                                JPEG, PNG, or WebP · Max 4 MB (auto-optimized).
                               </p>
                             </div>
                           </div>
@@ -902,7 +929,7 @@ export default function NewEventPage() {
                                   : "Upload Public Hero Banner Image"}
                               </div>
                               <p className="text-[11px] text-[#858B93] ">
-                                JPEG, PNG, or WebP &lt; 5MB (Panoramic crop).
+                                JPEG, PNG, or WebP · Max 4 MB (auto-optimized · Panoramic crop).
                               </p>
                             </div>
                           </div>
@@ -1107,7 +1134,7 @@ export default function NewEventPage() {
                         <label className="text-xs font-medium text-[#34383D]  block mb-1">Min Team Members</label>
                         <Input
                           type="number"
-                          min={2}
+                          min={1}
                           value={formData.minTeamSize}
                           onChange={(e) => setFormData({ ...formData, minTeamSize: Number(e.target.value) })}
                         />
