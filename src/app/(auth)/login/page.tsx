@@ -66,6 +66,14 @@ function LoginForm() {
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryMessage, setRecoveryMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Set New Password (after clicking recovery email link) State
+  const [passwordResetOpen, setPasswordResetOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [passwordResetMessage, setPasswordResetMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   // Help & Navigation Toast State
   const [navNotice, setNavNotice] = useState<string | null>(null);
 
@@ -79,11 +87,77 @@ function LoginForm() {
     }
   }, [urlError, urlDetails]);
 
-  // Genuine session check on initial mount
+  // Genuine session check + password recovery link handling on initial mount
   useEffect(() => {
     let mounted = true;
+    const supabase = createClient();
+
+    const { data: authListener } = supabase
+      ? supabase.auth.onAuthStateChange((event) => {
+          if (!mounted) return;
+          if (event === "PASSWORD_RECOVERY") {
+            setPasswordResetMessage(null);
+            setPasswordResetOpen(true);
+            setCheckingExistingSession(false);
+          }
+        })
+      : { data: { subscription: null } };
 
     async function checkExistingAuth() {
+      const hashParams = new URLSearchParams(
+        typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : ""
+      );
+      const hashError = hashParams.get("error_description") || hashParams.get("error");
+      if (hashError && mounted) {
+        setErrorMessage(
+          hashError.replace(/\+/g, " ") +
+            " Please request a fresh password reset link if needed."
+        );
+        setCheckingExistingSession(false);
+        return;
+      }
+
+      const modeParam = searchParams.get("mode");
+      const typeParam = searchParams.get("type") || hashParams.get("type");
+      const codeParam = searchParams.get("code");
+      const tokenHashParam = searchParams.get("token_hash");
+      const isRecoveryFlow =
+        modeParam === "reset" ||
+        typeParam === "recovery" ||
+        (typeof window !== "undefined" && window.location.hash.includes("type=recovery"));
+
+      if (isRecoveryFlow && supabase) {
+        try {
+          if (codeParam) {
+            await supabase.auth.exchangeCodeForSession(codeParam);
+          } else if (tokenHashParam) {
+            await supabase.auth.verifyOtp({ token_hash: tokenHashParam, type: "recovery" });
+          }
+          const { data: sessionData } = await supabase.auth.getUser();
+          if (mounted) {
+            if (sessionData?.user) {
+              setPasswordResetMessage(null);
+              setPasswordResetOpen(true);
+            } else {
+              setErrorMessage(
+                "Password reset link is invalid or expired. Please request a new reset link."
+              );
+            }
+            setCheckingExistingSession(false);
+          }
+          return;
+        } catch (err: any) {
+          if (mounted) {
+            setErrorMessage(
+              err?.message ||
+                "Unable to verify password reset link. Please request a new one."
+            );
+            setCheckingExistingSession(false);
+          }
+          return;
+        }
+      }
+
       // If URL already contains an error (e.g. not_an_admin), do NOT redirect away
       if (urlError) {
         if (mounted) setCheckingExistingSession(false);
@@ -91,7 +165,6 @@ function LoginForm() {
       }
 
       try {
-        const supabase = createClient();
         if (supabase) {
           const { data, error } = await supabase.auth.getUser();
           if (error || !data?.user) {
@@ -126,8 +199,9 @@ function LoginForm() {
     checkExistingAuth();
     return () => {
       mounted = false;
+      authListener?.subscription?.unsubscribe();
     };
-  }, [redirectTarget, router, urlError]);
+  }, [redirectTarget, router, searchParams, urlError]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,13 +335,23 @@ function LoginForm() {
         throw new Error("Authentication service is unavailable.");
       }
 
-      const resetUrl = new URL("/login", window.location.origin).toString();
+      const resetUrl = new URL("/login?mode=reset", window.location.origin).toString();
       const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
         redirectTo: resetUrl,
       });
 
       if (error) {
-        setRecoveryMessage({ type: "error", text: error.message });
+        const msg = error.message || "Unable to send password recovery email.";
+        const isCooldown =
+          msg.toLowerCase().includes("security purposes") ||
+          msg.toLowerCase().includes("rate limit") ||
+          msg.toLowerCase().includes("once every");
+        setRecoveryMessage({
+          type: "error",
+          text: isCooldown
+            ? `${msg} (Please wait ~60 seconds before requesting another email, and check your inbox/spam for the link already sent.)`
+            : msg,
+        });
       } else {
         setRecoveryMessage({
           type: "success",
@@ -281,6 +365,63 @@ function LoginForm() {
       });
     } finally {
       setRecoveryLoading(false);
+    }
+  };
+
+  const handleSetNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordResetMessage(null);
+
+    if (newPassword.length < 8) {
+      setPasswordResetMessage({
+        type: "error",
+        text: "Password must be at least 8 characters long.",
+      });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordResetMessage({
+        type: "error",
+        text: "Passwords do not match. Please re-enter them.",
+      });
+      return;
+    }
+
+    setPasswordResetLoading(true);
+    try {
+      const supabase = createClient();
+      if (!supabase) {
+        throw new Error("Authentication service is unavailable.");
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        setPasswordResetMessage({
+          type: "error",
+          text: error.message || "Failed to update password.",
+        });
+        return;
+      }
+
+      setPasswordResetMessage({
+        type: "success",
+        text: "Password updated! Redirecting you to the dashboard...",
+      });
+      setTimeout(() => {
+        setPasswordResetOpen(false);
+        router.replace(redirectTarget);
+        router.refresh();
+      }, 900);
+    } catch (err: any) {
+      setPasswordResetMessage({
+        type: "error",
+        text: err.message || "Unable to update password.",
+      });
+    } finally {
+      setPasswordResetLoading(false);
     }
   };
 
@@ -670,6 +811,133 @@ function LoginForm() {
                     className="px-5 py-2 rounded-xl bg-[#EA4F3C] hover:bg-[#D94331] text-xs font-semibold text-white transition-all cursor-pointer disabled:opacity-60"
                   >
                     {recoveryLoading ? "Sending link..." : "Send Reset Link"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/*
+        ========================================================================
+        6. SET NEW PASSWORD MODAL (RECOVERY CALLBACK)
+        ========================================================================
+      */}
+      <AnimatePresence>
+        {passwordResetOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/75 backdrop-blur-md"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative z-10 w-full max-w-md rounded-3xl border border-white/20 bg-black/85 backdrop-blur-xl p-6 sm:p-8 text-white shadow-2xl text-left"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight text-white">
+                    Set New Password
+                  </h3>
+                  <p className="mt-1 text-xs text-white/70 leading-relaxed">
+                    Create a new administrator password so you can sign in from any browser or mobile device.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPasswordResetOpen(false)}
+                  className="text-white/60 hover:text-white p-1 rounded cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {passwordResetMessage && (
+                <div
+                  className={`mt-4 rounded-xl border p-3 text-xs flex items-start gap-2.5 ${
+                    passwordResetMessage.type === "success"
+                      ? "border-emerald-500/40 bg-emerald-950/40 text-emerald-200"
+                      : "border-[#EA4F3C]/40 bg-[#EA4F3C]/10 text-white"
+                  }`}
+                >
+                  {passwordResetMessage.type === "success" ? (
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-[#EA4F3C] shrink-0 mt-0.5" />
+                  )}
+                  <p className="leading-relaxed">{passwordResetMessage.text}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSetNewPassword} className="mt-5 space-y-4">
+                <div>
+                  <label
+                    htmlFor="new-password"
+                    className="block text-xs font-semibold uppercase tracking-wider text-white/70 mb-1.5"
+                  >
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      required
+                      minLength={8}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                      className="h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3.5 pr-10 text-xs text-white placeholder:text-white/40 focus:border-white/50 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white cursor-pointer"
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="confirm-new-password"
+                    className="block text-xs font-semibold uppercase tracking-wider text-white/70 mb-1.5"
+                  >
+                    Confirm Password
+                  </label>
+                  <input
+                    id="confirm-new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="Re-enter new password"
+                    className="h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3.5 text-xs text-white placeholder:text-white/40 focus:border-white/50 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordResetOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-white/70 hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={passwordResetLoading}
+                    className="px-5 py-2 rounded-xl bg-[#EA4F3C] hover:bg-[#D94331] text-xs font-semibold text-white transition-all cursor-pointer disabled:opacity-60"
+                  >
+                    {passwordResetLoading ? "Saving..." : "Update Password"}
                   </button>
                 </div>
               </form>
