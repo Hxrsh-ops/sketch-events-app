@@ -13,6 +13,7 @@ import { RegistrationMode } from "@/types/database";
 import { generateTicketBearerToken } from "@/lib/ticket/rotating-qr";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import QRCode from "qrcode";
+import { EmailOutboxWorker } from "@/lib/email/worker";
 
 /**
  * Standard Result Type for Server Actions
@@ -580,6 +581,15 @@ export async function registerForEventAction(
         }
       } catch (ticketErr) {
         console.warn("[registerForEventAction] Ticket issuance or outbox payload update skipped:", ticketErr);
+      }
+
+      // Immediately dispatch queued registration/pass emails via the configured provider (e.g. Brevo)
+      // instead of waiting for the background cron job.
+      try {
+        const worker = new EmailOutboxWorker();
+        await worker.processBatch(10);
+      } catch (emailErr) {
+        console.warn("[registerForEventAction] Immediate outbox dispatch skipped (will retry via cron):", emailErr);
       }
     }
 

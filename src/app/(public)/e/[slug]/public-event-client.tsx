@@ -498,9 +498,17 @@ export default function PublicEventClient({
     }
   };
 
-  // Download SVG Pass Image
-  const handleDownloadPassSvg = () => {
+  // Download SVG Pass Image with real scannable QR vector
+  const handleDownloadPassSvg = async () => {
     if (!registrationResult) return;
+
+    const escapeXml = (str: string) =>
+      str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
     const isMock = Boolean(registrationResult.isMockPreview ?? isPreview);
     const passHeader = isMock
@@ -510,35 +518,52 @@ export default function PublicEventClient({
       ? "CLIENT PREVIEW CREDENTIAL • LOCAL TERMINAL TESTING ONLY"
       : "OFFICIAL EVENT CREDENTIAL • PRESENT AT DESK SCANNER";
 
+    const qrPayload =
+      registrationResult.qrCredentialId ||
+      registrationResult.liveTicketUrl ||
+      registrationResult.registrationId;
+
+    let embeddedQrSvg = "";
+    try {
+      const rawQrSvg = await QRCode.toString(qrPayload, {
+        type: "svg",
+        margin: 1,
+        width: 260,
+        color: { dark: "#17191C", light: "#FFFFFF" },
+      });
+      embeddedQrSvg = rawQrSvg.replace(
+        "<svg ",
+        '<svg x="170" y="210" width="260" height="260" '
+      );
+    } catch {
+      embeddedQrSvg = `<text x="300" y="345" font-family="monospace" font-size="14" fill="#17191C" text-anchor="middle">${escapeXml(
+        registrationResult.qrCredentialId
+      )}</text>`;
+    }
+
     const svgPass = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
   <rect width="600" height="800" rx="30" fill="#17191C"/>
   <circle cx="300" cy="150" r="240" fill="#FFFFFF" fill-opacity="0.04"/>
 
-  <text x="50" y="70" font-family="sans-serif" font-size="12" font-weight="bold" letter-spacing="3" fill="#8A9098">${passHeader}</text>
-  <text x="50" y="110" font-family="sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">${event.title}</text>
-  <text x="50" y="140" font-family="sans-serif" font-size="13" fill="#AEB3BA">${event.venue} • ${formatDate(event.startDate)}</text>
+  <text x="50" y="70" font-family="sans-serif" font-size="12" font-weight="bold" letter-spacing="3" fill="#8A9098">${escapeXml(passHeader)}</text>
+  <text x="50" y="110" font-family="sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">${escapeXml(event.title)}</text>
+  <text x="50" y="140" font-family="sans-serif" font-size="13" fill="#AEB3BA">${escapeXml(event.venue)} • ${escapeXml(formatDate(event.startDate))}</text>
 
   <rect x="150" y="190" width="300" height="300" rx="20" fill="#FFFFFF"/>
-  <rect x="180" y="220" width="240" height="240" fill="#17191C"/>
-  <rect x="200" y="240" width="80" height="80" fill="#FFFFFF"/>
-  <rect x="220" y="260" width="40" height="40" fill="#17191C"/>
-  <rect x="320" y="240" width="80" height="80" fill="#FFFFFF"/>
-  <rect x="340" y="260" width="40" height="40" fill="#17191C"/>
-  <rect x="200" y="360" width="80" height="80" fill="#FFFFFF"/>
-  <rect x="220" y="380" width="40" height="40" fill="#17191C"/>
+  ${embeddedQrSvg}
 
-  <text x="300" y="530" font-family="monospace" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">${registrationResult.registrationId}</text>
-  <text x="300" y="555" font-family="sans-serif" font-size="11" fill="#8A9098" text-anchor="middle">HASH: ${registrationResult.qrCredentialId}</text>
+  <text x="300" y="530" font-family="monospace" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">${escapeXml(registrationResult.registrationId)}</text>
+  <text x="300" y="555" font-family="sans-serif" font-size="11" fill="#8A9098" text-anchor="middle">HASH: ${escapeXml(registrationResult.qrCredentialId)}</text>
 
   <line x1="50" y1="590" x2="550" y2="590" stroke="#25292F" stroke-width="2"/>
 
   <text x="50" y="630" font-family="sans-serif" font-size="11" fill="#8A9098">PARTICIPANT / REPRESENTATIVE</text>
-  <text x="50" y="655" font-family="sans-serif" font-size="18" font-weight="bold" fill="#FFFFFF">${registrationResult.attendeeName}</text>
+  <text x="50" y="655" font-family="sans-serif" font-size="18" font-weight="bold" fill="#FFFFFF">${escapeXml(registrationResult.attendeeName)}</text>
 
-  ${registrationResult.teamName ? `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">TEAM AFFILIATION</text><text x="50" y="720" font-family="sans-serif" font-size="16" font-weight="bold" fill="#FFFFFF">${registrationResult.teamName}</text>` : `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">REGISTRATION STATUS</text><text x="50" y="720" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF">Confirmed Individual Attendee</text>`}
+  ${registrationResult.teamName ? `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">TEAM AFFILIATION</text><text x="50" y="720" font-family="sans-serif" font-size="16" font-weight="bold" fill="#FFFFFF">${escapeXml(registrationResult.teamName)}</text>` : `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">REGISTRATION STATUS</text><text x="50" y="720" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF">Confirmed Individual Attendee</text>`}
 
-  <text x="300" y="775" font-family="sans-serif" font-size="10" fill="#656B73" text-anchor="middle">${passFooter}</text>
+  <text x="300" y="775" font-family="sans-serif" font-size="10" fill="#656B73" text-anchor="middle">${escapeXml(passFooter)}</text>
 </svg>`;
 
     const blob = new Blob([svgPass], { type: "image/svg+xml;charset=utf-8;" });

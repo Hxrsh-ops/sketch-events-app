@@ -214,6 +214,13 @@ export default function AttendanceClient({
     setCameraError(null);
     stopCameraStream();
 
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setCameraError(
+        "Camera access requires HTTPS on mobile. Open the ngrok HTTPS URL instead of http://192.168.x.x."
+      );
+      return;
+    }
+
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setCameraError("Camera access is not supported by your current browser context.");
       return;
