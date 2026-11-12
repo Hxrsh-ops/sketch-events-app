@@ -176,6 +176,16 @@ export const TicketDesignDataSchema = z.object({
 
 export type TicketDesignData = z.infer<typeof TicketDesignDataSchema>;
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Matches any valid 8-4-4-4-12 PostgreSQL UUID (including deterministic seeded UUIDs
+ * such as 77777777-7777-7777-7777-777777770001 that fail strict RFC 4122 nibble checks).
+ */
+export function uuidString(message: string) {
+  return z.string().trim().regex(UUID_PATTERN, message);
+}
+
 /**
  * Template Action Schemas
  */
@@ -187,19 +197,19 @@ export const CreateTicketTemplateSchema = z.object({
 });
 
 export const UpdateTicketDraftSchema = z.object({
-  templateId: z.string().uuid("Invalid template ID"),
+  templateId: uuidString("Invalid template ID"),
   designData: TicketDesignDataSchema,
 });
 
 export const PublishTemplateVersionSchema = z.object({
-  templateId: z.string().uuid("Invalid template ID"),
+  templateId: uuidString("Invalid template ID"),
   designData: TicketDesignDataSchema,
   notes: z.string().max(200).optional(),
 });
 
 export const AssignEventTemplateSchema = z.object({
-  eventId: z.string().uuid("Invalid event ID"),
-  templateVersionId: z.string().uuid("Invalid template version ID"),
+  eventId: uuidString("Invalid event ID"),
+  templateVersionId: uuidString("Invalid template version ID"),
 });
 
 /**
@@ -207,6 +217,6 @@ export const AssignEventTemplateSchema = z.object({
  */
 export const VerifyRotatingQrSchema = z.object({
   token: z.string().trim().min(20, "Invalid QR token length"),
-  eventId: z.string().uuid("Invalid event ID"),
+  eventId: uuidString("Invalid event ID"),
   method: z.enum(["camera", "manual"]).default("camera"),
 });

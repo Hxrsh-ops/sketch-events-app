@@ -14,6 +14,7 @@ import {
   AssignEventTemplateSchema,
   VerifyRotatingQrSchema,
   TicketDesignData,
+  uuidString,
 } from "@/lib/validations/ticket-schemas";
 import {
   verifyRotatingQrTokenSignature,
@@ -573,7 +574,7 @@ export async function revokeTicketAction(
     }
 
     const schema = z.object({
-      ticketId: z.string().uuid("Invalid ticket ID"),
+      ticketId: uuidString("Invalid ticket ID"),
       reason: z.string().trim().min(3, "Reason must be at least 3 characters").max(300),
     });
 

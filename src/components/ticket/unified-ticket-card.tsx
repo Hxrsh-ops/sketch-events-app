@@ -6,10 +6,8 @@ import {
   MapPin,
   QrCode,
   RefreshCw,
-  Sparkles,
   Ticket as TicketIcon,
   Users,
-  Shield,
   CheckCircle2,
 } from "lucide-react";
 import { TicketDesignData } from "@/lib/validations/ticket-schemas";
@@ -108,6 +106,16 @@ export function UnifiedTicketCard({
   const isCheckedIn = attendee.attendanceStatus === "checked_in";
   const isRevoked = attendee.ticketStatus === "revoked";
 
+  const accentColor = design.theme.accent || "#E2B857";
+  const bgColor = design.theme.background || "#111315";
+  const borderColor = design.theme.borderColor || "#2C3136";
+
+  const admissionLabel = event.venueMode
+    ? event.venueMode === "in-person"
+      ? "IN-PERSON"
+      : event.venueMode.toUpperCase()
+    : "CONFIRMED";
+
   return (
     <div
       className={`unified-ticket-wrapper relative select-none shrink-0 print:m-0 print:p-0 ${className}`}
@@ -118,12 +126,26 @@ export function UnifiedTicketCard({
     >
       {/* Container Ticket Card */}
       <div
-        className="unified-ticket-root w-full h-full rounded-2xl border flex overflow-hidden shadow-2xl relative text-white print:border-neutral-300 print:shadow-none"
+        className="unified-ticket-root w-full h-full rounded-2xl border flex overflow-hidden shadow-[0_24px_60px_-15px_rgba(0,0,0,0.45)] relative text-white print:border-neutral-300 print:shadow-none"
         style={{
-          backgroundColor: design.theme.background || "#111315",
-          borderColor: design.theme.borderColor || "#2C3136",
+          backgroundColor: bgColor,
+          borderColor,
         }}
       >
+        {/* Subtle Architectural Texture & Accent Spotlight (when no custom image) */}
+        {!hasBgImage && (
+          <div
+            className="absolute inset-0 z-0 pointer-events-none"
+            style={{
+              backgroundImage: `radial-gradient(circle at 12% 18%, ${accentColor}1c 0%, transparent 48%), radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)`,
+              backgroundSize: "100% 100%, 18px 18px",
+            }}
+          />
+        )}
+
+        {/* Inner Hairline Frame */}
+        <div className="absolute inset-[1px] rounded-[15px] ring-1 ring-inset ring-white/10 pointer-events-none z-20" />
+
         {/* Layer 0: Background Artwork if present */}
         {hasBgImage && (
           <div
@@ -163,56 +185,52 @@ export function UnifiedTicketCard({
 
         {/* Layer 1: MAIN PASS (Approx 72% width) */}
         <div
-          className={`main-pass flex-1 p-6 sm:p-7 flex flex-col justify-between relative z-10 ${
+          className={`main-pass flex-1 p-7 sm:p-8 flex flex-col justify-between relative z-10 ${
             hasBgImage
-              ? "bg-gradient-to-r from-black/55 via-black/40 to-black/50 backdrop-blur-[0.5px]"
+              ? "bg-gradient-to-r from-black/65 via-black/45 to-black/55 backdrop-blur-[1px]"
               : "bg-transparent"
           }`}
         >
-          {/* Header Row: Branding, Admission Label, and Ticket Reference */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15">
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: design.theme.accent || "#E2B857" }}
+          {/* Header Row: Official Club Mark + Pass Serial */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2">
+                <img
+                  src="/assets/sketch-isometric-mark.png"
+                  alt="SKETCH"
+                  className="h-6 w-6 rounded-md object-contain bg-white/10 p-0.5 border border-white/15"
                 />
-                <span className="text-[10px] font-black tracking-widest uppercase text-white/90">
-                  SKETCHHUB
+                <span className="text-xs font-extrabold tracking-[0.22em] uppercase text-white">
+                  {event.organizerName || "SKETCH"}
                 </span>
               </div>
 
-              <span
-                style={{
-                  color: design.theme.accent || "#E2B857",
-                  borderColor: `${design.theme.accent || "#E2B857"}50`,
-                  backgroundColor: `${design.theme.accent || "#E2B857"}15`,
-                }}
-                className="text-[10px] font-bold tracking-wider uppercase border px-2.5 py-0.5 rounded-full"
-              >
-                {design.stub.badgeText || "GENERAL ADMISSION"}
-              </span>
-
               {event.category && (
-                <span className="text-[10px] font-medium text-white/70 uppercase tracking-wider hidden sm:inline">
-                  • {event.category}
-                </span>
+                <>
+                  <span className="h-3.5 w-[1px] bg-white/20" />
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em] truncate"
+                    style={{ color: accentColor }}
+                  >
+                    {event.category}
+                  </span>
+                </>
               )}
             </div>
 
-            <div className="font-mono text-xs font-bold text-white/80 bg-black/40 px-2.5 py-1 rounded-lg border border-white/10">
+            <div className="font-mono text-[11px] font-semibold tracking-wider text-white/75 bg-white/[0.06] px-2.5 py-1 rounded-md border border-white/10 shrink-0">
               {displayTicketNumber}
             </div>
           </div>
 
-          {/* Event Title & Location Row */}
-          <div className="my-auto py-3 space-y-2">
+          {/* Event Title & Schedule/Venue Row */}
+          <div className="my-auto py-4 space-y-3">
             <h1
-              className="text-2xl sm:text-3xl font-black tracking-tight leading-tight line-clamp-2 text-white drop-shadow-md"
+              className="text-2xl sm:text-[30px] font-extrabold tracking-tight leading-[1.12] line-clamp-2 text-white"
               style={{
                 fontFamily:
                   design.theme.fontFamily === "serif"
-                    ? "serif"
+                    ? "Georgia, serif"
                     : design.theme.fontFamily === "mono"
                     ? "monospace"
                     : "inherit",
@@ -221,57 +239,59 @@ export function UnifiedTicketCard({
               {displayTitle}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs text-white/85 pt-1">
-              <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10">
+            <div className="flex flex-wrap items-center gap-y-1.5 gap-x-5 text-xs text-white/80">
+              <div className="flex items-center gap-2">
                 <Calendar
                   className="h-3.5 w-3.5 shrink-0"
-                  style={{ color: design.theme.accent || "#E2B857" }}
+                  style={{ color: accentColor }}
                 />
-                <span className="font-medium">{displayDate}</span>
+                <span className="font-medium tracking-tight">{displayDate}</span>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10">
+              <div className="flex items-center gap-2">
                 <MapPin
                   className="h-3.5 w-3.5 shrink-0"
-                  style={{ color: design.theme.accent || "#E2B857" }}
+                  style={{ color: accentColor }}
                 />
-                <span className="font-medium truncate max-w-[260px]">{displayVenue}</span>
+                <span className="font-medium tracking-tight truncate max-w-[270px]">
+                  {displayVenue}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Bottom Attendee & Meta Row */}
-          <div className="pt-3 border-t border-white/15 flex items-end justify-between gap-4">
+          <div className="pt-3.5 border-t border-white/15 flex items-end justify-between gap-4">
             <div className="min-w-0">
-              <span className="text-[9px] uppercase tracking-widest font-bold text-white/60 block mb-0.5">
-                Pass Holder
+              <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
+                Holder
               </span>
-              <span className="font-black text-sm sm:text-base text-white tracking-tight truncate block drop-shadow-sm">
+              <span className="font-bold text-sm sm:text-base text-white tracking-tight truncate block">
                 {displayAttendee}
               </span>
             </div>
 
             {hasTeam && (
               <div className="min-w-0">
-                <span className="text-[9px] uppercase tracking-widest font-bold text-white/60 block mb-0.5">
+                <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
                   Team
                 </span>
-                <span className="font-semibold text-xs sm:text-sm text-white/90 truncate block flex items-center gap-1">
-                  <Users className="h-3 w-3 inline text-white/60" />
+                <span className="font-semibold text-xs sm:text-sm text-white/90 truncate flex items-center gap-1.5">
+                  <Users className="h-3 w-3 shrink-0 text-white/50" />
                   {displayTeam}
                 </span>
               </div>
             )}
 
-            <div className="text-right">
-              <span className="text-[9px] uppercase tracking-widest font-bold text-white/60 block mb-0.5">
-                Admission
+            <div className="text-right shrink-0">
+              <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
+                Access
               </span>
               <span
-                className="font-bold text-xs uppercase"
-                style={{ color: design.theme.accent || "#E2B857" }}
+                className="font-bold text-[11px] tracking-[0.14em] uppercase"
+                style={{ color: accentColor }}
               >
-                {event.venueMode ? `${event.venueMode.toUpperCase()} PASS` : "CONFIRMED ENTRY"}
+                {admissionLabel}
               </span>
             </div>
           </div>
@@ -281,11 +301,11 @@ export function UnifiedTicketCard({
         {design.stub.perforationPosition === "right" && (
           <div className="perforated-divider relative w-0 flex flex-col justify-between items-center py-0 z-20">
             {/* Top semicircular notch */}
-            <div className="w-5 h-5 -mt-2.5 bg-[#0A0B0D] dark:bg-[#0A0B0D] rounded-full border border-neutral-700/60 print:bg-white print:border-neutral-400" />
+            <div className="w-5 h-5 -mt-2.5 bg-[#0A0B0D] rounded-full border border-white/15 print:bg-white print:border-neutral-400" />
             {/* Vertical perforation line */}
-            <div className="h-full border-r-2 border-dashed border-white/30 my-1 print:border-neutral-400" />
+            <div className="h-full border-r border-dashed border-white/25 my-1 print:border-neutral-400" />
             {/* Bottom semicircular notch */}
-            <div className="w-5 h-5 -mb-2.5 bg-[#0A0B0D] dark:bg-[#0A0B0D] rounded-full border border-neutral-700/60 print:bg-white print:border-neutral-400" />
+            <div className="w-5 h-5 -mb-2.5 bg-[#0A0B0D] rounded-full border border-white/15 print:bg-white print:border-neutral-400" />
           </div>
         )}
 
@@ -294,34 +314,34 @@ export function UnifiedTicketCard({
           <div
             className={`verification-stub p-5 sm:p-6 flex flex-col items-center justify-between text-center relative z-10 border-l border-white/10 ${
               hasBgImage
-                ? "bg-black/60 backdrop-blur-md"
-                : "bg-neutral-900/90"
+                ? "bg-black/70 backdrop-blur-md"
+                : "bg-black/25"
             }`}
             style={{
               width: `${design.stub.stubWidth || 240}px`,
             }}
           >
             {/* Stub Header */}
-            <div className="space-y-0.5 w-full">
-              <div className="flex items-center justify-center gap-1">
+            <div className="space-y-1 w-full">
+              <div className="flex items-center justify-center gap-1.5">
                 <TicketIcon
                   className="h-3 w-3"
-                  style={{ color: design.theme.accent || "#E2B857" }}
+                  style={{ color: accentColor }}
                 />
                 <span
-                  style={{ color: design.theme.accent || "#E2B857" }}
-                  className="text-[9px] font-black uppercase tracking-widest block"
+                  style={{ color: accentColor }}
+                  className="text-[10px] font-extrabold uppercase tracking-[0.18em] block"
                 >
                   {design.stub.badgeText || "ADMIT ONE"}
                 </span>
               </div>
-              <span className="text-[9px] text-white/60 block font-mono">
-                GATE VERIFICATION
+              <span className="text-[9px] text-white/45 block font-mono tracking-widest uppercase">
+                Check-In Pass
               </span>
             </div>
 
             {/* High-Contrast Crisp White QR Card Container */}
-            <div className="p-3 bg-white rounded-2xl shadow-xl border border-neutral-200 flex flex-col items-center justify-center">
+            <div className="p-3 bg-white rounded-xl shadow-xl border border-white/80 flex flex-col items-center justify-center relative">
               {qr.type === "live" && qr.qrDataUrl ? (
                 <div className="relative">
                   <img
@@ -330,7 +350,7 @@ export function UnifiedTicketCard({
                     className="w-24 h-24 sm:w-28 sm:h-28 object-contain"
                   />
                   {isCheckedIn && (
-                    <div className="absolute inset-0 bg-emerald-500/90 rounded-lg flex flex-col items-center justify-center text-white p-1 text-center font-bold text-xs">
+                    <div className="absolute inset-0 bg-emerald-600/95 rounded-lg flex flex-col items-center justify-center text-white p-1 text-center font-bold text-xs">
                       <CheckCircle2 className="h-6 w-6 mb-0.5" />
                       <span>CHECKED IN</span>
                     </div>
@@ -357,10 +377,10 @@ export function UnifiedTicketCard({
             {/* Stub Footer: Timer or Gate Instructions */}
             <div className="w-full space-y-1">
               {qr.type === "live" && !isCheckedIn && !isRevoked ? (
-                <div className="flex items-center justify-center gap-1.5 text-[9px] font-mono text-white/80">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-white/85">
                   <span
                     className="h-1.5 w-1.5 rounded-full animate-ping"
-                    style={{ backgroundColor: design.theme.accent || "#E2B857" }}
+                    style={{ backgroundColor: accentColor }}
                   />
                   <span>
                     Refreshes in{" "}
@@ -370,13 +390,13 @@ export function UnifiedTicketCard({
                   </span>
                 </div>
               ) : (
-                <span className="text-[9px] text-white/70 block font-medium">
-                  Scan at entrance gate
+                <span className="text-[9px] text-white/60 block font-medium">
+                  Present at venue desk
                 </span>
               )}
 
-              <span className="text-[8.5px] text-white/50 block font-mono truncate">
-                REF: {displayTicketNumber}
+              <span className="text-[8.5px] text-white/40 block font-mono truncate">
+                {displayTicketNumber}
               </span>
             </div>
           </div>

@@ -3,6 +3,8 @@ import {
   TicketDesignDataSchema,
   CreateTicketTemplateSchema,
   CanvasElementSchema,
+  UpdateTicketDraftSchema,
+  PublishTemplateVersionSchema,
 } from "@/lib/validations/ticket-schemas";
 import {
   createTicketTemplateAction,
@@ -163,5 +165,26 @@ describe("Ticket Studio & Design Schema Security Invariants", () => {
     if (!pubRes.success) {
       expect(pubRes.error).toBe("FORBIDDEN");
     }
+  });
+
+  it("4. Seeded Starter Template UUIDs: accepts deterministic 7777.../8888... PostgreSQL UUIDs", () => {
+    const draftParsed = UpdateTicketDraftSchema.safeParse({
+      templateId: "77777777-7777-7777-7777-777777770001",
+      designData: { layout: "cinematic-horizontal" },
+    });
+    expect(draftParsed.success).toBe(true);
+
+    const publishParsed = PublishTemplateVersionSchema.safeParse({
+      templateId: "77777777-7777-7777-7777-777777770001",
+      designData: { layout: "cinematic-horizontal" },
+      notes: "v2 polish",
+    });
+    expect(publishParsed.success).toBe(true);
+
+    const invalidParsed = UpdateTicketDraftSchema.safeParse({
+      templateId: "not-a-uuid",
+      designData: { layout: "cinematic-horizontal" },
+    });
+    expect(invalidParsed.success).toBe(false);
   });
 });

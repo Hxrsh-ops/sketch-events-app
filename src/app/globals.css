@@ -46,43 +46,43 @@
   }
 
   .dark {
-    --background: #F8F9FA;
-    --foreground: #34383D;
-    --canvas: #F8F9FA;
+    --background: #0F1114;
+    --foreground: #F1F3F5;
+    --canvas: #0F1114;
 
-    --card: #FFFFFF;
-    --card-foreground: #34383D;
-    --card-border: #E5E7E9;
-    --card-border-hover: #D9DCE0;
-    --card-muted: #F6F7F8;
+    --card: #16191D;
+    --card-foreground: #F1F3F5;
+    --card-border: #25292F;
+    --card-border-hover: #353B44;
+    --card-muted: #1B1E23;
 
-    --surface-inset: #F6F7F8;
-    --surface-inset-border: #E5E7E9;
-    --surface-elevated: #FFFFFF;
+    --surface-inset: #13161A;
+    --surface-inset-border: #25292F;
+    --surface-elevated: #1D2126;
 
-    --popover: #FFFFFF;
-    --popover-foreground: #34383D;
+    --popover: #181B1F;
+    --popover-foreground: #F1F3F5;
 
-    --primary: #E3E5E8;
-    --primary-foreground: #34383D;
-    --primary-hover: #D9DCE0;
+    --primary: #25292F;
+    --primary-foreground: #F1F3F5;
+    --primary-hover: #30353D;
 
-    --secondary: #F6F7F8;
-    --secondary-foreground: #34383D;
-    --secondary-hover: #EAECEF;
+    --secondary: #1D2126;
+    --secondary-foreground: #E5E7EA;
+    --secondary-hover: #25292F;
 
-    --muted: #F6F7F8;
-    --muted-foreground: #858B93;
+    --muted: #1D2126;
+    --muted-foreground: #9AA0A6;
 
-    --accent: #E5E7E9;
-    --accent-foreground: #34383D;
+    --accent: #25292F;
+    --accent-foreground: #F1F3F5;
 
-    --destructive: #34383D;
+    --destructive: #E5484D;
     --destructive-foreground: #FFFFFF;
 
-    --border: #E5E7E9;
-    --input: #E5E7E9;
-    --ring: #858B93;
+    --border: #25292F;
+    --input: #25292F;
+    --ring: #656B73;
   }
 
   * {
@@ -200,8 +200,82 @@
 }
 
 .dark .sketch-card {
-  background: #FFFFFF;
-  border-color: #E5E7E9;
+  background-color: #16191D;
+  color: #F1F3F5;
+  border-color: #25292F;
+}
+
+.dark .sketch-card:hover {
+  border-color: #353B44;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.dark .sketch-card-hero {
+  background: #16191D !important;
+  color: #F1F3F5 !important;
+  border-color: #25292F !important;
+}
+
+.dark .sketch-card-hero * {
+  color: #F1F3F5;
+}
+
+.dark .sketch-card-hero [class*="text-3xl"],
+.dark .sketch-card-hero [class*="font-bold"],
+.dark .sketch-card-hero h1,
+.dark .sketch-card-hero h2,
+.dark .sketch-card-hero h3 {
+  color: #F1F3F5 !important;
+}
+
+.dark .skeleton-shimmer {
+  background-color: #1D2126;
+}
+
+/* Low-specificity dark mode fallbacks for legacy light utility classes (excludes ticket renderers) */
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-white {
+  background-color: #16191D;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F8F9FA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFAFA\] {
+  background-color: #0F1114;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F2F3F4\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F6F7F8\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F4F5F6\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F0F1F2\] {
+  background-color: #1B1E23;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7E9\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7EA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D9DCE0\] {
+  border-color: #25292F;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111827\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#17191C\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#34383D\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#25282B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111315\] {
+  color: #F1F3F5;
+}
+
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#4E545B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#656B73\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#777E86\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#858B93\] {
+  color: #9AA0A6;
+}
+
+:where(.dark) input:not(.unified-ticket-wrapper *),
+:where(.dark) textarea:not(.unified-ticket-wrapper *),
+:where(.dark) select:not(.unified-ticket-wrapper *) {
+  background-color: #13161A;
+  color: #F1F3F5;
+  border-color: #2A2F37;
 }
 
 /* Clean Form Focus & Selection */
