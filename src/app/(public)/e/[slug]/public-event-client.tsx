@@ -1103,12 +1103,9 @@ export default function PublicEventClient({
           /* State F: Main Dynamic Registration Form */
           <div className="space-y-6">
             <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
-                <h2 className="text-xl font-bold text-[#17191C] dark:text-[#F1F2F3]">
-                  {event.hasTeams ? "Team Pass Registration" : "Attendee Pass Registration"}
-                </h2>
-              </div>
+              <h2 className="text-xl font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                {event.hasTeams ? "Team Pass Registration" : "Attendee Pass Registration"}
+              </h2>
               <p className="mt-1 text-xs text-[#656B73] dark:text-[#8A9098]">
                 Direct registration for campus creators and technologists. Complete the form below to claim your verified pass.
               </p>
