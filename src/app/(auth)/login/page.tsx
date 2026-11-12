@@ -283,12 +283,10 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden selection:bg-[#EA4F3C] selection:text-white">
+    <div className="relative min-h-[100dvh] w-full flex flex-col justify-between overflow-x-hidden bg-[#0C0E12] selection:bg-[#EA4F3C] selection:text-white">
       {/*
         ========================================================================
-        1. FULL-VIEWPORT CINEMATIC BACKGROUND
-        Edge-to-edge sunset imagery with modern architectural terrace foreground,
-        infinity pool reflections, coastal horizon, and subtle dark overlay.
+        1. FULL-VIEWPORT CINEMATIC BACKGROUND (DESKTOP) & MOBILE THEME
         ========================================================================
       */}
       <div className="fixed inset-0 z-0 pointer-events-none select-none">
@@ -298,12 +296,13 @@ function LoginForm() {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[center_right] sm:object-center transition-opacity duration-1000"
+          className="object-cover object-[68%_center] sm:object-center opacity-55 sm:opacity-100 transition-opacity duration-1000"
           quality={90}
         />
-        {/* Carefully tuned subtle dark overlay to ensure high contrast and text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/60" />
-        <div className="absolute inset-0 bg-black/25" />
+        {/* Mobile-tuned ambient radial glow + high-contrast dark scrim; desktop preserves classic sunset overlay */}
+        <div className="absolute inset-0 sm:hidden bg-[radial-gradient(circle_at_50%_18%,rgba(234,79,60,0.16),transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0C0E12]/75 via-[#0C0E12]/55 to-[#0C0E12]/90 sm:bg-gradient-to-t sm:from-black/80 sm:via-black/40 sm:to-black/60" />
+        <div className="hidden sm:block absolute inset-0 bg-black/25" />
       </div>
 
       {/*
@@ -335,14 +334,8 @@ function LoginForm() {
           </div>
         </div>
 
-        {/* Right: BACK TO SKETCH & NEED HELP? */}
+        {/* Right: NEED HELP? */}
         <div className="flex items-center gap-4 sm:gap-10 text-[10px] sm:text-xs font-semibold tracking-[0.14em] sm:tracking-[0.18em] uppercase">
-          <Link
-            href="/e/diet-code-2026"
-            className="text-white/70 hover:text-white transition-colors duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 rounded py-0.5"
-          >
-            BACK TO SKETCH
-          </Link>
           <button
             type="button"
             onClick={() => {
@@ -383,13 +376,8 @@ function LoginForm() {
         Isometric Mark -> SketchHUB Title + OPS badge -> Subtitle -> Form
         ========================================================================
       */}
-      <main className="relative z-10 w-full flex-1 flex flex-col items-center justify-center px-4 py-10 sm:py-14">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[430px] flex flex-col items-center text-center"
-        >
+      <main className="relative z-10 w-full flex-1 flex flex-col items-center justify-center px-4 py-6 sm:py-14">
+        <div className="w-full max-w-[430px] flex flex-col items-center text-center rounded-3xl border border-white/12 bg-black/40 backdrop-blur-xl p-6 shadow-2xl sm:rounded-none sm:border-0 sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:shadow-none">
           {/* Authentic Isometric Metallic Sketch Logo Mark */}
           <div className="relative mb-3 flex items-center justify-center">
             <div className="relative h-14 w-14 sm:h-16 sm:w-16 flex items-center justify-center filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
@@ -523,7 +511,7 @@ function LoginForm() {
           </div>
 
           {/* Centered Google Auth Control Row with Flanking Forgot Password */}
-          <div className="relative w-full flex items-center justify-center min-h-[48px]">
+          <div className="relative w-full flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-0 min-h-[48px]">
             {/* Perfectly Centered Circular Google OAuth Button */}
             <button
               type="button"
@@ -540,7 +528,7 @@ function LoginForm() {
             </button>
 
             {/* Forgot Password Link Positioned Accurately on the Right without Offset */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <div className="sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
               <button
                 type="button"
                 onClick={() => {
@@ -554,7 +542,7 @@ function LoginForm() {
               </button>
             </div>
           </div>
-        </motion.div>
+        </div>
       </main>
 
       {/*
