@@ -212,6 +212,19 @@ function LoginForm() {
     setGoogleLoading(true);
 
     try {
+      const host = window.location.hostname;
+      const isPrivateLanIp =
+        /^192\.168\./.test(host) ||
+        /^10\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+      if (isPrivateLanIp) {
+        setErrorMessage(
+          "Google Sign-In is blocked by Google on local Wi-Fi IP addresses (192.168.x.x). Please sign in with your administrator email and password here, or open the app via localhost/HTTPS."
+        );
+        setGoogleLoading(false);
+        return;
+      }
+
       // Production Supabase Google OAuth Flow
       const supabase = createClient();
       if (!supabase) {
