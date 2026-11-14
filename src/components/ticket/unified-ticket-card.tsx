@@ -32,7 +32,7 @@ export interface UnifiedTicketCardProps {
     attendanceStatus?: "not_attended" | "checked_in" | "not_checked_in" | string;
   };
   qr: {
-    type: "synthetic" | "live";
+    type: "synthetic" | "live" | "static";
     qrDataUrl?: string | null;
     secondsRemaining?: number;
     isLoading?: boolean;
@@ -116,6 +116,35 @@ export function UnifiedTicketCard({
       : event.venueMode.toUpperCase()
     : "CONFIRMED";
 
+  const hasCustomElements = design.elements && design.elements.length > 0;
+
+  const getCustomElementValue = (el: any) => {
+    if (showVariableKeys && el.bindingKey && el.bindingKey !== "custom") {
+      return `{{${el.bindingKey}}}`;
+    }
+    switch (el.bindingKey) {
+      case "event_title":
+        return event.title ? displayTitle : (el.sampleValue !== undefined && el.sampleValue !== null ? el.sampleValue : displayTitle);
+      case "attendee_name":
+        return attendee.name ? displayAttendee : (el.sampleValue !== undefined && el.sampleValue !== null ? el.sampleValue : displayAttendee);
+      case "ticket_number":
+        return attendee.ticketNumber ? displayTicketNumber : (el.sampleValue !== undefined && el.sampleValue !== null ? el.sampleValue : displayTicketNumber);
+      case "venue":
+        return event.venue ? displayVenue : (el.sampleValue !== undefined && el.sampleValue !== null ? el.sampleValue : displayVenue);
+      case "start_date":
+        return event.startDate ? displayDate : (el.sampleValue !== undefined && el.sampleValue !== null ? el.sampleValue : displayDate);
+      case "team_name":
+        return attendee.teamName !== undefined && attendee.teamName !== null ? (displayTeam || "") : (el.sampleValue !== undefined && el.sampleValue !== null ? el.sampleValue : (displayTeam || ""));
+      case "category":
+        return event.category || el.sampleValue || "ADMIT ONE";
+      case "status":
+        return admissionLabel || el.sampleValue || "CONFIRMED";
+      case "custom":
+      default:
+        return el.text !== undefined && el.text !== null ? el.text : "";
+    }
+  };
+
   return (
     <div
       className={`unified-ticket-wrapper relative select-none shrink-0 print:m-0 print:p-0 ${className}`}
@@ -183,119 +212,157 @@ export function UnifiedTicketCard({
           </div>
         )}
 
-        {/* Layer 1: MAIN PASS (Approx 72% width) */}
-        <div
-          className={`main-pass flex-1 p-7 sm:p-8 flex flex-col justify-between relative z-10 ${
-            hasBgImage
-              ? "bg-gradient-to-r from-black/65 via-black/45 to-black/55 backdrop-blur-[1px]"
-              : "bg-transparent"
-          }`}
-        >
-          {/* Header Row: Official Club Mark + Pass Serial */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex items-center gap-2">
-                <img
-                  src="/assets/sketch-isometric-mark.png"
-                  alt="SKETCH"
-                  className="h-6 w-6 rounded-md object-contain bg-white/10 p-0.5 border border-white/15"
-                />
-                <span className="text-xs font-extrabold tracking-[0.22em] uppercase text-white">
-                  {event.organizerName || "SKETCH"}
-                </span>
-              </div>
-
-              {event.category && (
-                <>
-                  <span className="h-3.5 w-[1px] bg-white/20" />
-                  <span
-                    className="text-[10px] font-semibold uppercase tracking-[0.16em] truncate"
-                    style={{ color: accentColor }}
-                  >
-                    {event.category}
+        {/* Layer 1: MAIN PASS (Custom Elements or Starter Pass Layout) */}
+        {hasCustomElements ? (
+          <div className="custom-elements-container flex-1 relative z-10 overflow-hidden">
+            {design.elements.map((el) => {
+              const val = getCustomElementValue(el);
+              return (
+                <div
+                  key={el.id}
+                  style={{
+                    position: "absolute",
+                    left: `${el.x}px`,
+                    top: `${el.y}px`,
+                    width: `${el.width}px`,
+                    height: `${el.height}px`,
+                    zIndex: el.zIndex,
+                    color: el.color || design.theme.textColor || "#F3F4F6",
+                    fontSize: `${el.fontSize || 14}px`,
+                    fontWeight: el.fontWeight || "normal",
+                    textAlign: el.alignment || "left",
+                    letterSpacing: el.letterSpacing !== undefined ? `${el.letterSpacing}px` : undefined,
+                    lineHeight: el.lineHeight !== undefined ? `${el.lineHeight}` : undefined,
+                    transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent:
+                      el.alignment === "center"
+                        ? "center"
+                        : el.alignment === "right"
+                        ? "flex-end"
+                        : "flex-start",
+                  }}
+                >
+                  <span className="truncate w-full">{val}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            className={`main-pass flex-1 p-7 sm:p-8 flex flex-col justify-between relative z-10 ${
+              hasBgImage
+                ? "bg-gradient-to-r from-black/65 via-black/45 to-black/55 backdrop-blur-[1px]"
+                : "bg-transparent"
+            }`}
+          >
+            {/* Header Row: Official Club Mark + Pass Serial */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/assets/sketch-isometric-mark.png"
+                    alt="SKETCH"
+                    className="h-6 w-6 rounded-md object-contain bg-white/10 p-0.5 border border-white/15"
+                  />
+                  <span className="text-xs font-extrabold tracking-[0.22em] uppercase text-white">
+                    {event.organizerName || "SKETCH"}
                   </span>
-                </>
-              )}
-            </div>
+                </div>
 
-            <div className="font-mono text-[11px] font-semibold tracking-wider text-white/75 bg-white/[0.06] px-2.5 py-1 rounded-md border border-white/10 shrink-0">
-              {displayTicketNumber}
-            </div>
-          </div>
-
-          {/* Event Title & Schedule/Venue Row */}
-          <div className="my-auto py-4 space-y-3">
-            <h1
-              className="text-2xl sm:text-[30px] font-extrabold tracking-tight leading-[1.12] line-clamp-2 text-white"
-              style={{
-                fontFamily:
-                  design.theme.fontFamily === "serif"
-                    ? "Georgia, serif"
-                    : design.theme.fontFamily === "mono"
-                    ? "monospace"
-                    : "inherit",
-              }}
-            >
-              {displayTitle}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-y-1.5 gap-x-5 text-xs text-white/80">
-              <div className="flex items-center gap-2">
-                <Calendar
-                  className="h-3.5 w-3.5 shrink-0"
-                  style={{ color: accentColor }}
-                />
-                <span className="font-medium tracking-tight">{displayDate}</span>
+                {event.category && (
+                  <>
+                    <span className="h-3.5 w-[1px] bg-white/20" />
+                    <span
+                      className="text-[10px] font-semibold uppercase tracking-[0.16em] truncate"
+                      style={{ color: accentColor }}
+                    >
+                      {event.category}
+                    </span>
+                  </>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <MapPin
-                  className="h-3.5 w-3.5 shrink-0"
-                  style={{ color: accentColor }}
-                />
-                <span className="font-medium tracking-tight truncate max-w-[270px]">
-                  {displayVenue}
-                </span>
+              <div className="font-mono text-[11px] font-semibold tracking-wider text-white/75 bg-white/[0.06] px-2.5 py-1 rounded-md border border-white/10 shrink-0">
+                {displayTicketNumber}
               </div>
             </div>
-          </div>
 
-          {/* Bottom Attendee & Meta Row */}
-          <div className="pt-3.5 border-t border-white/15 flex items-end justify-between gap-4">
-            <div className="min-w-0">
-              <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
-                Holder
-              </span>
-              <span className="font-bold text-sm sm:text-base text-white tracking-tight truncate block">
-                {displayAttendee}
-              </span>
+            {/* Event Title & Schedule/Venue Row */}
+            <div className="my-auto py-4 space-y-3">
+              <h1
+                className="text-2xl sm:text-[30px] font-extrabold tracking-tight leading-[1.12] line-clamp-2 text-white"
+                style={{
+                  fontFamily:
+                    design.theme.fontFamily === "serif"
+                      ? "Georgia, serif"
+                      : design.theme.fontFamily === "mono"
+                      ? "monospace"
+                      : "inherit",
+                }}
+              >
+                {displayTitle}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-y-1.5 gap-x-5 text-xs text-white/80">
+                <div className="flex items-center gap-2">
+                  <Calendar
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: accentColor }}
+                  />
+                  <span className="font-medium tracking-tight">{displayDate}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <MapPin
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: accentColor }}
+                  />
+                  <span className="font-medium tracking-tight truncate max-w-[270px]">
+                    {displayVenue}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {hasTeam && (
+            {/* Bottom Attendee & Meta Row */}
+            <div className="pt-3.5 border-t border-white/15 flex items-end justify-between gap-4">
               <div className="min-w-0">
                 <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
-                  Team
+                  Holder
                 </span>
-                <span className="font-semibold text-xs sm:text-sm text-white/90 truncate flex items-center gap-1.5">
-                  <Users className="h-3 w-3 shrink-0 text-white/50" />
-                  {displayTeam}
+                <span className="font-bold text-sm sm:text-base text-white tracking-tight truncate block">
+                  {displayAttendee}
                 </span>
               </div>
-            )}
 
-            <div className="text-right shrink-0">
-              <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
-                Access
-              </span>
-              <span
-                className="font-bold text-[11px] tracking-[0.14em] uppercase"
-                style={{ color: accentColor }}
-              >
-                {admissionLabel}
-              </span>
+              {hasTeam && (
+                <div className="min-w-0">
+                  <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
+                    Team
+                  </span>
+                  <span className="font-semibold text-xs sm:text-sm text-white/90 truncate flex items-center gap-1.5">
+                    <Users className="h-3 w-3 shrink-0 text-white/50" />
+                    {displayTeam}
+                  </span>
+                </div>
+              )}
+
+              <div className="text-right shrink-0">
+                <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/50 block mb-0.5">
+                  Access
+                </span>
+                <span
+                  className="font-bold text-[11px] tracking-[0.14em] uppercase"
+                  style={{ color: accentColor }}
+                >
+                  {admissionLabel}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Layer 2: Perforated Divider (Notches & Vertical Line) */}
         {design.stub.perforationPosition === "right" && (
@@ -342,7 +409,7 @@ export function UnifiedTicketCard({
 
             {/* High-Contrast Crisp White QR Card Container */}
             <div className="p-3 bg-white rounded-xl shadow-xl border border-white/80 flex flex-col items-center justify-center relative">
-              {qr.type === "live" && qr.qrDataUrl ? (
+              {(qr.type === "live" || qr.type === "static") && qr.qrDataUrl ? (
                 <div className="relative">
                   <img
                     src={qr.qrDataUrl}
@@ -356,7 +423,7 @@ export function UnifiedTicketCard({
                     </div>
                   )}
                 </div>
-              ) : qr.type === "live" && qr.isLoading ? (
+              ) : qr.isLoading ? (
                 <div className="w-24 h-24 sm:w-28 sm:h-28 flex flex-col items-center justify-center text-neutral-400">
                   <RefreshCw className="h-6 w-6 animate-spin mb-1 text-neutral-600" />
                   <span className="text-[9px] font-mono">Generating...</span>

@@ -33,6 +33,17 @@ import {
   Image as ImageIcon,
   Trash2,
   RotateCcw,
+  Plus,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Download,
+  Type,
+  ChevronsUp,
+  ChevronsDown,
+  ArrowUp,
+  ArrowDown,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +59,8 @@ import {
 } from "@/app/actions/ticket-actions";
 import { TicketDesignData, CanvasElement } from "@/lib/validations/ticket-schemas";
 import { UnifiedTicketCard } from "@/components/ticket/unified-ticket-card";
+import { generateUnifiedTicketSvg } from "@/lib/ticket/ticket-renderer";
+import { ColorPickerField } from "@/components/ui/circular-color-picker";
 
 interface StudioClientProps {
   initialTemplates: TicketTemplate[];
@@ -269,6 +282,154 @@ export default function StudioClient({
   const [showSafeMargins, setShowSafeMargins] = useState<boolean>(true);
   const [showSyntheticData, setShowSyntheticData] = useState<boolean>(true);
 
+  // Sample Preview Values state
+  const [sampleData, setSampleData] = useState({
+    eventTitle: "Annual Design & Tech Summit 2026",
+    attendeeName: "Aditi Rao",
+    ticketNumber: "TKT-2026-8849-GL",
+    teamName: "CodeCraft Orbit",
+    venue: "University Central Auditorium, Zone 1",
+    startDate: "2026-11-21T10:00:00Z",
+    category: "KEYNOTE & SHOWCASE",
+    status: "CONFIRMED",
+  });
+
+  const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to get current text of an element (handles dynamic vs custom text)
+  const getElementCurrentText = (el: CanvasElement): string => {
+    if (typeof el.sampleValue === "string") {
+      return el.sampleValue;
+    }
+    if (typeof el.text === "string") {
+      return el.text;
+    }
+    if (el.bindingKey && el.bindingKey !== "custom") {
+      switch (el.bindingKey) {
+        case "event_title":
+          return sampleData.eventTitle;
+        case "attendee_name":
+          return sampleData.attendeeName;
+        case "ticket_number":
+          return sampleData.ticketNumber;
+        case "venue":
+          return sampleData.venue;
+        case "team_name":
+          return sampleData.teamName || "";
+        case "category":
+          return sampleData.category;
+        case "status":
+          return sampleData.status;
+        default:
+          return "";
+      }
+    }
+    return "";
+  };
+
+  // Helper to update text content or sample value immediately
+  const handleUpdateElementText = (id: string, newText: string) => {
+    updateDesign((prev) => ({
+      ...prev,
+      elements: prev.elements.map((el) => {
+        if (el.id !== id) return el;
+        if (el.bindingKey && el.bindingKey !== "custom") {
+          return {
+            ...el,
+            sampleValue: newText,
+            text: newText,
+          };
+        } else {
+          return {
+            ...el,
+            text: newText,
+          };
+        }
+      }),
+    }));
+
+    // Synchronize sampleData if dynamic field
+    const targetEl = design.elements.find((e) => e.id === id);
+    if (targetEl?.bindingKey && targetEl.bindingKey !== "custom") {
+      setSampleData((prev) => {
+        const next = { ...prev };
+        if (targetEl.bindingKey === "event_title") next.eventTitle = newText;
+        else if (targetEl.bindingKey === "attendee_name") next.attendeeName = newText;
+        else if (targetEl.bindingKey === "ticket_number") next.ticketNumber = newText;
+        else if (targetEl.bindingKey === "venue") next.venue = newText;
+        else if (targetEl.bindingKey === "team_name") next.teamName = newText;
+        else if (targetEl.bindingKey === "category") next.category = newText;
+        else if (targetEl.bindingKey === "status") next.status = newText;
+        return next;
+      });
+    }
+  };
+
+  // Duplicate Element
+  const handleDuplicateElement = (id: string) => {
+    const elToDup = design.elements.find((el) => el.id === id);
+    if (!elToDup) return;
+    const newId = `el-${Date.now()}`;
+    const duplicated: CanvasElement = {
+      ...elToDup,
+      id: newId,
+      x: Math.min(design.canvas.width - elToDup.width, elToDup.x + 15),
+      y: Math.min(design.canvas.height - elToDup.height, elToDup.y + 15),
+      isLocked: false,
+    };
+    updateDesign((prev) => ({
+      ...prev,
+      elements: [...prev.elements, duplicated],
+    }));
+    setSelectedElementId(newId);
+  };
+
+  // Layer Ordering Handlers
+  const handleBringToFront = (id: string) => {
+    updateDesign((prev) => {
+      const idx = prev.elements.findIndex((e) => e.id === id);
+      if (idx === -1 || idx === prev.elements.length - 1) return prev;
+      const el = prev.elements[idx];
+      const rest = prev.elements.filter((e) => e.id !== id);
+      return { ...prev, elements: [...rest, el] };
+    });
+  };
+
+  const handleSendToBack = (id: string) => {
+    updateDesign((prev) => {
+      const idx = prev.elements.findIndex((e) => e.id === id);
+      if (idx === -1 || idx === 0) return prev;
+      const el = prev.elements[idx];
+      const rest = prev.elements.filter((e) => e.id !== id);
+      return { ...prev, elements: [el, ...rest] };
+    });
+  };
+
+  const handleBringForward = (id: string) => {
+    updateDesign((prev) => {
+      const idx = prev.elements.findIndex((e) => e.id === id);
+      if (idx === -1 || idx === prev.elements.length - 1) return prev;
+      const copy = [...prev.elements];
+      const temp = copy[idx];
+      copy[idx] = copy[idx + 1];
+      copy[idx + 1] = temp;
+      return { ...prev, elements: copy };
+    });
+  };
+
+  const handleSendBackward = (id: string) => {
+    updateDesign((prev) => {
+      const idx = prev.elements.findIndex((e) => e.id === id);
+      if (idx <= 0) return prev;
+      const copy = [...prev.elements];
+      const temp = copy[idx];
+      copy[idx] = copy[idx - 1];
+      copy[idx - 1] = temp;
+      return { ...prev, elements: copy };
+    });
+  };
+
   // Feedback states
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -360,6 +521,15 @@ export default function StudioClient({
     if (editorMode !== "visual" || !selectedElementId) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept arrow keys or typing if user is focused inside an input or textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 2;
@@ -377,6 +547,30 @@ export default function StudioClient({
             return { ...el, x: nx, y: ny };
           }),
         }));
+      }
+
+      if (e.key === "Delete" || (e.key === "Backspace" && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        handleDeleteElement(selectedElementId);
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        handleRedo();
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        handleDuplicateElement(selectedElementId);
       }
     };
 
@@ -441,15 +635,37 @@ export default function StudioClient({
     setIsAssigning(true);
     setFeedback(null);
     try {
-      // Look up current published version ID or default
+      // Automatically publish current design version first so assigned event gets latest changes
+      let versionToAssign: string | null = null;
+      const pubRes = await publishTemplateVersionAction({
+        templateId: selectedTemplateId,
+        designData: design,
+        notes: "Auto-published version on event assignment",
+      });
+
+      if (pubRes.success && pubRes.data?.versionId) {
+        versionToAssign = pubRes.data.versionId;
+        setActiveVersionNumber(pubRes.data.versionNumber);
+      } else {
+        const tplRes = await getTicketTemplateAction(selectedTemplateId);
+        if (tplRes.success && tplRes.data?.versions?.length) {
+          versionToAssign = tplRes.data.versions[tplRes.data.versions.length - 1].id;
+        }
+      }
+
+      if (!versionToAssign) {
+        versionToAssign = "88888888-8888-8888-8888-888888880001";
+      }
+
       const res = await assignEventTemplateAction({
         eventId: targetEventId,
-        templateVersionId: "88888888-8888-8888-8888-888888880001",
+        templateVersionId: versionToAssign,
       });
+
       if (res.success) {
         setFeedback({
           type: "success",
-          text: "Ticket design assigned to event. New registrations will receive this pass.",
+          text: "Ticket design successfully assigned to event. Attendees will receive this exact pass.",
         });
       } else {
         setFeedback({ type: "error", text: res.message });
@@ -467,6 +683,81 @@ export default function StudioClient({
     () => design.elements.find((el) => el.id === selectedElementId),
     [design.elements, selectedElementId]
   );
+
+  const [isExportingSvg, setIsExportingSvg] = useState(false);
+
+  const handleExportSvg = async () => {
+    setIsExportingSvg(true);
+    try {
+      const svg = await generateUnifiedTicketSvg({
+        design,
+        event: {
+          title: sampleData.eventTitle,
+          category: sampleData.category,
+          venue: sampleData.venue,
+          venueMode: "in-person",
+          startDate: sampleData.startDate,
+        },
+        attendee: {
+          name: sampleData.attendeeName,
+          ticketNumber: sampleData.ticketNumber,
+          teamName: sampleData.teamName,
+        },
+      });
+
+      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ticket-template-test.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setFeedback({ type: "success", text: "Ticket template SVG exported successfully." });
+    } catch {
+      setFeedback({ type: "error", text: "Failed to export ticket SVG." });
+    } finally {
+      setIsExportingSvg(false);
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
+
+  const handleAddElement = (bindingKey: any, defaultText: string) => {
+    const newId = `el-${Date.now()}`;
+    const newEl: CanvasElement = {
+      id: newId,
+      type: "text",
+      x: 60,
+      y: 60,
+      width: 280,
+      height: 36,
+      zIndex: 2,
+      isLocked: false,
+      bindingKey,
+      text: defaultText,
+      fontSize: bindingKey === "event_title" ? 24 : 14,
+      fontWeight: bindingKey === "event_title" ? "bold" : "medium",
+      color: "#F3F4F6",
+      alignment: "left",
+    };
+
+    updateDesign((prev) => ({
+      ...prev,
+      elements: [...prev.elements, newEl],
+    }));
+    setSelectedElementId(newId);
+  };
+
+  const handleDeleteElement = (id: string) => {
+    updateDesign((prev) => ({
+      ...prev,
+      elements: prev.elements.filter((el) => el.id !== id),
+    }));
+    if (selectedElementId === id) {
+      setSelectedElementId(null);
+    }
+  };
 
   return (
     <div className="flex flex-col space-y-6 pb-12 max-w-[1440px] mx-auto text-[#17191C]">
@@ -492,6 +783,17 @@ export default function StudioClient({
 
         {/* Global Studio Actions */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportSvg}
+            disabled={isExportingSvg}
+            className="rounded-lg h-9 px-3.5 text-xs font-semibold gap-1.5 border-[#E5E7E9] text-[#17191C]"
+          >
+            <Download className="h-3.5 w-3.5 text-[#777E86]" />
+            <span>Export SVG</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -626,65 +928,65 @@ export default function StudioClient({
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5 space-y-3.5 text-xs">
-                <div>
-                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
-                    Accent Color
-                  </label>
-                  <div className="flex items-center gap-2.5">
-                    <input
-                      type="color"
-                      value={design.theme.accent}
-                      onChange={(e) =>
-                        updateDesign((prev) => ({
-                          ...prev,
-                          theme: { ...prev.theme, accent: e.target.value },
-                        }))
-                      }
-                      className="h-8 w-12 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={design.theme.accent}
-                      onChange={(e) =>
-                        updateDesign((prev) => ({
-                          ...prev,
-                          theme: { ...prev.theme, accent: e.target.value },
-                        }))
-                      }
-                      className="font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A] w-28"
-                    />
-                  </div>
-                </div>
+                {/* Accent Color */}
+                <ColorPickerField
+                  label="Accent Color"
+                  value={design.theme.accent}
+                  onChange={(hex) =>
+                    updateDesign((prev) => ({
+                      ...prev,
+                      theme: { ...prev.theme, accent: hex },
+                    }))
+                  }
+                />
 
-                <div>
-                  <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
-                    Surface Base
-                  </label>
-                  <div className="flex items-center gap-2.5">
-                    <input
-                      type="color"
-                      value={design.theme.surface}
-                      onChange={(e) =>
-                        updateDesign((prev) => ({
-                          ...prev,
-                          theme: { ...prev.theme, surface: e.target.value },
-                        }))
-                      }
-                      className="h-8 w-12 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={design.theme.surface}
-                      onChange={(e) =>
-                        updateDesign((prev) => ({
-                          ...prev,
-                          theme: { ...prev.theme, surface: e.target.value },
-                        }))
-                      }
-                      className="font-mono text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A] w-28"
-                    />
-                  </div>
-                </div>
+                {/* Surface Base */}
+                <ColorPickerField
+                  label="Surface Base"
+                  value={design.theme.surface}
+                  onChange={(hex) =>
+                    updateDesign((prev) => ({
+                      ...prev,
+                      theme: { ...prev.theme, surface: hex },
+                    }))
+                  }
+                />
+
+                {/* Text Color */}
+                <ColorPickerField
+                  label="Text Color"
+                  value={design.theme.textColor || "#F3F4F6"}
+                  onChange={(hex) =>
+                    updateDesign((prev) => ({
+                      ...prev,
+                      theme: { ...prev.theme, textColor: hex },
+                    }))
+                  }
+                />
+
+                {/* Background Color */}
+                <ColorPickerField
+                  label="Background Color"
+                  value={design.theme.background || "#111315"}
+                  onChange={(hex) =>
+                    updateDesign((prev) => ({
+                      ...prev,
+                      theme: { ...prev.theme, background: hex },
+                    }))
+                  }
+                />
+
+                {/* Border Color */}
+                <ColorPickerField
+                  label="Border Color"
+                  value={design.theme.borderColor || "#2C3136"}
+                  onChange={(hex) =>
+                    updateDesign((prev) => ({
+                      ...prev,
+                      theme: { ...prev.theme, borderColor: hex },
+                    }))
+                  }
+                />
 
                 <div>
                   <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
@@ -855,27 +1157,20 @@ export default function StudioClient({
 
                     {/* Contrast Overlay Color & Opacity */}
                     <div>
-                      <label className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1.5">
-                        Readability Contrast Overlay
-                      </label>
-                      <div className="flex items-center gap-2 mb-2">
-                        <input
-                          type="color"
+                      <div className="mb-2">
+                        <ColorPickerField
+                          label="Readability Contrast Overlay"
                           value={design.backgroundImage.overlayColor || "#000000"}
-                          onChange={(e) =>
+                          onChange={(hex) =>
                             updateDesign((prev) => ({
                               ...prev,
                               backgroundImage: {
                                 ...prev.backgroundImage!,
-                                overlayColor: e.target.value,
+                                overlayColor: hex,
                               },
                             }))
                           }
-                          className="h-8 w-12 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
                         />
-                        <span className="font-mono text-xs text-[#858B93] ">
-                          {design.backgroundImage.overlayColor || "#000000"}
-                        </span>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-[11px] text-[#858B93] ">
@@ -1042,6 +1337,7 @@ export default function StudioClient({
               <RenderedTicketCard
                 design={design}
                 showSyntheticData={showSyntheticData}
+                sampleData={sampleData}
               />
             </div>
 
@@ -1064,7 +1360,7 @@ export default function StudioClient({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Canvas Tools Toolbar */}
           <div className="lg:col-span-12 flex items-center justify-between p-3 bg-white  rounded-xl border border-[#E5E7E9]  shadow-sm flex-wrap gap-3">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1112,6 +1408,71 @@ export default function StudioClient({
               >
                 Reset Zoom
               </Button>
+              <div className="h-5 w-px bg-neutral-200 dark:bg-neutral-800 mx-1" />
+
+              {/* Quick Add Dynamic Fields */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddElement("attendee_name", "Participant Name")}
+                  className="h-8 text-[11px] font-semibold px-2.5 rounded-lg border-[#E5E7E9]"
+                >
+                  <Plus className="h-3 w-3 mr-1 text-amber-500" />
+                  Attendee Name
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddElement("event_title", "Event Title")}
+                  className="h-8 text-[11px] font-semibold px-2.5 rounded-lg border-[#E5E7E9]"
+                >
+                  <Plus className="h-3 w-3 mr-1 text-amber-500" />
+                  Event Name
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddElement("ticket_number", "TKT-2026-0001")}
+                  className="h-8 text-[11px] font-semibold px-2.5 rounded-lg border-[#E5E7E9]"
+                >
+                  <Plus className="h-3 w-3 mr-1 text-amber-500" />
+                  Ticket ID
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddElement("venue", "Event Venue Hall")}
+                  className="h-8 text-[11px] font-semibold px-2.5 rounded-lg border-[#E5E7E9]"
+                >
+                  <Plus className="h-3 w-3 mr-1 text-amber-500" />
+                  Venue
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddElement("start_date", "Event Date & Time")}
+                  className="h-8 text-[11px] font-semibold px-2.5 rounded-lg border-[#E5E7E9]"
+                >
+                  <Plus className="h-3 w-3 mr-1 text-amber-500" />
+                  Date
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddElement("custom", "Custom Notice")}
+                  className="h-8 text-[11px] font-semibold px-2.5 rounded-lg border-[#E5E7E9]"
+                >
+                  <Plus className="h-3 w-3 mr-1 text-amber-500" />
+                  Custom
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1124,9 +1485,13 @@ export default function StudioClient({
                 />
                 <span>Safe Print Margins</span>
               </label>
-              <span className="text-xs text-[#8E95A0] hidden sm:inline">
-                Use Arrow Keys (+Shift) to Nudge Selected Element
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowSyntheticData(!showSyntheticData)}
+                className="text-xs text-[#858B93] hover:text-[#17191C] dark:hover:text-white font-medium"
+              >
+                {showSyntheticData ? "Show Variable Keys" : "Show Sample Data"}
+              </button>
             </div>
           </div>
 
@@ -1145,38 +1510,141 @@ export default function StudioClient({
                 onSelectElement={setSelectedElementId}
                 showSafeMargins={showSafeMargins}
                 showSyntheticData={showSyntheticData}
+                zoomLevel={zoomLevel}
+                onUpdateElementPosition={(id, x, y) => {
+                  updateDesign((prev) => ({
+                    ...prev,
+                    elements: prev.elements.map((el) => (el.id === id ? { ...el, x, y } : el)),
+                  }));
+                }}
+                onUpdateElementSize={(id, width, height) => {
+                  updateDesign((prev) => ({
+                    ...prev,
+                    elements: prev.elements.map((el) => (el.id === id ? { ...el, width, height } : el)),
+                  }));
+                }}
+                getElementCurrentText={getElementCurrentText}
+                onUpdateElementText={handleUpdateElementText}
+                inlineEditingId={inlineEditingId}
+                onSetInlineEditingId={setInlineEditingId}
               />
             </div>
           </div>
 
           {/* Element Inspector Panel */}
           <div className="lg:col-span-4 space-y-4">
-            <Card className="rounded-xl border-[#E5E7E9]  shadow-sm">
+            <Card className="rounded-xl border-[#E5E7E9] dark:border-[#23272C] shadow-sm">
               <CardHeader className="pb-3 pt-5 px-5">
                 <CardTitle className="text-sm font-bold flex items-center justify-between">
                   <span>Element Properties</span>
-                  {selectedElement?.isLocked && (
-                    <Badge variant="outline" className="text-[9px] uppercase font-bold text-amber-500 border-amber-500/30">
-                      Locked System Field
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {selectedElement && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDuplicateElement(selectedElement.id)}
+                          title="Duplicate element (Ctrl+D)"
+                          className="h-7 text-xs gap-1 px-2 border-[#E5E7E9] dark:border-[#23272C]"
+                        >
+                          <Copy className="h-3 w-3" />
+                          <span>Duplicate</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteElement(selectedElement.id)}
+                          title="Delete element (Del)"
+                          className="h-7 text-xs text-rose-500 hover:text-rose-600 gap-1 px-2"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete</span>
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-5 pb-5 space-y-3.5 text-xs">
+              <CardContent className="px-5 pb-5 space-y-4 text-xs">
                 {selectedElement ? (
                   <>
-                    <div>
-                      <span className="text-[11px] font-semibold text-[#858B93]  uppercase block mb-1">
-                        Bound Variable
-                      </span>
-                      <span className="font-mono text-xs text-amber-600 dark:text-amber-400 font-bold">
-                        {selectedElement.bindingKey || "custom"}
-                      </span>
+                    {/* Primary Text Content / Preview Value Input */}
+                    <div className="space-y-1.5 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                      <div className="flex items-center justify-between">
+                        <label
+                          htmlFor="element-text-input"
+                          className="text-[11px] font-bold text-amber-500 uppercase flex items-center gap-1.5"
+                        >
+                          <Type className="h-3.5 w-3.5" />
+                          <span>{selectedElement.bindingKey ? "Preview / Sample Text" : "Text Content"}</span>
+                        </label>
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] uppercase font-bold ${
+                            selectedElement.bindingKey
+                              ? "text-amber-500 border-amber-500/40 bg-amber-500/10"
+                              : "text-sky-400 border-sky-400/40 bg-sky-400/10"
+                          }`}
+                        >
+                          {selectedElement.bindingKey ? `Variable: {{${selectedElement.bindingKey}}}` : "Custom Text"}
+                        </Badge>
+                      </div>
+                      <input
+                        id="element-text-input"
+                        ref={textInputRef}
+                        type="text"
+                        value={getElementCurrentText(selectedElement)}
+                        onChange={(e) => handleUpdateElementText(selectedElement.id, e.target.value)}
+                        placeholder={selectedElement.bindingKey ? "Enter preview value..." : "Enter text content..."}
+                        className="w-full text-xs px-2.5 py-2 rounded-lg border border-amber-500/30 bg-background focus:ring-2 focus:ring-amber-500 focus:outline-none font-medium text-foreground"
+                      />
+                      {selectedElement.bindingKey ? (
+                        <p className="text-[10px] text-[#858B93] leading-tight">
+                          Live sample value. When tickets are issued to attendees, this is replaced by the actual {selectedElement.bindingKey.replace(/_/g, " ")}.
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-[#858B93] leading-tight">
+                          Static text displayed on every ticket. Supports full backspace, delete, and special characters.
+                        </p>
+                      )}
                     </div>
 
+                    {/* Dynamic Variable Binding Selector */}
+                    <div>
+                      <span className="text-[11px] font-semibold text-[#858B93] uppercase block mb-1">
+                        Dynamic Field Binding
+                      </span>
+                      <select
+                        value={selectedElement.bindingKey || "custom"}
+                        onChange={(e) => {
+                          const val = e.target.value === "custom" ? undefined : (e.target.value as any);
+                          updateDesign((prev) => ({
+                            ...prev,
+                            elements: prev.elements.map((el) =>
+                              el.id === selectedElement.id ? { ...el, bindingKey: val } : el
+                            ),
+                          }));
+                        }}
+                        className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                      >
+                        <option value="custom">No Dynamic Binding (Custom Static Text)</option>
+                        <option value="event_title">event_title (Event Title)</option>
+                        <option value="attendee_name">attendee_name (Attendee / Participant Name)</option>
+                        <option value="ticket_number">ticket_number (Ticket ID / Pass Number)</option>
+                        <option value="venue">venue (Venue / Location)</option>
+                        <option value="start_date">start_date (Event Date & Time)</option>
+                        <option value="team_name">team_name (Team / Organization)</option>
+                        <option value="category">category (Ticket Category / Tier)</option>
+                        <option value="status">status (Ticket Status)</option>
+                      </select>
+                    </div>
+
+                    {/* Coordinates (X, Y) */}
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="text-[11px] text-[#858B93]  block mb-1">
+                        <label className="text-[11px] text-[#858B93] block mb-1">
                           X Position (px)
                         </label>
                         <input
@@ -1191,12 +1659,12 @@ export default function StudioClient({
                               ),
                             }));
                           }}
-                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A]"
+                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] text-[#858B93]  block mb-1">
+                        <label className="text-[11px] text-[#858B93] block mb-1">
                           Y Position (px)
                         </label>
                         <input
@@ -1211,53 +1679,335 @@ export default function StudioClient({
                               ),
                             }));
                           }}
-                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A]"
+                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-[11px] text-[#858B93]  block mb-1">
-                        Font Size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        min="8"
-                        max="72"
-                        value={selectedElement.fontSize || 16}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          updateDesign((prev) => ({
-                            ...prev,
-                            elements: prev.elements.map((el) =>
-                              el.id === selectedElement.id ? { ...el, fontSize: val } : el
-                            ),
-                          }));
-                        }}
-                        className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9]  bg-[#F9FAFB] dark:bg-[#15171A]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] text-[#858B93]  block mb-1">
-                        Text Color
-                      </label>
-                      <div className="flex items-center gap-2">
+                    {/* Dimensions (Width, Height) */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[11px] text-[#858B93] block mb-1">
+                          Width (px)
+                        </label>
                         <input
-                          type="color"
-                          value={selectedElement.color || "#F3F4F6"}
+                          type="number"
+                          min="20"
+                          value={selectedElement.width}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = Math.max(20, Number(e.target.value));
                             updateDesign((prev) => ({
                               ...prev,
                               elements: prev.elements.map((el) =>
-                                el.id === selectedElement.id ? { ...el, color: val } : el
+                                el.id === selectedElement.id ? { ...el, width: val } : el
                               ),
                             }));
                           }}
-                          className="h-7 w-10 rounded border border-[#E5E7E9]  cursor-pointer bg-transparent"
+                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
                         />
-                        <span className="font-mono text-xs">{selectedElement.color || "#F3F4F6"}</span>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] text-[#858B93] block mb-1">
+                          Height (px)
+                        </label>
+                        <input
+                          type="number"
+                          min="16"
+                          value={selectedElement.height}
+                          onChange={(e) => {
+                            const val = Math.max(16, Number(e.target.value));
+                            updateDesign((prev) => ({
+                              ...prev,
+                              elements: prev.elements.map((el) =>
+                                el.id === selectedElement.id ? { ...el, height: val } : el
+                              ),
+                            }));
+                          }}
+                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Font Family */}
+                    <div>
+                      <label className="text-[11px] text-[#858B93] block mb-1">
+                        Font Family (Theme)
+                      </label>
+                      <select
+                        value={design.theme.fontFamily || "sans"}
+                        onChange={(e) => {
+                          const val = e.target.value as any;
+                          updateDesign((prev) => ({
+                            ...prev,
+                            theme: {
+                              ...prev.theme,
+                              fontFamily: val,
+                            },
+                          }));
+                        }}
+                        className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                      >
+                        <option value="cinematic">Cinematic Display (Bold Editorial)</option>
+                        <option value="sans">Modern Sans (Inter/Helvetica)</option>
+                        <option value="mono">Cyber Monospace Terminal</option>
+                        <option value="serif">Classic Formal Serif</option>
+                      </select>
+                    </div>
+
+                    {/* Font Size & Weight */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[11px] text-[#858B93] block mb-1">
+                          Font Size ({selectedElement.fontSize || 16}px)
+                        </label>
+                        <input
+                          type="number"
+                          min="8"
+                          max="96"
+                          value={selectedElement.fontSize || 16}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            updateDesign((prev) => ({
+                              ...prev,
+                              elements: prev.elements.map((el) =>
+                                el.id === selectedElement.id ? { ...el, fontSize: val } : el
+                              ),
+                            }));
+                          }}
+                          className="w-full text-xs font-mono px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] text-[#858B93] block mb-1">
+                          Font Weight
+                        </label>
+                        <select
+                          value={selectedElement.fontWeight || "normal"}
+                          onChange={(e) => {
+                            const val = e.target.value as any;
+                            updateDesign((prev) => ({
+                              ...prev,
+                              elements: prev.elements.map((el) =>
+                                el.id === selectedElement.id ? { ...el, fontWeight: val } : el
+                              ),
+                            }));
+                          }}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                        >
+                          <option value="normal">Normal</option>
+                          <option value="medium">Medium</option>
+                          <option value="semibold">Semibold</option>
+                          <option value="bold">Bold</option>
+                          <option value="extrabold">Extra Bold</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Alignment & Text Color */}
+                    <div className="grid grid-cols-2 gap-2.5 items-end">
+                      <div>
+                        <label className="text-[11px] text-[#858B93] block mb-1">
+                          Alignment
+                        </label>
+                        <div className="flex rounded-lg border border-[#E5E7E9] dark:border-[#23272C] p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateDesign((prev) => ({
+                                ...prev,
+                                elements: prev.elements.map((el) =>
+                                  el.id === selectedElement.id ? { ...el, alignment: "left" } : el
+                                ),
+                              }));
+                            }}
+                            className={`flex-1 py-1 rounded flex items-center justify-center ${
+                              selectedElement.alignment === "left" || !selectedElement.alignment
+                                ? "bg-amber-500 text-black font-bold"
+                                : "text-[#858B93] hover:text-foreground"
+                            }`}
+                          >
+                            <AlignLeft className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateDesign((prev) => ({
+                                ...prev,
+                                elements: prev.elements.map((el) =>
+                                  el.id === selectedElement.id ? { ...el, alignment: "center" } : el
+                                ),
+                              }));
+                            }}
+                            className={`flex-1 py-1 rounded flex items-center justify-center ${
+                              selectedElement.alignment === "center"
+                                ? "bg-amber-500 text-black font-bold"
+                                : "text-[#858B93] hover:text-foreground"
+                            }`}
+                          >
+                            <AlignCenter className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateDesign((prev) => ({
+                                ...prev,
+                                elements: prev.elements.map((el) =>
+                                  el.id === selectedElement.id ? { ...el, alignment: "right" } : el
+                                ),
+                              }));
+                            }}
+                            className={`flex-1 py-1 rounded flex items-center justify-center ${
+                              selectedElement.alignment === "right"
+                                ? "bg-amber-500 text-black font-bold"
+                                : "text-[#858B93] hover:text-foreground"
+                            }`}
+                          >
+                            <AlignRight className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <ColorPickerField
+                          label="Text Color"
+                          value={selectedElement.color || "#F3F4F6"}
+                          onChange={(hex) => {
+                            updateDesign((prev) => ({
+                              ...prev,
+                              elements: prev.elements.map((el) =>
+                                el.id === selectedElement.id ? { ...el, color: hex } : el
+                              ),
+                            }));
+                          }}
+                          align="right"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Letter Spacing, Line Height, Rotation */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-[#858B93] block mb-1">
+                          Spacing (px)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="-5"
+                          max="20"
+                          value={selectedElement.letterSpacing ?? 0}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            updateDesign((prev) => ({
+                              ...prev,
+                              elements: prev.elements.map((el) =>
+                                el.id === selectedElement.id ? { ...el, letterSpacing: val } : el
+                              ),
+                            }));
+                          }}
+                          className="w-full text-xs font-mono px-2 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-[#858B93] block mb-1">
+                          Line Height
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.8"
+                          max="3"
+                          value={selectedElement.lineHeight ?? 1.2}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            updateDesign((prev) => ({
+                              ...prev,
+                              elements: prev.elements.map((el) =>
+                                el.id === selectedElement.id ? { ...el, lineHeight: val } : el
+                              ),
+                            }));
+                          }}
+                          className="w-full text-xs font-mono px-2 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-[#858B93] block mb-1">
+                          Rotation (deg)
+                        </label>
+                        <input
+                          type="number"
+                          step="5"
+                          min="-180"
+                          max="180"
+                          value={selectedElement.rotation ?? 0}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            updateDesign((prev) => ({
+                              ...prev,
+                              elements: prev.elements.map((el) =>
+                                el.id === selectedElement.id ? { ...el, rotation: val } : el
+                              ),
+                            }));
+                          }}
+                          className="w-full text-xs font-mono px-2 py-1.5 rounded-lg border border-[#E5E7E9] dark:border-[#23272C] bg-[#F9FAFB] dark:bg-[#15171A]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Layer Ordering Controls */}
+                    <div className="pt-2 border-t border-[#E5E7E9] dark:border-[#23272C]">
+                      <span className="text-[11px] font-semibold text-[#858B93] uppercase block mb-1.5">
+                        Layer Ordering
+                      </span>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleBringToFront(selectedElement.id)}
+                          className="h-8 text-[10px] px-1 flex flex-col items-center justify-center gap-0.5 border-[#E5E7E9] dark:border-[#23272C]"
+                          title="Bring to Front"
+                        >
+                          <ChevronsUp className="h-3 w-3" />
+                          <span className="truncate">To Front</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleBringForward(selectedElement.id)}
+                          className="h-8 text-[10px] px-1 flex flex-col items-center justify-center gap-0.5 border-[#E5E7E9] dark:border-[#23272C]"
+                          title="Bring Forward"
+                        >
+                          <ArrowUp className="h-3 w-3" />
+                          <span className="truncate">Forward</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSendBackward(selectedElement.id)}
+                          className="h-8 text-[10px] px-1 flex flex-col items-center justify-center gap-0.5 border-[#E5E7E9] dark:border-[#23272C]"
+                          title="Send Backward"
+                        >
+                          <ArrowDown className="h-3 w-3" />
+                          <span className="truncate">Backward</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSendToBack(selectedElement.id)}
+                          className="h-8 text-[10px] px-1 flex flex-col items-center justify-center gap-0.5 border-[#E5E7E9] dark:border-[#23272C]"
+                          title="Send to Back"
+                        >
+                          <ChevronsDown className="h-3 w-3" />
+                          <span className="truncate">To Back</span>
+                        </Button>
                       </div>
                     </div>
                   </>
@@ -1266,6 +2016,74 @@ export default function StudioClient({
                     Click an element on the canvas to inspect and configure its attributes.
                   </p>
                 )}
+
+                {/* Canvas Layers List */}
+                <div className="pt-3 border-t border-[#E5E7E9] dark:border-[#23272C] space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[#858B93] uppercase">
+                      Canvas Elements ({design.elements.length})
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newId = `el-custom-${Date.now()}`;
+                        const newElement: CanvasElement = {
+                          id: newId,
+                          type: "text",
+                          x: 40,
+                          y: 240,
+                          width: 220,
+                          height: 30,
+                          zIndex: design.elements.length + 1,
+                          isLocked: false,
+                          text: "New Text Element",
+                          fontSize: 14,
+                          fontWeight: "normal",
+                          color: "#F3F4F6",
+                          alignment: "left",
+                        };
+                        updateDesign((prev) => ({
+                          ...prev,
+                          elements: [...prev.elements, newElement],
+                        }));
+                        setSelectedElementId(newId);
+                      }}
+                      className="h-6 text-[10px] gap-1 px-2 text-amber-500 hover:text-amber-400"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Add Text</span>
+                    </Button>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                    {design.elements.map((el, idx) => {
+                      const isSelected = el.id === selectedElementId;
+                      const textLabel = getElementCurrentText(el) || el.text || el.bindingKey || "Untitled";
+                      return (
+                        <div
+                          key={el.id}
+                          onClick={() => setSelectedElementId(el.id)}
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer text-xs transition-colors ${
+                            isSelected
+                              ? "bg-amber-500/15 border border-amber-500/40 text-amber-400 font-semibold"
+                              : "hover:bg-neutral-800/40 border border-transparent text-[#858B93]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="font-mono text-[10px] text-muted-foreground w-4">
+                              {idx + 1}
+                            </span>
+                            <span className="truncate max-w-[140px]">{textLabel}</span>
+                          </div>
+                          <span className="font-mono text-[9px] uppercase px-1 rounded bg-neutral-800 text-neutral-400">
+                            {el.bindingKey || "static"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1313,27 +2131,27 @@ export default function StudioClient({
 
           {previewTab === "ticket" && (
             <div className="p-8 bg-[#F8F9FA] rounded-3xl border border-[#23272C] flex items-center justify-center">
-              <RenderedTicketCard design={design} showSyntheticData={true} />
+              <RenderedTicketCard design={design} showSyntheticData={true} sampleData={sampleData} />
             </div>
           )}
 
           {previewTab === "email" && (
             <div className="max-w-[600px] mx-auto p-6 bg-white  rounded-3xl border border-[#E5E7E9]  shadow-sm space-y-4">
               <div className="border-b border-[#E5E7E9]  pb-3 text-xs text-[#858B93] ">
-                <strong>Subject:</strong> Your Pass for Sample Event Summit
+                <strong>Subject:</strong> Your Pass for {sampleData.eventTitle || "Sample Event Summit"}
               </div>
               <p className="text-sm">
-                Hello <strong>Sample Attendee</strong>,
+                Hello <strong>{sampleData.attendeeName || "Sample Attendee"}</strong>,
               </p>
               <p className="text-xs text-[#858B93]  leading-relaxed">
-                Your registration is confirmed. Tap the button below when arriving at the venue to present your entry pass.
+                Your registration is confirmed. Tap the button below when arriving at the venue to present your entry pass. Official vector ticket pass attached to your confirmation.
               </p>
               <div className="p-4 rounded-xl bg-[#111315] text-white text-center space-y-2">
                 <span className="text-[10px] font-bold tracking-wider text-amber-400 uppercase">
                   ENTRY PASS
                 </span>
                 <div className="font-mono text-base font-extrabold text-white">
-                  TKT-2026-8849-GL
+                  {sampleData.ticketNumber || "TKT-2026-8849-GL"}
                 </div>
                 <div className="pt-2">
                   <a
@@ -1366,7 +2184,7 @@ export default function StudioClient({
               </div>
 
               <div className="p-8 bg-[#F8F9FA] rounded-3xl border border-[#23272C] flex items-center justify-center overflow-x-auto">
-                <RenderedTicketCard design={design} showSyntheticData={true} />
+                <RenderedTicketCard design={design} showSyntheticData={true} sampleData={sampleData} />
               </div>
             </div>
           )}
@@ -1380,25 +2198,35 @@ export default function StudioClient({
 function RenderedTicketCard({
   design,
   showSyntheticData,
+  sampleData,
 }: {
   design: TicketDesignData;
   showSyntheticData: boolean;
+  sampleData?: {
+    eventTitle?: string;
+    attendeeName?: string;
+    ticketNumber?: string;
+    venue?: string;
+    teamName?: string;
+    category?: string;
+    status?: string;
+  };
 }) {
   return (
     <UnifiedTicketCard
       design={design}
       event={{
-        title: "Annual Design & Tech Summit 2026",
-        category: "KEYNOTE & SHOWCASE",
-        venue: "University Central Auditorium, Zone 1",
+        title: sampleData?.eventTitle || "Annual Design & Tech Summit 2026",
+        category: sampleData?.category || "KEYNOTE & SHOWCASE",
+        venue: sampleData?.venue || "University Central Auditorium, Zone 1",
         venueMode: "in-person",
         startDate: "2026-11-21T10:00:00Z",
       }}
       attendee={{
-        name: "Aditi Rao",
-        ticketNumber: "TKT-2026-8849-GL",
-        teamName: "CodeCraft Orbit",
-        ticketStatus: "active",
+        name: sampleData?.attendeeName || "Aditi Rao",
+        ticketNumber: sampleData?.ticketNumber || "TKT-2026-8849-GL",
+        teamName: sampleData?.teamName || "CodeCraft Orbit",
+        ticketStatus: (sampleData?.status as any) || "active",
         attendanceStatus: "not_attended",
       }}
       qr={{
@@ -1409,20 +2237,103 @@ function RenderedTicketCard({
   );
 }
 
-// Subcomponent: Interactive Visual Canvas
+// Subcomponent: Interactive Visual Canvas with Drag-and-Drop, Inline Editing, and Resizing
 function InteractiveCanvas({
   design,
   selectedElementId,
   onSelectElement,
   showSafeMargins,
   showSyntheticData,
+  zoomLevel = 1,
+  onUpdateElementPosition,
+  onUpdateElementSize,
+  getElementCurrentText,
+  onUpdateElementText,
+  inlineEditingId,
+  onSetInlineEditingId,
 }: {
   design: TicketDesignData;
   selectedElementId: string | null;
   onSelectElement: (id: string) => void;
   showSafeMargins: boolean;
   showSyntheticData: boolean;
+  zoomLevel?: number;
+  onUpdateElementPosition?: (id: string, x: number, y: number) => void;
+  onUpdateElementSize?: (id: string, width: number, height: number) => void;
+  getElementCurrentText?: (el: CanvasElement) => string;
+  onUpdateElementText?: (id: string, text: string) => void;
+  inlineEditingId?: string | null;
+  onSetInlineEditingId?: (id: string | null) => void;
 }) {
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ startMouseX: number; startMouseY: number; startElX: number; startElY: number } | null>(null);
+
+  const handleElementMouseDown = (e: React.MouseEvent, el: CanvasElement) => {
+    e.stopPropagation();
+    onSelectElement(el.id);
+    if (!onUpdateElementPosition) return;
+
+    isDraggingRef.current = true;
+    dragStartRef.current = {
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startElX: el.x,
+      startElY: el.y,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current || !dragStartRef.current) return;
+      const dx = (moveEvent.clientX - dragStartRef.current.startMouseX) / zoomLevel;
+      const dy = (moveEvent.clientY - dragStartRef.current.startMouseY) / zoomLevel;
+
+      const rawX = dragStartRef.current.startElX + dx;
+      const rawY = dragStartRef.current.startElY + dy;
+      // Snap to 5px grid
+      const snappedX = Math.round(rawX / 5) * 5;
+      const snappedY = Math.round(rawY / 5) * 5;
+
+      const clampedX = Math.max(0, Math.min(design.canvas.width - el.width, snappedX));
+      const clampedY = Math.max(0, Math.min(design.canvas.height - el.height, snappedY));
+
+      onUpdateElementPosition(el.id, clampedX, clampedY);
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      dragStartRef.current = null;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent, el: CanvasElement) => {
+    e.stopPropagation();
+    if (!onUpdateElementSize) return;
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+    const startWidth = el.width;
+    const startHeight = el.height;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const dx = (moveEvent.clientX - startMouseX) / (zoomLevel || 1);
+      const dy = (moveEvent.clientY - startMouseY) / (zoomLevel || 1);
+      const newWidth = Math.max(30, Math.round((startWidth + dx) / 5) * 5);
+      const newHeight = Math.max(16, Math.round((startHeight + dy) / 5) * 5);
+      onUpdateElementSize(el.id, newWidth, newHeight);
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
   return (
     <div
       style={{
@@ -1463,13 +2374,31 @@ function InteractiveCanvas({
         </div>
       )}
 
-      {/* Render Canvas Elements */}
+      {/* Render Canvas Elements with Dragging, Inline Edit & Resize */}
       {design.elements.map((el) => {
         const isSelected = el.id === selectedElementId;
+        const isInlineEditing = inlineEditingId === el.id;
+        const currentText = getElementCurrentText ? getElementCurrentText(el) : (el.sampleValue ?? el.text ?? "");
+        const displayText = showSyntheticData
+          ? (currentText || (el.bindingKey ? `{{${el.bindingKey}}}` : ""))
+          : (el.bindingKey ? `{{${el.bindingKey}}}` : (el.text ?? ""));
+
         return (
           <div
             key={el.id}
-            onClick={() => onSelectElement(el.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectElement(el.id);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onSelectElement(el.id);
+              onSetInlineEditingId?.(el.id);
+            }}
+            onMouseDown={(e) => {
+              if (isInlineEditing) return;
+              handleElementMouseDown(e, el);
+            }}
             style={{
               position: "absolute",
               left: `${el.x}px`,
@@ -1481,14 +2410,55 @@ function InteractiveCanvas({
               fontSize: `${el.fontSize || 14}px`,
               fontWeight: el.fontWeight || "normal",
               textAlign: el.alignment || "left",
+              letterSpacing: el.letterSpacing ? `${el.letterSpacing}px` : undefined,
+              lineHeight: el.lineHeight ? `${el.lineHeight}` : undefined,
+              transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+              transformOrigin: "center center",
             }}
-            className={`cursor-pointer transition-all flex items-center ${
+            className={`transition-shadow flex items-center relative ${
+              isInlineEditing ? "cursor-text ring-2 ring-amber-400" : "cursor-move"
+            } ${
               isSelected
-                ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-neutral-900 rounded"
+                ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-neutral-900 rounded bg-amber-500/10"
                 : "hover:ring-1 hover:ring-amber-500/50 rounded"
             }`}
+            title="Click to select, drag to reposition, double-click to inline edit text"
           >
-            <span className="truncate w-full">{el.text}</span>
+            {isInlineEditing ? (
+              <input
+                autoFocus
+                type="text"
+                value={currentText}
+                onChange={(e) => onUpdateElementText?.(el.id, e.target.value)}
+                onBlur={() => onSetInlineEditingId?.(null)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter" || e.key === "Escape") {
+                    onSetInlineEditingId?.(null);
+                  }
+                }}
+                className="w-full h-full bg-black/80 text-white rounded px-1 outline-none ring-1 ring-amber-400"
+                style={{
+                  color: el.color || design.theme.textColor,
+                  fontSize: `${el.fontSize || 14}px`,
+                  fontWeight: el.fontWeight || "normal",
+                  textAlign: el.alignment || "left",
+                }}
+              />
+            ) : (
+              <span className="truncate w-full select-none">
+                {displayText || <span className="opacity-40 italic">[Empty]</span>}
+              </span>
+            )}
+
+            {/* Resize Handle */}
+            {isSelected && !isInlineEditing && onUpdateElementSize && (
+              <div
+                onMouseDown={(e) => handleResizeMouseDown(e, el)}
+                className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-amber-500 border border-black rounded-sm cursor-se-resize z-30 shadow"
+                title="Drag to resize"
+              />
+            )}
           </div>
         );
       })}
@@ -1505,7 +2475,7 @@ function InteractiveCanvas({
             backgroundColor: design.theme.surface,
             borderLeft: "1px dashed #3A4048",
           }}
-          className="p-6 flex flex-col items-center justify-between text-center"
+          className="p-6 flex flex-col items-center justify-between text-center pointer-events-none"
         >
           <span
             style={{ color: design.theme.accent }}

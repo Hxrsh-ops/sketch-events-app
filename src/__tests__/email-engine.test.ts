@@ -7,6 +7,7 @@ import {
 import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter } from "@/lib/email/adapters";
 import { EmailOutboxWorker } from "@/lib/email/worker";
 import { TicketPassPayload } from "@/lib/email/types";
+import { DEFAULT_UNIFIED_TICKET_DESIGN } from "@/lib/ticket/ticket-renderer";
 
 describe("Email Engine: Templates and Validation", () => {
   const validPayload: TicketPassPayload = {
@@ -25,6 +26,38 @@ describe("Email Engine: Templates and Validation", () => {
     expect(rendered.html).toContain("SKETCH-TKT-9DA76B0A6D06");
     expect(rendered.html).toContain("Alice Designer");
     expect(rendered.text).toContain("Registration ID: REG-2026-10001-A1B2C3");
+    expect(rendered.html).toContain("Official Pass Attached:");
+    expect(rendered.html).toContain("REG-2026-10001-A1B2C3_pass.svg");
+  });
+
+  it("successfully renders ticket pass with custom TicketDesignData colors and styles", () => {
+    const customDesign = {
+      ...DEFAULT_UNIFIED_TICKET_DESIGN,
+      theme: {
+        ...DEFAULT_UNIFIED_TICKET_DESIGN.theme,
+        background: "#050608",
+        surface: "#111317",
+        accent: "#F59E0B",
+        textColor: "#FFFFFF",
+        secondaryTextColor: "#9CA3AF",
+        borderColor: "#374151",
+        fontFamily: "cinematic" as const,
+      },
+      stub: {
+        ...DEFAULT_UNIFIED_TICKET_DESIGN.stub,
+        stubWidth: 240,
+        perforationPosition: "right" as const,
+        badgeText: "VIP ALL-ACCESS",
+      },
+      elements: [],
+    };
+
+    const rendered = renderTicketPassEmail(validPayload, "Elena Rostova", customDesign);
+
+    expect(rendered.html).toContain("#050608");
+    expect(rendered.html).toContain("#F59E0B");
+    expect(rendered.html).toContain("VIP ALL-ACCESS");
+    expect(rendered.html).toContain("Elena Rostova");
   });
 
   it("successfully renders team badge when team_name is provided", () => {
@@ -119,6 +152,31 @@ describe("Email Engine: Provider Adapters", () => {
     expect(testAdapter.sentMessages.length).toBe(1);
     expect(testAdapter.sentMessages[0].idempotencyKey).toBe("key-123");
     expect(testAdapter.sentMessages[0].to).toBe("test@example.com");
+  });
+
+  it("TestEmailAdapter correctly captures email attachments", async () => {
+    const dummySvg = "<svg>ticket</svg>";
+    const base64Content = Buffer.from(dummySvg).toString("base64");
+
+    const result = await testAdapter.sendEmail({
+      to: "attendee@example.com",
+      subject: "Your Pass",
+      html: "<p>Here is your ticket</p>",
+      attachments: [
+        {
+          filename: "ticket_pass.svg",
+          content: base64Content,
+          contentType: "image/svg+xml",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(testAdapter.sentMessages.length).toBe(1);
+    expect(testAdapter.sentMessages[0].attachments).toBeDefined();
+    expect(testAdapter.sentMessages[0].attachments?.length).toBe(1);
+    expect(testAdapter.sentMessages[0].attachments?.[0].filename).toBe("ticket_pass.svg");
+    expect(testAdapter.sentMessages[0].attachments?.[0].contentType).toBe("image/svg+xml");
   });
 
   it("TestEmailAdapter correctly handles simulated failures", async () => {

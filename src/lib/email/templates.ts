@@ -1,4 +1,5 @@
 import { TicketPassPayload, TicketPassPayloadSchema } from "./types";
+import { TicketDesignData } from "@/lib/validations/ticket-schemas";
 
 export interface RenderedEmail {
   html: string;
@@ -8,7 +9,11 @@ export interface RenderedEmail {
 /**
  * Validates the job payload and renders responsive HTML and plaintext for ticket passes.
  */
-export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recipientName: string): RenderedEmail {
+export function renderTicketPassEmail(
+  rawPayload: Record<string, unknown>,
+  recipientName: string,
+  design?: TicketDesignData
+): RenderedEmail {
   const parseResult = TicketPassPayloadSchema.safeParse(rawPayload);
   if (!parseResult.success) {
     const errorDetails = parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ");
@@ -16,6 +21,11 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
   }
 
   const payload: TicketPassPayload = parseResult.data;
+  const bg = design?.theme?.background || "#111316";
+  const accent = design?.theme?.accent || "#FBBF24";
+  const borderColor = design?.theme?.borderColor || "#262A30";
+  const badgeText = design?.stub?.badgeText || "CONFIRMED";
+
   const formattedDate = new Date(payload.start_date).toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -27,10 +37,14 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
   });
 
   const teamBadgeHtml = payload.team_name
-    ? `<span style="display:inline-block;padding:4px 10px;background:#2A2212;color:#FBBF24;border:1px solid #523E14;border-radius:9999px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TEAM: ${escapeHtml(
+    ? `<span style="display:inline-block;padding:4px 10px;background:#2A2212;color:${escapeHtml(
+        accent
+      )};border:1px solid #523E14;border-radius:9999px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TEAM: ${escapeHtml(
         payload.team_name
       )}</span>`
     : `<span style="display:inline-block;padding:4px 10px;background:#1C2229;color:#D1D5DB;border:1px solid #2D343E;border-radius:9999px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">INDIVIDUAL PASS</span>`;
+
+  const ticketFileName = `${payload.ticket_number || payload.registration_id}_pass.svg`;
 
   const html = `<!DOCTYPE html>
 <html>
@@ -47,15 +61,21 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
           Hello <strong>${escapeHtml(recipientName)}</strong>, your official pass is confirmed:
         </p>
 
-        <!-- Dark Obsidian Official Event Pass Card -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#111316;border-radius:20px;border:1px solid #262A30;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.22);color:#FFFFFF;">
+        <!-- Official Event Pass Card -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:${escapeHtml(
+          bg
+        )};border-radius:20px;border:1px solid ${escapeHtml(
+    borderColor
+  )};overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.22);color:#FFFFFF;">
           <!-- Top Brand + Ticket Number Strip -->
           <tr>
             <td style="padding:22px 26px 14px 26px;border-bottom:1px solid #22262C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#9CA3AF;">
-                    SKETCH <span style="color:#4B5563;margin:0 6px;">|</span> <span style="color:#FBBF24;">CONFIRMED</span>
+                    SKETCH <span style="color:#4B5563;margin:0 6px;">|</span> <span style="color:${escapeHtml(
+                      accent
+                    )};">${escapeHtml(badgeText)}</span>
                   </td>
                   <td align="right">
                     ${
@@ -128,13 +148,22 @@ export function renderTicketPassEmail(rawPayload: Record<string, unknown>, recip
                 </tr>
               </table>
 
+              <!-- Attached SVG Pass Notice -->
+              <div style="margin-top:18px;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;text-align:center;">
+                <p style="margin:0;font-size:11px;color:#9CA3AF;">
+                  Official Pass Attached: <strong style="color:#FFFFFF;font-family:monospace;">${escapeHtml(
+                    ticketFileName
+                  )}</strong>
+                </p>
+              </div>
+
               ${
                 payload.live_ticket_url
-                  ? `<div style="text-align:center;margin-top:22px;">
+                  ? `<div style="text-align:center;margin-top:18px;">
                       <a href="${escapeHtml(
                         payload.live_ticket_url
                       )}" style="display:inline-block;padding:13px 26px;background:#FFFFFF;color:#111316;text-decoration:none;font-size:13px;font-weight:800;border-radius:9999px;">
-                        Open Live Rotating Ticket &rarr;
+                        Open Live Admission Pass &rarr;
                       </a>
                     </div>
                     <p style="margin:14px 0 0 0;font-size:11px;color:#6B7280;text-align:center;line-height:1.5;">

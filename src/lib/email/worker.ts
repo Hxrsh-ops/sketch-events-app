@@ -1,9 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { getServerEnv } from "@/lib/env.server";
-import { EmailDeliveryJob, EmailProviderAdapter } from "./types";
+import { EmailDeliveryJob, EmailProviderAdapter, EmailAttachment } from "./types";
 import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter, MailpitEmailAdapter } from "./adapters";
 import { renderTicketPassEmail, renderCertificateEmail, renderAnnouncementEmail } from "./templates";
 import { getStoredCommunications, updateStoredCommunication } from "@/lib/registration-store";
+import { generateUnifiedTicketSvg, DEFAULT_UNIFIED_TICKET_DESIGN } from "@/lib/ticket/ticket-renderer";
+import { TicketDesignData } from "@/lib/validations/ticket-schemas";
 
 export interface ProcessBatchResult {
   claimed: number;
@@ -108,9 +110,68 @@ export class EmailOutboxWorker {
 
     try {
       let rendered: { html: string; text: string };
+      let attachments: EmailAttachment[] | undefined;
 
       if (job.templateType === "ticket_pass") {
-        rendered = renderTicketPassEmail(job.payload, job.recipientName);
+        // Retrieve custom ticket template design if assigned to this event
+        let design: TicketDesignData = DEFAULT_UNIFIED_TICKET_DESIGN;
+        if ((job.payload as any)?.template_design) {
+          design = (job.payload as any).template_design;
+        } else if (job.eventId && supabase) {
+          try {
+            const { data: eventRow } = await (supabase as any)
+              .from("events")
+              .select("ticket_template_version_id, ticket_template_versions:ticket_template_version_id(design_data)")
+              .eq("id", job.eventId)
+              .maybeSingle();
+
+            if (eventRow?.ticket_template_versions?.design_data) {
+              design = eventRow.ticket_template_versions.design_data as TicketDesignData;
+            }
+          } catch {
+            // Graceful fallback to default design
+          }
+        }
+
+        rendered = renderTicketPassEmail(job.payload, job.recipientName, design);
+
+        // Generate matching vector ticket pass SVG attachment using canonical ticket renderer
+        try {
+          const ticketNum =
+            (job.payload as any)?.ticket_number || (job.payload as any)?.registration_id || "ticket";
+          const qrPayload =
+            (job.payload as any)?.qr_credential_id ||
+            (job.payload as any)?.live_ticket_url ||
+            ticketNum;
+
+          const ticketSvg = await generateUnifiedTicketSvg({
+            design,
+            event: {
+              title: (job.payload as any)?.event_title || job.subject,
+              venue: (job.payload as any)?.venue || "Campus Venue",
+              startDate: (job.payload as any)?.start_date,
+              organizerName: "SKETCH",
+            },
+            attendee: {
+              name: job.recipientName,
+              ticketNumber: ticketNum,
+              teamName: (job.payload as any)?.team_name || null,
+            },
+            qrPayload,
+          });
+
+          const attachmentName = `${ticketNum}_pass.svg`;
+          attachments = [
+            {
+              filename: attachmentName,
+              name: attachmentName,
+              content: Buffer.from(ticketSvg, "utf-8").toString("base64"),
+              contentType: "image/svg+xml",
+            },
+          ];
+        } catch (svgErr) {
+          console.error("[EmailOutboxWorker] Could not generate ticket pass attachment:", svgErr);
+        }
       } else if (job.templateType === "certificate") {
         rendered = renderCertificateEmail(job.payload, job.recipientName, job.subject);
       } else if (job.templateType === "announcement" || job.templateType === "reminder") {
@@ -125,6 +186,7 @@ export class EmailOutboxWorker {
         subject: job.subject,
         html: rendered.html,
         text: rendered.text,
+        attachments,
         idempotencyKey: `outbox-${job.id}`,
       });
 

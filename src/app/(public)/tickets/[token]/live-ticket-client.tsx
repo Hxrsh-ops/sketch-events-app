@@ -2,19 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import QRCode from "qrcode";
 import {
   Sun,
   Printer,
   ShieldCheck,
   Check,
   Copy,
-  RefreshCw,
-  Clock,
+  Download,
+  Ticket as TicketIcon,
 } from "lucide-react";
 import { LiveTicketData } from "@/types";
-import { requestRotatingQrTokenAction } from "@/app/actions/ticket-actions";
 import { UnifiedTicketCard } from "@/components/ticket/unified-ticket-card";
 import { TicketDesignData } from "@/lib/validations/ticket-schemas";
+import { generateUnifiedTicketSvg } from "@/lib/ticket/ticket-renderer";
 
 interface LiveTicketClientProps {
   ticket: LiveTicketData;
@@ -42,69 +43,47 @@ const DEFAULT_TICKET_DESIGN: TicketDesignData = {
   qr: {
     size: 180,
     label: "SCAN TO VERIFY",
-    rotating: true,
-    refreshIntervalSec: 30,
+    rotating: false,
+    refreshIntervalSec: 0,
   },
   elements: [],
 };
 
 export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClientProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<number>(0);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(30);
   const [isLoadingQr, setIsLoadingQr] = useState<boolean>(true);
   const [qrError, setQrError] = useState<string | null>(null);
   const [maxBrightnessMode, setMaxBrightnessMode] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [isDownloadingSvg, setIsDownloadingSvg] = useState<boolean>(false);
 
-  // Fetch a fresh rotating QR token
-  const fetchFreshQrToken = async () => {
-    if (ticket.ticketStatus !== "active" || ticket.attendanceStatus === "checked_in") {
-      setIsLoadingQr(false);
-      return;
-    }
-
-    setIsLoadingQr(true);
-    setQrError(null);
-
-    try {
-      const res = await requestRotatingQrTokenAction(bearerToken);
-      if (res.success && res.data) {
-        setQrDataUrl(res.data.qrDataUrl);
-        setExpiresAt(res.data.expiresAt);
-        const rem = Math.max(0, res.data.expiresAt - Math.floor(Date.now() / 1000));
-        setSecondsRemaining(rem);
-      } else {
-        setQrError(res.message || "Failed to generate security QR token.");
-      }
-    } catch {
-      setQrError("Connection interrupted. Please tap to retry.");
-    } finally {
-      setIsLoadingQr(false);
-    }
-  };
-
-  // Initial load
+  // Generate permanent, static QR code once from attendee ticket number
   useEffect(() => {
-    fetchFreshQrToken();
-  }, [bearerToken, ticket.ticketStatus, ticket.attendanceStatus]);
+    let isMounted = true;
+    const staticPayload = ticket.ticketNumber || bearerToken;
 
-  // Countdown and auto-refresh timer loop
-  useEffect(() => {
-    if (ticket.ticketStatus !== "active" || ticket.attendanceStatus === "checked_in") return;
+    QRCode.toDataURL(staticPayload, {
+      margin: 1,
+      width: 260,
+      color: { dark: "#17191C", light: "#FFFFFF" },
+    })
+      .then((url) => {
+        if (isMounted) {
+          setQrDataUrl(url);
+          setIsLoadingQr(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setQrError("Could not render admission QR code.");
+          setIsLoadingQr(false);
+        }
+      });
 
-    const interval = setInterval(() => {
-      const now = Math.floor(Date.now() / 1000);
-      const rem = Math.max(0, expiresAt - now);
-      setSecondsRemaining(rem);
-
-      if (rem <= 2 && !isLoadingQr) {
-        fetchFreshQrToken();
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [expiresAt, isLoadingQr, ticket.ticketStatus, ticket.attendanceStatus]);
+    return () => {
+      isMounted = false;
+    };
+  }, [ticket.ticketNumber, bearerToken]);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -120,10 +99,46 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
     }
   };
 
+  const resolvedDesign: TicketDesignData = ticket.templateDesign || DEFAULT_TICKET_DESIGN;
+
+  const handleDownloadSvg = async () => {
+    setIsDownloadingSvg(true);
+    try {
+      const svg = await generateUnifiedTicketSvg({
+        design: resolvedDesign,
+        event: {
+          title: ticket.eventTitle,
+          category: ticket.venueMode?.toUpperCase(),
+          venue: ticket.venue,
+          venueMode: ticket.venueMode,
+          startDate: ticket.startDate,
+        },
+        attendee: {
+          name: ticket.attendeeName,
+          ticketNumber: ticket.ticketNumber,
+          teamName: ticket.teamName,
+        },
+        qrPayload: ticket.ticketNumber || bearerToken,
+      });
+
+      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${ticket.ticketNumber || "ticket"}_pass.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download SVG pass:", err);
+    } finally {
+      setIsDownloadingSvg(false);
+    }
+  };
+
   const isCheckedIn = ticket.attendanceStatus === "checked_in";
   const isRevoked = ticket.ticketStatus === "revoked";
-
-  const resolvedDesign: TicketDesignData = ticket.templateDesign || DEFAULT_TICKET_DESIGN;
 
   return (
     <main
@@ -143,6 +158,22 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadSvg}
+              disabled={isDownloadingSvg}
+              className={`px-2.5 py-1.5 rounded-xl border text-xs flex items-center gap-1.5 transition-colors ${
+                maxBrightnessMode
+                  ? "bg-neutral-100 border-neutral-300 text-black font-semibold"
+                  : "bg-[#181B1E] border-[#2C3136] text-[#A6ADB5] hover:text-white"
+              }`}
+              title="Download Ticket SVG"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-[11px] hidden sm:inline">
+                {isDownloadingSvg ? "Exporting..." : "Download SVG"}
+              </span>
+            </button>
+
             <button
               onClick={() => setMaxBrightnessMode(!maxBrightnessMode)}
               className={`px-2.5 py-1.5 rounded-xl border text-xs flex items-center gap-1.5 transition-colors ${
@@ -190,23 +221,21 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
               attendanceStatus: ticket.attendanceStatus,
             }}
             qr={{
-              type: "live",
+              type: "static",
               qrDataUrl: qrDataUrl,
-              secondsRemaining: secondsRemaining,
               isLoading: isLoadingQr,
               error: qrError,
-              onRefresh: fetchFreshQrToken,
             }}
           />
         </div>
 
-        {/* Anti-Replay Security Explanation Banner (Hidden when printing) */}
+        {/* Official Gate Admission Banner (Static, Clean, No Timers) */}
         {!isCheckedIn && !isRevoked && (
           <div className="p-4 rounded-2xl bg-[#14171A] border border-[#23272C] flex items-start gap-3 text-xs text-[#8A9098] print:hidden">
-            <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+            <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
             <div className="leading-relaxed text-[11px]">
-              <strong className="text-white block mb-0.5">Live Rotating Security Pass</strong>
-              Your admission QR code rotates automatically every 30 seconds with an active cryptographic signature. Present this live screen directly at the gate terminal for express check-in.
+              <strong className="text-white block mb-0.5">Verified Official Admission Pass</strong>
+              Your admission QR code is linked to registration ID <strong className="text-amber-400 font-mono">{ticket.ticketNumber}</strong>. Present this screen or a printed copy directly at the admission desk for express check-in.
             </div>
           </div>
         )}

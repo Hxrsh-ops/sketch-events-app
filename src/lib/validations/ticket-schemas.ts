@@ -123,6 +123,7 @@ export const CanvasElementSchema = z.object({
   zIndex: z.number().min(0).max(100).default(1),
   isLocked: z.boolean().default(false),
   text: z.string().max(200).optional(),
+  sampleValue: z.string().max(200).optional(),
   bindingKey: z.enum([
     "event_title",
     "attendee_name",
@@ -139,6 +140,9 @@ export const CanvasElementSchema = z.object({
   fontWeight: z.enum(["normal", "medium", "semibold", "bold", "extrabold"]).optional(),
   color: SafeColorSchema.optional(),
   alignment: z.enum(["left", "center", "right"]).optional(),
+  letterSpacing: z.number().min(-5).max(30).optional(),
+  lineHeight: z.number().min(0.5).max(4).optional(),
+  rotation: z.number().min(-360).max(360).optional(),
 });
 
 export type CanvasElement = z.infer<typeof CanvasElementSchema>;

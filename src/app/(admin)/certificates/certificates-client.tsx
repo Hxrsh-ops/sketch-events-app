@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Send,
   CheckCircle2,
@@ -24,6 +24,14 @@ import { CertificateRecord, EventItem, Participant } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { batchIssueCertificatesAction } from "@/app/actions/certificate-actions";
 import { getStoredCertificates } from "@/lib/registration-store";
+import { CertificateStudio } from "@/components/certificate/certificate-studio";
+import { UnifiedCertificateCard } from "@/components/certificate/unified-certificate-card";
+import { DEFAULT_CERTIFICATE_DESIGN, CertificateDesignData } from "@/types/certificate-template";
+import { generateCertificateSvg } from "@/lib/certificate/certificate-renderer";
+import {
+  getActiveCertificateDesign,
+  subscribeToActiveCertificateDesign,
+} from "@/lib/certificate/certificate-store";
 
 interface CertificatesClientProps {
   initialCertificates: CertificateRecord[];
@@ -53,6 +61,17 @@ export default function CertificatesClient({
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"registry" | "studio">("registry");
+  const [certDesign, setCertDesign] = useState<CertificateDesignData>(() => getActiveCertificateDesign());
+
+  // Listen to active template updates across components and tabs
+  useEffect(() => {
+    setCertDesign(getActiveCertificateDesign());
+    const unsubscribe = subscribeToActiveCertificateDesign((updated) => {
+      setCertDesign(updated);
+    });
+    return unsubscribe;
+  }, []);
 
   // Eligible participants for batch issuance (checked in attendees without certificates)
   const issuedRecipientEmails = new Set(certificates.map((c) => c.recipientEmail.toLowerCase()));
@@ -124,6 +143,34 @@ export default function CertificatesClient({
     }
   };
 
+  // Download personalized SVG vector matching the template studio configuration
+  const handleDownloadCertSvg = async (cert: CertificateRecord) => {
+    try {
+      const svg = await generateCertificateSvg({
+        design: certDesign,
+        certificate: {
+          recipientName: cert.recipientName,
+          eventTitle: cert.eventTitle,
+          certificateNumber: cert.certificateNumber,
+          issuedAt: cert.issuedAt,
+        },
+        verificationBaseUrl: typeof window !== "undefined" ? window.location.origin : "",
+      });
+
+      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      const objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `certificate-${cert.certificateNumber}.svg`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch {
+      setFeedbackMessage("Failed to generate personalized certificate SVG.");
+    }
+  };
+
   // Event dropdown options
   const eventOptions = [
     { value: "all", label: "All Events Combined" },
@@ -174,6 +221,34 @@ export default function CertificatesClient({
         </Button>
       </div>
 
+      {/* Module Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-[#E5E7EA] dark:border-[#30353A] pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("registry")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 ${
+            activeTab === "registry"
+              ? "bg-[#17191C] text-white dark:bg-white dark:text-[#17191C] shadow-xs"
+              : "text-[#656B73] dark:text-[#8A9098] hover:text-[#17191C] dark:hover:text-white"
+          }`}
+        >
+          <Award className="h-4 w-4" />
+          <span>Issued Registry ({certificates.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("studio")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 ${
+            activeTab === "studio"
+              ? "bg-[#17191C] text-white dark:bg-white dark:text-[#17191C] shadow-xs"
+              : "text-[#656B73] dark:text-[#8A9098] hover:text-[#17191C] dark:hover:text-white"
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>Certificate Template Studio</span>
+        </button>
+      </div>
+
       {/* Action Feedback Banner */}
       {feedbackMessage && (
         <div className="rounded-xl border border-[#E5E7E9] bg-[#F6F7F8] text-[#34383D] p-4 text-xs flex items-center justify-between shadow-xs">
@@ -191,7 +266,15 @@ export default function CertificatesClient({
         </div>
       )}
 
-      {/* Summary KPI Cards */}
+      {/* Studio View */}
+      {activeTab === "studio" && (
+        <CertificateStudio initialDesign={certDesign} onSave={setCertDesign} />
+      )}
+
+      {/* Registry View */}
+      {activeTab === "registry" && (
+        <>
+          {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="sketch-card-hero rounded-xl border border-[#E5E7E9] bg-white p-5 select-none cursor-default shadow-xs text-[#34383D]">
           <span className="text-xs font-medium text-[#858B93]">Total Verified &amp; Issued</span>
@@ -314,14 +397,33 @@ export default function CertificatesClient({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-right pr-6">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 rounded-lg border-[#E5E7E9] px-2.5 text-[11px] font-medium text-[#34383D] hover:bg-[#F6F7F8] gap-1"
-                      >
-                        <Eye className="h-3 w-3 text-[#777E86]" />
-                        <span>Preview</span>
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCert(cert);
+                          }}
+                          className="h-7 rounded-lg border-[#E5E7E9] px-2.5 text-[11px] font-medium text-[#34383D] hover:bg-[#F6F7F8] gap-1"
+                        >
+                          <Eye className="h-3 w-3 text-[#777E86]" />
+                          <span>Preview</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadCertSvg(cert);
+                          }}
+                          title="Download personalized SVG vector matching template design"
+                          className="h-7 rounded-lg border-[#E5E7E9] px-2 text-[11px] font-medium text-[#34383D] hover:bg-[#F6F7F8] gap-1"
+                        >
+                          <Download className="h-3 w-3 text-[#777E86]" />
+                          <span>SVG</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -330,6 +432,8 @@ export default function CertificatesClient({
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Certificate Live Canvas Preview SlideOver */}
       <SlideOver
@@ -341,50 +445,40 @@ export default function CertificatesClient({
       >
         {selectedCert && (
           <div className="space-y-6">
-            {/* Visual Certificate Card */}
-            <div className="rounded-xl border border-[#E5E7E9] bg-[#F6F7F8] p-6 shadow-xs text-center space-y-4">
-              <div className="flex justify-between items-center border-b border-[#E5E7E9] pb-3">
-                <span className="text-[10px] font-semibold tracking-widest uppercase text-[#858B93]">
-                  SKETCH CREDENTIAL ARCHIVE
-                </span>
-                <ShieldCheck className="h-4 w-4 text-[#777E86]" />
-              </div>
-
-              <div className="space-y-1 pt-2">
-                <p className="text-[11px] text-[#858B93] uppercase tracking-wider">
-                  Certificate of Participation
-                </p>
-                <h3 className="text-xl font-bold text-[#34383D]">
-                  {selectedCert.recipientName}
-                </h3>
-                <p className="text-xs text-[#858B93]">has successfully completed and attended</p>
-                <h4 className="text-sm font-semibold text-[#34383D]">{selectedCert.eventTitle}</h4>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-[#E5E7E9] pt-4 text-left">
-                <div>
-                  <p className="text-[10px] text-[#858B93]">ISSUED ON</p>
-                  <p className="text-xs font-semibold text-[#34383D]">
-                    {formatDate(selectedCert.issuedAt)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-[#858B93]">SERIAL IDENTIFIER</p>
-                  <p className="text-xs font-mono font-bold text-[#34383D]">
-                    {selectedCert.certificateNumber}
-                  </p>
-                </div>
+            {/* Visual Certificate Card rendered with Studio Template Design */}
+            <div className="rounded-xl border border-[#E5E7E9] bg-[#090B0D] p-3 shadow-xs overflow-hidden flex items-center justify-center min-h-[260px]">
+              <div style={{ transform: "scale(0.52)", transformOrigin: "center center" }}>
+                <UnifiedCertificateCard
+                  design={certDesign}
+                  certificate={{
+                    recipientName: selectedCert.recipientName,
+                    eventTitle: selectedCert.eventTitle,
+                    certificateNumber: selectedCert.certificateNumber,
+                    issuedAt: selectedCert.issuedAt,
+                  }}
+                  interactive={false}
+                />
               </div>
             </div>
 
-            <Button
-              variant="charcoal"
-              className="w-full rounded-lg text-xs font-semibold gap-2 h-10 shadow-xs bg-[#E3E5E8] text-[#34383D] border border-[#E5E7E9] hover:bg-[#D9DCE0]"
-              onClick={() => handleDownloadCertPdf(selectedCert)}
-            >
-              <Download className="h-4 w-4 text-[#777E86]" />
-              <span>Download Certificate PDF</span>
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                className="w-full rounded-lg text-xs font-semibold gap-1.5 h-10 shadow-xs border-[#E5E7E9]"
+                onClick={() => handleDownloadCertSvg(selectedCert)}
+              >
+                <Download className="h-4 w-4 text-[#777E86]" />
+                <span>Download SVG Vector</span>
+              </Button>
+              <Button
+                variant="charcoal"
+                className="w-full rounded-lg text-xs font-semibold gap-1.5 h-10 shadow-xs bg-[#17191C] text-white hover:bg-[#25292F]"
+                onClick={() => handleDownloadCertPdf(selectedCert)}
+              >
+                <Download className="h-4 w-4 text-white" />
+                <span>Download PDF</span>
+              </Button>
+            </div>
           </div>
         )}
       </SlideOver>

@@ -30,6 +30,16 @@ export interface SendEmailResult {
 }
 
 /**
+ * Email Attachment Interface
+ */
+export interface EmailAttachment {
+  filename?: string;
+  name?: string;
+  content: string; // base64 encoded content
+  contentType?: string;
+}
+
+/**
  * Outgoing message options passed to a provider adapter
  */
 export interface SendEmailOptions {
@@ -40,6 +50,7 @@ export interface SendEmailOptions {
   text?: string;
   replyTo?: string;
   idempotencyKey?: string;
+  attachments?: EmailAttachment[];
 }
 
 /**

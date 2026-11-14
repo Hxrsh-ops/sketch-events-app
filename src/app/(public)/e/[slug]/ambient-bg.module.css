@@ -1,0 +1,104 @@
+/* Route-scoped ambient event background styles for /e/[slug] */
+
+.ambientWrapper {
+  position: relative;
+  width: 100%;
+  overflow-x: clip;
+}
+
+.ambientBackground {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* Dynamic Blurred Event Cover Image Layer */
+.ambientImage {
+  position: absolute;
+  top: -60px;
+  left: -60px;
+  right: -60px;
+  bottom: -60px;
+  width: calc(100% + 120px);
+  height: calc(100% + 120px);
+  object-fit: cover;
+  background-size: cover;
+  background-repeat: no-repeat;
+  filter: blur(28px) brightness(0.92) saturate(1.25) contrast(1.05);
+  opacity: 0.85;
+  transform: scale(1.15);
+  will-change: transform, opacity;
+  pointer-events: none;
+  user-select: none;
+}
+
+:global(.dark) .ambientImage {
+  opacity: 0.82;
+}
+
+/* Elegant dark ambient fallback when event has no cover image or on image error */
+.ambientFallback {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    rgba(30, 41, 59, 0.45) 0%,
+    rgba(17, 24, 39, 0.70) 45%,
+    rgba(10, 12, 16, 0.95) 100%
+  );
+  pointer-events: none;
+}
+
+:global(.dark) .ambientFallback {
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    rgba(25, 33, 44, 0.50) 0%,
+    rgba(13, 17, 23, 0.80) 45%,
+    rgba(7, 9, 12, 0.98) 100%
+  );
+}
+
+/* Subtle Ambient Glow to enhance color depth and visual warmth */
+.ambientGlow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(56, 189, 248, 0.10) 0%,
+    rgba(139, 92, 246, 0.06) 35%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Dark Readability Overlay with adjustable opacity */
+.ambientOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 12, 16, 0.38) 0%,
+    rgba(13, 16, 20, 0.44) 45%,
+    rgba(7, 9, 12, 0.50) 100%
+  );
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+:global(.dark) .ambientOverlay {
+  background: linear-gradient(
+    180deg,
+    rgba(7, 9, 12, 0.40) 0%,
+    rgba(10, 12, 16, 0.46) 45%,
+    rgba(5, 7, 9, 0.52) 100%
+  );
+}
+
+/* Sharp, Interactive Foreground Content */
+.contentContainer {
+  position: relative;
+  z-index: 10;
+}

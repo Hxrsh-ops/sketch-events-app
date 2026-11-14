@@ -5,8 +5,8 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Live Entry Ticket | SKETCHHUB Events",
-  description: "Official dynamic entry pass with continuously rotating security verification.",
+  title: "Admission Ticket | SKETCHHUB Events",
+  description: "Official verified event entry pass with static QR credential for desk check-in.",
   referrer: "no-referrer",
   robots: "noindex, nofollow",
 };

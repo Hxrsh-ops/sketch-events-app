@@ -21,6 +21,7 @@ import {
   ExternalLink,
   MessageCircle,
   AlertCircle,
+  Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ import {
 } from "@/lib/form-templates";
 import { saveSubmission } from "@/lib/registration-store";
 import { registerForEventAction } from "@/app/actions/registration-actions";
+import { generateUnifiedTicketSvg, DEFAULT_UNIFIED_TICKET_DESIGN } from "@/lib/ticket/ticket-renderer";
 import {
   EventItem,
   RegistrationFormSchema,
@@ -43,18 +45,27 @@ import {
   TeamMemberSubmission,
   Round,
 } from "@/types";
+import styles from "./ambient-bg.module.css";
 
 interface PublicEventClientProps {
   event: EventItem;
   rounds?: Round[];
   isPreview?: boolean;
+  bgOverlayOpacity?: number;
 }
 
 export default function PublicEventClient({
   event,
   rounds,
   isPreview = false,
+  bgOverlayOpacity,
 }: PublicEventClientProps) {
+  // Dynamic blurred page background using the event's actual cover image
+  const coverImageUrl = event.heroImage || event.posterUrl;
+  const focalPoint = event.heroImageFocalPoint || event.focalPoint || "center";
+  const [bgImageFailed, setBgImageFailed] = useState(false);
+  const hasCoverImage = Boolean(coverImageUrl && !bgImageFailed);
+
   const eventRounds = (rounds && rounds.length > 0)
     ? rounds
     : isPreview && event.hasRounds
@@ -498,83 +509,45 @@ export default function PublicEventClient({
     }
   };
 
-  // Download SVG Pass Image with real scannable QR vector
+  // Download SVG Pass Image with real scannable QR vector matching unified ticket layout
   const handleDownloadPassSvg = async () => {
     if (!registrationResult) return;
 
-    const escapeXml = (str: string) =>
-      str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
-
-    const isMock = Boolean(registrationResult.isMockPreview ?? isPreview);
-    const passHeader = isMock
-      ? "SKETCH PREVIEW EVENT PASS • LOCAL DEMO ONLY"
-      : "SKETCH OFFICIAL EVENT PASS";
-    const passFooter = isMock
-      ? "CLIENT PREVIEW CREDENTIAL • LOCAL TERMINAL TESTING ONLY"
-      : "OFFICIAL EVENT CREDENTIAL • PRESENT AT DESK SCANNER";
-
-    const qrPayload =
-      registrationResult.qrCredentialId ||
-      registrationResult.liveTicketUrl ||
-      registrationResult.registrationId;
-
-    let embeddedQrSvg = "";
     try {
-      const rawQrSvg = await QRCode.toString(qrPayload, {
-        type: "svg",
-        margin: 1,
-        width: 260,
-        color: { dark: "#17191C", light: "#FFFFFF" },
+      const ticketNum = registrationResult.ticketNumber || registrationResult.registrationId;
+      const svgPass = await generateUnifiedTicketSvg({
+        design: DEFAULT_UNIFIED_TICKET_DESIGN,
+        event: {
+          title: event.title,
+          category: event.category,
+          venue: event.venue,
+          venueMode: event.venueMode,
+          startDate: event.startDate,
+          organizerName: "SKETCH",
+        },
+        attendee: {
+          name: registrationResult.attendeeName,
+          ticketNumber: ticketNum,
+          teamName: registrationResult.teamName,
+        },
+        qrPayload:
+          registrationResult.qrCredentialId ||
+          registrationResult.liveTicketUrl ||
+          ticketNum,
       });
-      embeddedQrSvg = rawQrSvg.replace(
-        "<svg ",
-        '<svg x="170" y="210" width="260" height="260" '
-      );
-    } catch {
-      embeddedQrSvg = `<text x="300" y="345" font-family="monospace" font-size="14" fill="#17191C" text-anchor="middle">${escapeXml(
-        registrationResult.qrCredentialId
-      )}</text>`;
+
+      const blob = new Blob([svgPass], { type: "image/svg+xml;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${ticketNum}_pass.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download unified ticket pass SVG:", err);
     }
-
-    const svgPass = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
-  <rect width="600" height="800" rx="30" fill="#17191C"/>
-  <circle cx="300" cy="150" r="240" fill="#FFFFFF" fill-opacity="0.04"/>
-
-  <text x="50" y="70" font-family="sans-serif" font-size="12" font-weight="bold" letter-spacing="3" fill="#8A9098">${escapeXml(passHeader)}</text>
-  <text x="50" y="110" font-family="sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">${escapeXml(event.title)}</text>
-  <text x="50" y="140" font-family="sans-serif" font-size="13" fill="#AEB3BA">${escapeXml(event.venue)} • ${escapeXml(formatDate(event.startDate))}</text>
-
-  <rect x="150" y="190" width="300" height="300" rx="20" fill="#FFFFFF"/>
-  ${embeddedQrSvg}
-
-  <text x="300" y="530" font-family="monospace" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">${escapeXml(registrationResult.registrationId)}</text>
-  <text x="300" y="555" font-family="sans-serif" font-size="11" fill="#8A9098" text-anchor="middle">HASH: ${escapeXml(registrationResult.qrCredentialId)}</text>
-
-  <line x1="50" y1="590" x2="550" y2="590" stroke="#25292F" stroke-width="2"/>
-
-  <text x="50" y="630" font-family="sans-serif" font-size="11" fill="#8A9098">PARTICIPANT / REPRESENTATIVE</text>
-  <text x="50" y="655" font-family="sans-serif" font-size="18" font-weight="bold" fill="#FFFFFF">${escapeXml(registrationResult.attendeeName)}</text>
-
-  ${registrationResult.teamName ? `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">TEAM AFFILIATION</text><text x="50" y="720" font-family="sans-serif" font-size="16" font-weight="bold" fill="#FFFFFF">${escapeXml(registrationResult.teamName)}</text>` : `<text x="50" y="695" font-family="sans-serif" font-size="11" fill="#8A9098">REGISTRATION STATUS</text><text x="50" y="720" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF">Confirmed Individual Attendee</text>`}
-
-  <text x="300" y="775" font-family="sans-serif" font-size="10" fill="#656B73" text-anchor="middle">${escapeXml(passFooter)}</text>
-</svg>`;
-
-    const blob = new Blob([svgPass], { type: "image/svg+xml;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${registrationResult.registrationId}_pass.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const isDeadlinePassed = new Date(event.endDate || event.startDate).getTime() < Date.now();
@@ -606,17 +579,44 @@ export default function PublicEventClient({
   );
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto pb-16">
-      {/* Event Hero Card */}
+    <div className={styles.ambientWrapper}>
+      {/* Route-scoped Dynamic Blurred Event Cover Background Layer */}
+      <div className={styles.ambientBackground} aria-hidden="true">
+        {hasCoverImage ? (
+          <img
+            src={coverImageUrl}
+            alt=""
+            aria-hidden="true"
+            onError={() => setBgImageFailed(true)}
+            className={styles.ambientImage}
+            style={{ objectPosition: focalPoint }}
+          />
+        ) : (
+          <div className={styles.ambientFallback} />
+        )}
+        <div className={styles.ambientGlow} />
+        <div
+          className={styles.ambientOverlay}
+          style={bgOverlayOpacity !== undefined ? { opacity: bgOverlayOpacity } : undefined}
+        />
+      </div>
+
+      {/* Foreground Content - Kept sharp and fully interactive */}
+      <div className={`${styles.contentContainer} space-y-8 max-w-4xl mx-auto pb-16`}>
+        {/* Event Hero Card */}
       <div className="overflow-hidden rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm">
         {/* Poster Header */}
         <div className="relative h-72 sm:h-96 w-full overflow-hidden bg-[#17191C]">
-          <img
-            src={event.heroImage || event.posterUrl}
-            alt={event.title}
-            style={{ objectPosition: event.heroImageFocalPoint || event.focalPoint || "center" }}
-            className="h-full w-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
-          />
+          {coverImageUrl ? (
+            <img
+              src={coverImageUrl}
+              alt={event.title}
+              style={{ objectPosition: focalPoint }}
+              className="h-full w-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-[#1E293B] via-[#0F172A] to-[#0A0C10] flex items-center justify-center opacity-70" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/50 to-transparent" />
 
           {/* Top Category & Lifecycle Badges */}
@@ -933,9 +933,7 @@ export default function PublicEventClient({
                     )}
                   </div>
                   <p className="mt-3 text-[10px] font-mono uppercase tracking-[0.18em] text-white/55">
-                    {registrationResult.liveTicketUrl
-                      ? "Tap below for 30s live rotating gate QR"
-                      : `REF • ${registrationResult.registrationId}`}
+                    REF • {registrationResult.ticketNumber || registrationResult.registrationId}
                   </p>
                 </div>
               </div>
@@ -990,15 +988,15 @@ export default function PublicEventClient({
               </div>
             )}
 
-            {/* Live Ticket Link */}
+            {/* Direct Ticket Pass Link */}
             {registrationResult.liveTicketUrl && (
               <div className="max-w-md mx-auto text-center pt-1">
                 <Link
                   href={registrationResult.liveTicketUrl}
                   className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#17191C] dark:bg-white text-white dark:text-[#17191C] text-xs font-bold shadow-lg hover:scale-[1.01] transition-transform"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  <span>Open Live Rotating Ticket</span>
+                  <Ticket className="h-4 w-4" />
+                  <span>View Verified Admission Pass</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -1212,5 +1210,6 @@ export default function PublicEventClient({
         )}
       </div>
     </div>
+  </div>
   );
 }

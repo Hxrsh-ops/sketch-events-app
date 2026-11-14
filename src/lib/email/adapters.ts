@@ -49,6 +49,13 @@ export class ResendEmailAdapter implements EmailProviderAdapter {
         text: options.text,
       };
 
+      if (options.attachments && options.attachments.length > 0) {
+        payload.attachments = options.attachments.map((att) => ({
+          filename: att.filename || att.name || "attachment",
+          content: att.content,
+        }));
+      }
+
       if (options.replyTo) {
         payload.reply_to = options.replyTo;
       }
@@ -143,6 +150,16 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
 
       let htmlContent = options.html;
       const attachments: Array<{ name: string; content: string }> = [];
+
+      // Include explicit file attachments
+      if (options.attachments && options.attachments.length > 0) {
+        for (const att of options.attachments) {
+          attachments.push({
+            name: att.filename || att.name || "attachment",
+            content: att.content,
+          });
+        }
+      }
 
       // Gmail strips inline `data:image/...;base64,...` URLs. Convert embedded QR data URLs
       // into a CID inline attachment so Gmail renders the QR code cleanly and also attaches it.
@@ -299,7 +316,7 @@ export class MailpitEmailAdapter implements EmailProviderAdapter {
         fromName = fromEmail;
       }
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         From: {
           Email: fromEmail,
           Name: fromName,
@@ -314,6 +331,13 @@ export class MailpitEmailAdapter implements EmailProviderAdapter {
         HTML: options.html,
         Text: options.text || "",
       };
+
+      if (options.attachments && options.attachments.length > 0) {
+        payload.Attachments = options.attachments.map((att) => ({
+          Filename: att.filename || att.name || "attachment",
+          Data: att.content,
+        }));
+      }
 
       const res = await fetch(`${this.baseUrl.replace(/\/+$/, "")}/api/v1/send`, {
         method: "POST",
