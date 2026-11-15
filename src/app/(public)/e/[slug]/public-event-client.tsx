@@ -39,6 +39,12 @@ import { saveSubmission } from "@/lib/registration-store";
 import { registerForEventAction } from "@/app/actions/registration-actions";
 import { generateUnifiedTicketSvg, DEFAULT_UNIFIED_TICKET_DESIGN } from "@/lib/ticket/ticket-renderer";
 import {
+  SmilingSun,
+  RetroRainbowPill,
+  NeoBadge,
+  ScallopedWave,
+} from "@/components/public/retro-elements";
+import {
   EventItem,
   RegistrationFormSchema,
   RegistrationSubmission,
@@ -60,7 +66,7 @@ export default function PublicEventClient({
   isPreview = false,
   bgOverlayOpacity,
 }: PublicEventClientProps) {
-  // Dynamic blurred page background using the event's actual cover image
+  // Event cover image
   const coverImageUrl = event.heroImage || event.posterUrl;
   const focalPoint = event.heroImageFocalPoint || event.focalPoint || "center";
   const [bgImageFailed, setBgImageFailed] = useState(false);
@@ -72,7 +78,7 @@ export default function PublicEventClient({
     ? MOCK_ROUNDS.filter((r) => r.eventId === event.id)
     : [];
 
-  // Active form schema for this event (auto-injects Team Name if event.hasTeams and missing)
+  // Active form schema for this event
   const formSchema: RegistrationFormSchema = useMemo(() => {
     const baseSchema =
       event.registrationForm && event.registrationForm.sections?.length > 0
@@ -148,52 +154,39 @@ export default function PublicEventClient({
   } | null>(null);
   const [confirmationQrDataUrl, setConfirmationQrDataUrl] = useState<string | null>(null);
 
+  // Generate real scannable QR Code Data URL on confirmation
   useEffect(() => {
-    if (!registrationResult) {
-      setConfirmationQrDataUrl(null);
-      return;
-    }
-    let cancelled = false;
-    const rawTicketUrl = registrationResult.liveTicketUrl;
-    const cleanRelativePath = rawTicketUrl ? rawTicketUrl.replace(/^https?:\/\/[^/]+/, "") : "";
-    const canonicalLiveUrl =
-      cleanRelativePath && typeof window !== "undefined"
-        ? `${window.location.origin}${cleanRelativePath}`
-        : rawTicketUrl;
+    if (journeyStep === "confirmed" && registrationResult) {
+      const qrPayload =
+        (registrationResult.liveTicketUrl && typeof window !== "undefined"
+          ? `${window.location.origin}${registrationResult.liveTicketUrl.replace(/^https?:\/\/[^/]+/, "")}`
+          : registrationResult.liveTicketUrl) ||
+        registrationResult.qrCredentialId ||
+        registrationResult.ticketNumber ||
+        registrationResult.registrationId;
 
-    const qrPayload =
-      canonicalLiveUrl ||
-      registrationResult.qrCredentialId ||
-      registrationResult.registrationId;
-
-    QRCode.toDataURL(qrPayload, {
-      width: 220,
-      margin: 1,
-      color: {
-        dark: "#111315",
-        light: "#FFFFFF",
-      },
-    })
-      .then((url) => {
-        if (!cancelled) setConfirmationQrDataUrl(url);
+      QRCode.toDataURL(qrPayload, {
+        width: 320,
+        margin: 2,
+        color: {
+          dark: "#121212",
+          light: "#FFFFFF",
+        },
       })
-      .catch(() => {
-        if (!cancelled) setConfirmationQrDataUrl(null);
-      });
+        .then((url) => setConfirmationQrDataUrl(url))
+        .catch((err) => {
+          console.error("Failed to generate confirmed ticket QR data URL:", err);
+        });
+    }
+  }, [journeyStep, registrationResult]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [registrationResult]);
-
+  // Field change handler
   const handleFieldChange = (fieldId: string, value: unknown) => {
     setFormValues((prev) => ({
       ...prev,
       [fieldId]: value,
     }));
-    if (submissionError) {
-      setSubmissionError(null);
-    }
+
     if (errors[fieldId]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -205,7 +198,6 @@ export default function PublicEventClient({
 
   // Helper to extract primary attendee name, email, and team name from dynamic form values
   const extractAttendeeMetadata = () => {
-    // 1. Team Name
     let teamName: string | undefined = undefined;
     if (formValues["team_name"]) {
       teamName = String(formValues["team_name"]);
@@ -225,7 +217,6 @@ export default function PublicEventClient({
       }
     }
 
-    // 2. Attendee / Leader Name
     let attendeeName = "";
     const nameKeys = ["leader_name", "captain_name", "fullName", "full_name", "name"];
     for (const k of nameKeys) {
@@ -254,7 +245,6 @@ export default function PublicEventClient({
       attendeeName = "Participant";
     }
 
-    // 3. Attendee / Leader Email
     let email = "";
     const emailKeys = ["leader_email", "captain_email", "email", "srm_email"];
     for (const k of emailKeys) {
@@ -288,12 +278,10 @@ export default function PublicEventClient({
 
     formSchema.sections.forEach((section) => {
       section.fields.forEach((field) => {
-        // Evaluate conditional visibility: hidden fields are never validated
         if (!isFieldVisible(field, formValues)) {
           return;
         }
 
-        // Info type has no user inputs
         if (field.type === "info") {
           return;
         }
@@ -305,7 +293,6 @@ export default function PublicEventClient({
           val === "" ||
           (Array.isArray(val) && val.length === 0);
 
-        // Required validation
         if (field.required && isBlank) {
           newErrors[field.id] = `${field.label} is required.`;
           return;
@@ -314,19 +301,16 @@ export default function PublicEventClient({
         if (!isBlank) {
           const strVal = String(val).trim();
 
-          // Email validation
           if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strVal)) {
             newErrors[field.id] = "Please enter a valid email address.";
             return;
           }
 
-          // Phone validation
           if (field.type === "phone" && !/^[0-9+\s\-().]{7,20}$/.test(strVal)) {
             newErrors[field.id] = "Please enter a valid phone number.";
             return;
           }
 
-          // URL validation
           if (
             field.type === "url" &&
             !/^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(strVal)
@@ -335,7 +319,6 @@ export default function PublicEventClient({
             return;
           }
 
-          // Number validation
           if (field.type === "number") {
             const num = Number(strVal);
             if (isNaN(num)) {
@@ -359,7 +342,7 @@ export default function PublicEventClient({
     if (Object.keys(newErrors).length === 0) {
       setSubmissionError(null);
       setJourneyStep("review");
-      window.scrollTo({ top: 450, behavior: "smooth" });
+      window.scrollTo({ top: 350, behavior: "smooth" });
     } else {
       const firstErrorId = Object.keys(newErrors)[0];
       const elem = document.getElementById(firstErrorId);
@@ -377,7 +360,6 @@ export default function PublicEventClient({
 
     const { attendeeName, email, teamName } = extractAttendeeMetadata();
 
-    // Extract structured team members from form values if present
     const teamMembers: TeamMemberSubmission[] = [];
     for (let i = 1; i <= 6; i++) {
       const mName =
@@ -409,7 +391,6 @@ export default function PublicEventClient({
         const generatedRegId = `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`;
         const generatedCredHash = `qr_cred_${Math.random().toString(36).substring(2, 10)}`;
 
-        // Save submission record into shared preview repository if in preview mode
         const submissionRecord: RegistrationSubmission = {
           id: `sub-${Date.now().toString(36)}`,
           registrationId: generatedRegId,
@@ -510,7 +491,7 @@ export default function PublicEventClient({
     }
   };
 
-  // Download SVG Pass Image with real scannable QR vector matching unified ticket layout
+  // Download SVG Pass Image
   const handleDownloadPassSvg = async () => {
     if (!registrationResult) return;
 
@@ -559,31 +540,9 @@ export default function PublicEventClient({
   const isRegistrationUpcoming = event.registrationState === "upcoming" || event.lifecycle === "draft";
   const isRegistrationOpen = !isRegistrationClosed && !isRegistrationFull && !isRegistrationUpcoming;
 
-  const registrationStatusBadge = isRegistrationFull ? (
-    <span className="rounded-full bg-[#17191C] text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-      Sold Out
-    </span>
-  ) : isDeadlinePassed ? (
-    <span className="rounded-full bg-[#34383D] text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-      Deadline Passed
-    </span>
-  ) : isRegistrationClosed ? (
-    <span className="rounded-full bg-[#8A9098] text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-      Closed
-    </span>
-  ) : isRegistrationUpcoming ? (
-    <span className="rounded-full bg-[#AEB3BA] text-[#17191C] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-      Opening Soon
-    </span>
-  ) : (
-    <span className="rounded-full bg-emerald-600 text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-      Open
-    </span>
-  );
-
   return (
     <div className={styles.ambientWrapper}>
-      {/* Route-scoped Dynamic Blurred Event Cover Background Layer */}
+      {/* Route-scoped FlowFest Cream Background Layer */}
       <div className={styles.ambientBackground} aria-hidden="true">
         {hasCoverImage ? (
           <img
@@ -604,132 +563,265 @@ export default function PublicEventClient({
         />
       </div>
 
-      {/* Foreground Content - Kept sharp and fully interactive */}
-      <div className={`${styles.contentContainer} space-y-8 max-w-4xl mx-auto pb-16`}>
-        {/* Event Hero Card */}
-      <div className="overflow-hidden rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] shadow-sm">
-        {/* Poster Header */}
-        <div className="relative h-72 sm:h-96 w-full overflow-hidden bg-[#17191C]">
-          {coverImageUrl ? (
-            <img
-              src={coverImageUrl}
-              alt={event.title}
-              style={{ objectPosition: focalPoint }}
-              className="h-full w-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-br from-[#1E293B] via-[#0F172A] to-[#0A0C10] flex items-center justify-center opacity-70" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#17191C] via-[#17191C]/50 to-transparent" />
+      {/* Top Floating Mini Header */}
+      <header className="relative z-20 max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-2">
+        <div className="flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border-2 border-ink bg-cream-plus shadow-brutal-flat hover:translate-y-0.5 active:translate-y-1 transition-all"
+          >
+            <span className="font-peachy font-black text-lg tracking-tight text-ink">
+              SKETCH
+            </span>
+            <span className="h-3.5 w-[2px] bg-ink/30" />
+            <span className="font-quicksand font-bold text-xs uppercase tracking-wider text-ink/75">
+              Campus Events
+            </span>
+          </Link>
 
-          {/* Top Category & Lifecycle Badges */}
-          <div className="absolute top-5 left-5 flex items-center gap-2">
-            <span className="rounded-full bg-white/95 dark:bg-[#1B1E21]/95 px-3 py-1 text-xs font-bold text-[#17191C] dark:text-[#F1F2F3] backdrop-blur-md shadow-xs">
-              {event.category}
-            </span>
-            <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-bold text-white uppercase tracking-wider backdrop-blur-md border border-white/20">
-              {event.lifecycle}
-            </span>
-            {registrationStatusBadge}
-          </div>
-
-          {/* Bottom Title & Subtitle */}
-          <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white/70">
-              OFFICIAL SKETCH EXPERIENCE
-            </span>
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight drop-shadow-sm text-white">
-              {event.title}
-            </h1>
-            <p className="text-xs sm:text-sm text-white/80 line-clamp-2 max-w-2xl leading-relaxed">
-              {event.shortDescription}
-            </p>
+          <div className="flex items-center gap-2">
+            <SmilingSun className="w-8 h-8" />
+            <NeoBadge bg="bg-retro-yellow" rotate="-rotate-1">
+              Official Pass
+            </NeoBadge>
           </div>
         </div>
+      </header>
 
-        {/* Operational Metadata Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#F4F5F6] dark:divide-[#262A2E] border-b border-[#F4F5F6] dark:border-[#262A2E] bg-[#F9FAFB] dark:bg-[#151719] text-xs text-[#656B73] dark:text-[#8A9098]">
-          <div className="p-4 flex items-center gap-3">
-            <Calendar className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
-            <div>
-              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Date & Timing</div>
-              <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">{formatDate(event.startDate)}</div>
+      {/* Main Foreground Container */}
+      <main className={`${styles.contentContainer} max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-8 pb-20`}>
+        {/* HERO SECTION: FlowFest Neo-Brutalist Layout */}
+        <section className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-10 shadow-brutal-card relative overflow-hidden">
+          {/* Top Tilted Badges & Mascot */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <NeoBadge bg="bg-retro-yellow" rotate="-rotate-2">
+                {event.category}
+              </NeoBadge>
+              <NeoBadge bg="bg-retro-pink" rotate="rotate-1">
+                {event.hasTeams ? "Team Format" : "Individual"}
+              </NeoBadge>
+              {isRegistrationFull ? (
+                <NeoBadge bg="bg-ink text-white" rotate="rotate-0">
+                  Sold Out
+                </NeoBadge>
+              ) : isRegistrationClosed ? (
+                <NeoBadge bg="bg-ink/70 text-white" rotate="rotate-0">
+                  Closed
+                </NeoBadge>
+              ) : (
+                <NeoBadge bg="bg-retro-orange text-white" rotate="-rotate-1">
+                  Registration Open
+                </NeoBadge>
+              )}
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2">
+              <RetroRainbowPill className="h-3 w-20" />
             </div>
           </div>
-          <div className="p-4 flex items-center gap-3">
-            <MapPin className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left: Big Peachy Title & Narrative */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="space-y-2">
+                <span className="font-quicksand font-bold text-xs uppercase tracking-widest text-ink/60">
+                  CAMPUS CREATORS & INNOVATORS EXPERIENCE
+                </span>
+                <h1 className="font-peachy font-black text-3xl sm:text-5xl text-ink leading-[1.08] tracking-tight">
+                  {event.title}
+                </h1>
+              </div>
+
+              <p className="font-quicksand font-semibold text-sm sm:text-base text-ink/80 leading-relaxed">
+                {event.shortDescription || event.description}
+              </p>
+
+              <div className="pt-2 flex items-center gap-3">
+                <a
+                  href="#register"
+                  className="btn-brutal inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-retro-orange text-white font-quicksand font-black text-sm border-2 border-ink shadow-brutal-btn"
+                >
+                  <span>Get Pass Now</span>
+                  <ArrowRight className="h-4 w-4 stroke-[3]" />
+                </a>
+
+                {event.communityLink && (
+                  <a
+                    href={event.communityLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-brutal inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-cream text-ink font-quicksand font-bold text-xs border-2 border-ink shadow-brutal-flat"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span>Community</span>
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Framed Polaroid Poster */}
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="w-full max-w-sm rounded-3xl border-2 border-ink bg-[#FFFDF7] p-3 shadow-brutal-card rotate-1 hover:rotate-0 transition-transform duration-300">
+                <div className="relative h-64 sm:h-72 w-full rounded-2xl border-2 border-ink overflow-hidden bg-retro-yellow/30">
+                  {coverImageUrl ? (
+                    <img
+                      src={coverImageUrl}
+                      alt={event.title}
+                      style={{ objectPosition: focalPoint }}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex flex-col items-center justify-center p-6 text-center space-y-3">
+                      <SmilingSun className="w-16 h-16" />
+                      <span className="font-peachy font-black text-xl text-ink">
+                        {event.title}
+                      </span>
+                    </div>
+                  )}
+                  <div className="absolute bottom-2.5 right-2.5">
+                    <span className="px-3 py-1 rounded-full bg-cream-plus/95 border-2 border-ink font-quicksand font-black text-[10px] uppercase text-ink shadow-brutal-badge">
+                      Free Entry
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between px-2 pt-1">
+                  <span className="font-quicksand font-bold text-xs text-ink/75">
+                    SKETCH Official
+                  </span>
+                  <RetroRainbowPill className="h-2.5 w-16" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* EVENT SPECS GRID: Neo-Brutalist Sticker Cards */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="rounded-2xl border-2 border-ink bg-cream-plus p-4 shadow-brutal-flat flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl border-2 border-ink bg-retro-yellow flex items-center justify-center text-ink shrink-0 shadow-brutal-badge">
+              <Calendar className="h-5 w-5 stroke-[2.5]" />
+            </div>
             <div>
-              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Venue & Mode</div>
-              <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3] line-clamp-1">
+              <div className="font-quicksand font-bold text-[10px] uppercase tracking-wider text-ink/60">
+                Date & Timing
+              </div>
+              <div className="font-quicksand font-black text-xs text-ink">
+                {formatDate(event.startDate)}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border-2 border-ink bg-cream-plus p-4 shadow-brutal-flat flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl border-2 border-ink bg-retro-pink flex items-center justify-center text-ink shrink-0 shadow-brutal-badge">
+              <MapPin className="h-5 w-5 stroke-[2.5]" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-quicksand font-bold text-[10px] uppercase tracking-wider text-ink/60">
+                Venue & Mode
+              </div>
+              <div className="font-quicksand font-black text-xs text-ink truncate">
                 {event.venue} ({event.venueMode})
               </div>
             </div>
           </div>
-          <div className="p-4 flex items-center gap-3">
-            <Clock className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
+
+          <div className="rounded-2xl border-2 border-ink bg-cream-plus p-4 shadow-brutal-flat flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl border-2 border-ink bg-retro-mango flex items-center justify-center text-ink shrink-0 shadow-brutal-badge">
+              <Clock className="h-5 w-5 stroke-[2.5]" />
+            </div>
             <div>
-              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Registration Closes</div>
-              <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">{formatDate(event.endDate || event.startDate)}</div>
+              <div className="font-quicksand font-bold text-[10px] uppercase tracking-wider text-ink/60">
+                Registration Closes
+              </div>
+              <div className="font-quicksand font-black text-xs text-ink">
+                {formatDate(event.endDate || event.startDate)}
+              </div>
             </div>
           </div>
-          <div className="p-4 flex items-center gap-3">
-            <Users className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
+
+          <div className="rounded-2xl border-2 border-ink bg-cream-plus p-4 shadow-brutal-flat flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl border-2 border-ink bg-retro-orange flex items-center justify-center text-white shrink-0 shadow-brutal-badge">
+              <Users className="h-5 w-5 stroke-[2.5]" />
+            </div>
             <div>
-              <div className="text-[10px] text-[#8A9098] font-bold uppercase">Format & Fee</div>
-              <div className="font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+              <div className="font-quicksand font-bold text-[10px] uppercase tracking-wider text-ink/60">
+                Format & Fee
+              </div>
+              <div className="font-quicksand font-black text-xs text-ink">
                 {event.hasTeams
                   ? `Team (${event.minTeamSize || 2}-${event.maxTeamSize || 4}) • Free`
                   : "Individual • Free"}
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Event Narrative Body & Stage Pipeline */}
-        <div className="p-6 sm:p-8 space-y-6">
-          <div>
-            <h2 className="text-base font-bold text-[#17191C] dark:text-[#F1F2F3]">About this Experience</h2>
-            <p className="mt-2 text-xs sm:text-sm text-[#656B73] dark:text-[#8A9098] leading-relaxed">
+        {/* EXPERIENCE DETAILS & CRITERIA */}
+        <section className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-8 shadow-brutal-card space-y-6">
+          <div className="space-y-2">
+            <h2 className="font-peachy font-black text-2xl text-ink tracking-tight">
+              About this Experience
+            </h2>
+            <p className="font-quicksand font-semibold text-sm text-ink/80 leading-relaxed whitespace-pre-line">
               {event.description}
             </p>
           </div>
 
-          {/* Eligibility & Admission Criteria */}
-          <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div>
-              <span className="text-[10px] font-bold uppercase text-[#8A9098] tracking-wider">Eligibility Criteria</span>
-              <p className="font-semibold text-[#17191C] dark:text-[#F1F2F3] mt-0.5">
+          {/* Eligibility Sticker */}
+          <div className="rounded-2xl border-2 border-ink bg-retro-yellow/25 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-brutal-flat">
+            <div className="space-y-1">
+              <span className="font-quicksand font-black text-[10px] uppercase tracking-wider text-ink/70">
+                Eligibility & Admission
+              </span>
+              <p className="font-quicksand font-bold text-xs text-ink">
                 {event.hasTeams
-                  ? `Open to eligible teams of ${event.minTeamSize || 2} to ${event.maxTeamSize || 4} participants.`
-                  : "Open to all registered attendees and community members."}
+                  ? `Open to eligible campus teams of ${event.minTeamSize || 2} to ${event.maxTeamSize || 4} participants.`
+                  : "Open to all registered student creators, developers, and designers."}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[#17191C] text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="px-3.5 py-1.5 rounded-full border-2 border-ink bg-ink text-white font-quicksand font-black text-xs uppercase tracking-wider shadow-brutal-badge">
                 Free Admission
               </span>
-              <span className="rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] px-3 py-1 text-xs font-semibold text-[#34383D] dark:text-[#E8EAED]">
-                Capacity: {event.capacity} Attendees
+              <span className="px-3 py-1.5 rounded-full border-2 border-ink bg-cream-plus font-quicksand font-bold text-xs text-ink shadow-brutal-badge">
+                Capacity: {event.capacity}
               </span>
             </div>
           </div>
 
-          {/* If Event has Stages / Rounds, Display Agenda Schedule */}
+          {/* Rounds Progression if applicable */}
           {eventRounds.length > 0 && (
-            <div className="border-t border-[#F0F1F2] dark:border-[#262A2E] pt-6 space-y-3">
-              <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-2">
-                <Layers className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
-                Competition Progression & Stages
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="border-t-2 border-ink/15 pt-6 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <Layers className="h-5 w-5 text-ink stroke-[2.5]" />
+                <h3 className="font-peachy font-black text-xl text-ink">
+                  Competition Stages & Rounds
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {eventRounds.map((rnd) => (
-                  <div key={rnd.id} className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-3.5 space-y-1">
+                  <div
+                    key={rnd.id}
+                    className="rounded-2xl border-2 border-ink bg-[#FFFDF7] p-4 shadow-brutal-flat space-y-1.5"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-[#8A9098] uppercase">Stage {rnd.order}</span>
-                      <Badge variant="secondary" className="text-[9px] capitalize">{rnd.status.replace("_", " ")}</Badge>
+                      <span className="font-quicksand font-black text-[10px] text-retro-orange uppercase">
+                        Stage {rnd.order}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full border border-ink text-[10px] font-quicksand font-bold bg-retro-yellow/40 text-ink">
+                        {rnd.status.replace("_", " ")}
+                      </span>
                     </div>
-                    <h4 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">{rnd.name}</h4>
-                    <p className="text-[11px] text-[#656B73] dark:text-[#8A9098]">Venue: {rnd.venue}</p>
+                    <h4 className="font-quicksand font-black text-sm text-ink">
+                      {rnd.name}
+                    </h4>
+                    <p className="font-quicksand font-semibold text-xs text-ink/70">
+                      Venue: {rnd.venue}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -737,21 +829,27 @@ export default function PublicEventClient({
           )}
 
           {/* Organized by Section */}
-          <div className="border-t border-[#F0F1F2] dark:border-[#262A2E] pt-6 space-y-3">
-            <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3] flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED]" />
-              Organized by
-            </h3>
-            <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="border-t-2 border-ink/15 pt-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-ink stroke-[2.5]" />
+              <h3 className="font-peachy font-black text-xl text-ink">
+                Organized by
+              </h3>
+            </div>
+            <div className="rounded-2xl border-2 border-ink bg-[#FFFDF7] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-brutal-flat">
               <div>
-                <p className="font-bold text-[#17191C] dark:text-[#F1F2F3]">SketchHUB Event Operations</p>
-                <p className="text-[#656B73] dark:text-[#8A9098] mt-0.5">Official Host & Event Management Team</p>
+                <p className="font-quicksand font-black text-sm text-ink">
+                  Sketch Campus Operations Team
+                </p>
+                <p className="font-quicksand font-semibold text-xs text-ink/70">
+                  Official Host & Event Management Group
+                </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
                 {event.contactEmail && (
                   <a
                     href={`mailto:${event.contactEmail}`}
-                    className="inline-flex items-center gap-1.5 text-[#34383D] dark:text-[#E8EAED] font-semibold hover:underline"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-ink bg-cream-plus font-quicksand font-bold text-xs text-ink shadow-brutal-badge hover:bg-cream"
                   >
                     <Mail className="h-3.5 w-3.5" />
                     <span>{event.contactEmail}</span>
@@ -760,402 +858,291 @@ export default function PublicEventClient({
                 {event.contactPhone && (
                   <a
                     href={`tel:${event.contactPhone}`}
-                    className="inline-flex items-center gap-1.5 text-[#34383D] dark:text-[#E8EAED] font-semibold hover:underline"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-ink bg-cream-plus font-quicksand font-bold text-xs text-ink shadow-brutal-badge hover:bg-cream"
                   >
                     <Phone className="h-3.5 w-3.5" />
                     <span>{event.contactPhone}</span>
                   </a>
                 )}
-                {event.communityLink && (
-                  <a
-                    href={event.communityLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[#34383D] dark:text-[#E8EAED] font-semibold hover:underline"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    <span>Community Channel</span>
-                  </a>
-                )}
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Registration Section */}
-      <div id="register" className="rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-6 sm:p-8 shadow-sm">
-        {/* State A: Closed Registration */}
-        {isRegistrationClosed ? (
-          <div className="py-8 text-center space-y-3 max-w-md mx-auto">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#F4F5F6] dark:bg-[#151719] text-[#8A9098]">
-              <Lock className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">Registration is Closed</h3>
-            <p className="text-xs text-[#656B73] dark:text-[#8A9098] leading-relaxed">
-              Registrations for this event are now officially closed. If you already hold a valid entry pass, please present your QR code at the desk on the event day.
-            </p>
-            <Link href="/">
-              <Button variant="outline" size="sm" className="rounded-full text-xs mt-2 border-[#E5E7EA] dark:border-[#30353A]">
-                Explore Other SKETCH Events
-              </Button>
-            </Link>
-          </div>
-        ) : isRegistrationFull ? (
-          /* State B: Full / Sold Out */
-          <div className="py-8 text-center space-y-3 max-w-md mx-auto">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#F4F5F6] dark:bg-[#151719] text-[#8A9098]">
-              <Users className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">Event Capacity Reached</h3>
-            <p className="text-xs text-[#656B73] dark:text-[#8A9098] leading-relaxed">
-              All {event.capacity} seats for {event.title} have been filled. Registration is currently full.
-            </p>
-            <Link href="/">
-              <Button variant="outline" size="sm" className="rounded-full text-xs mt-2 border-[#E5E7EA] dark:border-[#30353A]">
-                Discover Available Events
-              </Button>
-            </Link>
-          </div>
-        ) : isRegistrationUpcoming ? (
-          /* State C: Upcoming / Draft */
-          <div className="py-8 text-center space-y-3 max-w-md mx-auto">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#F4F5F6] dark:bg-[#151719] text-[#8A9098]">
-              <Clock className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">Registration Opening Soon</h3>
-            <p className="text-xs text-[#656B73] dark:text-[#8A9098] leading-relaxed">
-              Official registration for {event.title} is scheduled to open shortly. Check back or visit our event portal for announcements.
-            </p>
-          </div>
-        ) : journeyStep === "confirmed" && registrationResult ? (
-          /* State D: Confirmed Entry Pass Screen */
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-sm">
-                <Check className="h-8 w-8 stroke-[3]" />
+        {/* REGISTRATION SECTION: The core form container */}
+        <section id="register">
+          {/* State A: Closed Registration */}
+          {isRegistrationClosed ? (
+            <div className="rounded-3xl border-2 border-ink bg-cream-plus p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto shadow-brutal-card">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ink bg-retro-yellow text-ink shadow-brutal-flat">
+                <Lock className="h-7 w-7 stroke-[2.5]" />
               </div>
-              <h3 className="text-2xl font-extrabold text-[#17191C] dark:text-[#F1F2F3]">
-                {Boolean(registrationResult.isMockPreview ?? isPreview)
-                  ? "Preview Registration Recorded"
-                  : "Registration Confirmed!"}
+              <h3 className="font-peachy font-black text-2xl text-ink">
+                Registration is Closed
               </h3>
-              <p className="text-xs text-[#656B73] dark:text-[#8A9098] max-w-md mx-auto">
-                {Boolean(registrationResult.isMockPreview ?? isPreview)
-                  ? "A simulated participant pass has been generated in Preview Mode for "
-                  : "Your official participant event pass has been generated for "}
-                <strong className="text-[#17191C] dark:text-[#F1F2F3]">{registrationResult.email}</strong>.
+              <p className="font-quicksand font-semibold text-xs text-ink/75 leading-relaxed">
+                Registrations for this experience are now officially closed. If you already hold a confirmed ticket pass, present your QR code at the desk on event day.
               </p>
-
-              {Boolean(registrationResult.isMockPreview ?? isPreview) && (
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-200 max-w-md mx-auto text-center space-y-1">
-                  <div className="font-bold uppercase tracking-wider text-[10px] text-amber-700 dark:text-amber-300">
-                    Preview Mode • Local Non-Production Persistence
-                  </div>
-                  <p className="text-[11px] leading-relaxed">
-                    This registration was validated in local preview sandbox. Authoritative database persistence is enabled in production environment.
+              <Link href="/">
+                <button className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn mt-2">
+                  Explore Other Events
+                </button>
+              </Link>
+            </div>
+          ) : isRegistrationFull ? (
+            /* State B: Full / Sold Out */
+            <div className="rounded-3xl border-2 border-ink bg-cream-plus p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto shadow-brutal-card">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ink bg-retro-pink text-ink shadow-brutal-flat">
+                <Users className="h-7 w-7 stroke-[2.5]" />
+              </div>
+              <h3 className="font-peachy font-black text-2xl text-ink">
+                Event Capacity Reached
+              </h3>
+              <p className="font-quicksand font-semibold text-xs text-ink/75 leading-relaxed">
+                All {event.capacity} seats for {event.title} have been reserved. Registration is currently full.
+              </p>
+              <Link href="/">
+                <button className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-pink text-white font-quicksand font-black text-xs shadow-brutal-btn mt-2">
+                  Discover Available Events
+                </button>
+              </Link>
+            </div>
+          ) : isRegistrationUpcoming ? (
+            /* State C: Upcoming / Draft */
+            <div className="rounded-3xl border-2 border-ink bg-cream-plus p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto shadow-brutal-card">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ink bg-retro-mango text-ink shadow-brutal-flat">
+                <Clock className="h-7 w-7 stroke-[2.5]" />
+              </div>
+              <h3 className="font-peachy font-black text-2xl text-ink">
+                Registration Opening Soon
+              </h3>
+              <p className="font-quicksand font-semibold text-xs text-ink/75 leading-relaxed">
+                Official passes for {event.title} will open shortly. Check back soon!
+              </p>
+            </div>
+          ) : journeyStep === "confirmed" && registrationResult ? (
+            /* State D: Confirmed Entry Pass Screen */
+            <div className="space-y-6">
+              <div className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-10 shadow-brutal-card text-center space-y-4">
+                <div className="flex justify-center">
+                  <SmilingSun className="w-16 h-16" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-peachy font-black text-3xl sm:text-4xl text-ink">
+                    Registration Confirmed! 🎉
+                  </h3>
+                  <p className="font-quicksand font-semibold text-sm text-ink/80 max-w-md mx-auto">
+                    Your official admission pass has been generated for{" "}
+                    <strong className="text-ink font-black">{registrationResult.email}</strong>.
                   </p>
                 </div>
-              )}
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F4F5F6] dark:bg-[#151719] border border-transparent dark:border-[#30353A] text-[10px] font-semibold text-[#656B73] dark:text-[#8A9098]">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#17191C] dark:text-[#E8EAED]" />
-                <span>
-                  {Boolean(registrationResult.isMockPreview ?? isPreview)
-                    ? "Client Preview Credential • Valid for Terminal Simulation"
-                    : "Authoritative Verified Credential"}
-                </span>
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border-2 border-ink bg-retro-yellow/40 text-ink font-quicksand font-black text-xs shadow-brutal-flat">
+                  <ShieldCheck className="h-4 w-4 stroke-[2.5]" />
+                  <span>Verified Admission Credential</span>
+                </div>
               </div>
-            </div>
 
-            {/* Live Visual Pass Card */}
-            <div
-              className="max-w-md mx-auto overflow-hidden rounded-3xl border border-[#2C3136] bg-[#111315] text-white shadow-[0_24px_60px_-15px_rgba(0,0,0,0.45)] relative"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 15% 12%, rgba(226, 184, 87, 0.16) 0%, transparent 48%), radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
-                backgroundSize: "100% 100%, 18px 18px",
-              }}
-            >
-              <div className="absolute inset-[1px] rounded-[23px] ring-1 ring-inset ring-white/10 pointer-events-none" />
-
-              {/* Top Club Header */}
-              <div className="p-6 pb-5 relative z-10">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src="/assets/sketch-isometric-mark.png"
-                      alt="SKETCH"
-                      className="h-6 w-6 rounded-md object-contain bg-white/10 p-0.5 border border-white/15"
-                    />
-                    <span className="text-xs font-extrabold tracking-[0.22em] uppercase text-white">
-                      SKETCH
+              {/* Neo-brutalist Tactile Pass Card */}
+              <div className="max-w-md mx-auto rounded-3xl border-2 border-ink bg-cream-plus shadow-brutal-card overflow-hidden relative">
+                {/* Top Ticket Header */}
+                <div className="p-6 bg-retro-yellow border-b-2 border-ink">
+                  <div className="flex items-center justify-between">
+                    <span className="font-peachy font-black text-xl text-ink tracking-tight">
+                      SKETCH PASS
                     </span>
-                    <span className="h-3.5 w-[1px] bg-white/20" />
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E2B857]">
-                      {Boolean(registrationResult.isMockPreview ?? isPreview)
-                        ? "PREVIEW"
-                        : "CONFIRMED"}
+                    <span className="px-3 py-1 rounded-full border-2 border-ink bg-cream-plus font-mono font-bold text-xs text-ink shadow-brutal-badge">
+                      {registrationResult.ticketNumber || registrationResult.registrationId}
                     </span>
                   </div>
-                  <span className="font-mono text-[11px] font-semibold tracking-wider text-white/80 bg-white/[0.06] px-2.5 py-1 rounded-md border border-white/10">
-                    {registrationResult.ticketNumber || registrationResult.registrationId}
-                  </span>
-                </div>
-
-                {/* Event Title & Schedule */}
-                <div className="mt-5 space-y-1.5">
-                  <h4 className="text-xl font-extrabold tracking-tight text-white leading-snug">
+                  <h4 className="mt-3 font-peachy font-black text-2xl text-ink leading-tight">
                     {event.title}
                   </h4>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/70">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-[#E2B857]" />
-                      {formatDate(event.startDate)}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-[#E2B857]" />
-                      {event.venue}
-                    </span>
+                  <div className="mt-1 flex items-center gap-3 text-xs font-quicksand font-bold text-ink/75">
+                    <span>{formatDate(event.startDate)}</span>
+                    <span>•</span>
+                    <span>{event.venue}</span>
                   </div>
                 </div>
 
-                {/* Real QR Code Container */}
-                <div className="mt-6 flex flex-col items-center justify-center">
-                  <div className="p-3.5 rounded-2xl bg-white shadow-xl border border-white/80 flex flex-col items-center">
+                {/* QR Display Area */}
+                <div className="p-8 flex flex-col items-center justify-center bg-[#FFFDF7]">
+                  <div className="p-4 rounded-2xl border-2 border-ink bg-white shadow-brutal-flat">
                     {confirmationQrDataUrl ? (
                       <img
                         src={confirmationQrDataUrl}
-                        alt="Registration Pass QR Code"
-                        className="w-36 h-36 object-contain"
+                        alt="QR Code"
+                        className="w-44 h-44 object-contain"
                       />
                     ) : (
-                      <div className="w-36 h-36 flex items-center justify-center text-[11px] font-mono text-neutral-500">
-                        Generating QR...
+                      <div className="w-44 h-44 flex items-center justify-center font-quicksand font-bold text-xs text-ink/60">
+                        Loading QR...
                       </div>
                     )}
                   </div>
-                  <p className="mt-3 text-[10px] font-mono uppercase tracking-[0.18em] text-white/55">
-                    REF • {registrationResult.ticketNumber || registrationResult.registrationId}
+                  <p className="mt-3 font-mono font-bold text-xs text-ink/60 uppercase tracking-widest">
+                    Present at Check-in Desk
                   </p>
                 </div>
-              </div>
 
-              {/* Perforated Ticket Tear Divider */}
-              <div className="relative flex items-center justify-between px-0 my-0">
-                <div className="w-4 h-4 -ml-2 rounded-full bg-white dark:bg-[#16191D] border border-[#2C3136]" />
-                <div className="flex-1 border-t border-dashed border-white/20 mx-2" />
-                <div className="w-4 h-4 -mr-2 rounded-full bg-white dark:bg-[#16191D] border border-[#2C3136]" />
-              </div>
-
-              {/* Bottom Pass Holder Stub */}
-              <div className="px-6 py-4 bg-black/25 flex items-end justify-between gap-4 relative z-10">
-                <div className="min-w-0">
-                  <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/45 block mb-0.5">
-                    Holder
-                  </span>
-                  <p className="text-sm font-bold text-white truncate">
-                    {registrationResult.attendeeName}
-                  </p>
+                {/* Perforated Tear Line */}
+                <div className="relative flex items-center justify-between border-t-2 border-dashed border-ink bg-[#FFFDF7] px-0">
+                  <div className="w-5 h-5 -ml-2.5 rounded-full bg-cream border-2 border-ink" />
+                  <div className="w-5 h-5 -mr-2.5 rounded-full bg-cream border-2 border-ink" />
                 </div>
-                {registrationResult.teamName && (
-                  <div className="min-w-0 text-right">
-                    <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/45 block mb-0.5">
-                      Team
+
+                {/* Bottom Stub */}
+                <div className="p-5 bg-cream border-t-2 border-ink flex items-center justify-between">
+                  <div>
+                    <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
+                      Holder
                     </span>
-                    <p className="text-xs font-semibold text-[#E2B857] truncate">
-                      {registrationResult.teamName}
-                    </p>
-                  </div>
-                )}
-                {!registrationResult.teamName && (
-                  <div className="text-right shrink-0">
-                    <span className="text-[9px] uppercase tracking-[0.18em] font-semibold text-white/45 block mb-0.5">
-                      Registration
+                    <span className="font-quicksand font-black text-sm text-ink">
+                      {registrationResult.attendeeName}
                     </span>
-                    <p className="text-[11px] font-mono font-semibold text-white/80">
-                      {registrationResult.registrationId}
-                    </p>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Existing Registration Notice */}
-            {registrationResult.isExisting && (
-              <div className="max-w-md mx-auto rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-center text-xs text-amber-800 dark:text-amber-200">
-                <span className="font-semibold block text-amber-900 dark:text-amber-200">
-                  Existing Registration Retrieved
-                </span>
-                <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 mt-0.5">
-                  You are already registered for this event. Your verified pass has been retrieved safely without creating a duplicate.
-                </p>
-              </div>
-            )}
-
-            {/* Direct Ticket Pass Link */}
-            {registrationResult.liveTicketUrl && (
-              <div className="max-w-md mx-auto text-center pt-1">
-                <Link
-                  href={registrationResult.liveTicketUrl.replace(/^https?:\/\/[^/]+/, "")}
-                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#17191C] dark:bg-white text-white dark:text-[#17191C] text-xs font-bold shadow-lg hover:scale-[1.01] transition-transform"
-                >
-                  <Ticket className="h-4 w-4" />
-                  <span>View Verified Admission Pass</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            )}
-
-            {/* Official Community Link */}
-            {event.communityLink && (
-              <div className="max-w-md mx-auto rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 p-4 text-center space-y-2">
-                <div className="flex items-center justify-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs">
-                  <MessageCircle className="h-4 w-4" />
-                  <span>Join the Official Participant Community</span>
-                </div>
-                <p className="text-[11px] text-[#656B73] dark:text-[#8A9098]">
-                  Connect with fellow participants, team organizers, and mentors before the event day.
-                </p>
-                <a
-                  href={event.communityLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-bold transition-transform hover:scale-[1.02] outline-none focus-visible:ring-2 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
-                >
-                  <span>Join Discussion Group</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
-            )}
-
-            {/* Organizer Contact Info */}
-            {(event.contactEmail || event.contactPhone) && (
-              <div className="max-w-md mx-auto text-center text-xs text-[#8A9098] space-y-1 pt-2">
-                <p className="font-medium text-[#656B73] dark:text-[#AEB3BA]">Questions or Check-in Assistance?</p>
-                <div className="flex items-center justify-center flex-wrap gap-4 text-[11px]">
-                  {event.contactEmail && (
-                    <a href={`mailto:${event.contactEmail}`} className="hover:underline flex items-center gap-1">
-                      <Mail className="h-3 w-3 text-[#17191C] dark:text-[#E8EAED]" />
-                      <span>{event.contactEmail}</span>
-                    </a>
-                  )}
-                  {event.contactPhone && (
-                    <a href={`tel:${event.contactPhone}`} className="hover:underline flex items-center gap-1">
-                      <Phone className="h-3 w-3 text-[#17191C] dark:text-[#E8EAED]" />
-                      <span>{event.contactPhone}</span>
-                    </a>
+                  {registrationResult.teamName ? (
+                    <div className="text-right">
+                      <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
+                        Team
+                      </span>
+                      <span className="font-quicksand font-black text-xs text-retro-orange">
+                        {registrationResult.teamName}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-right">
+                      <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
+                        Status
+                      </span>
+                      <span className="font-quicksand font-black text-xs text-emerald-700">
+                        Confirmed
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
-            )}
 
-            {/* Action Buttons */}
-            <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-3 pt-2">
-              <Button
-                variant="charcoal"
-                className="flex-1 rounded-full text-xs font-semibold gap-1.5 h-11 shadow-sm"
-                onClick={handleDownloadPassSvg}
-              >
-                <Download className="h-4 w-4" />
-                <span>Download Pass (SVG)</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 rounded-full border-[#E5E7EA] dark:border-[#30353A] text-xs font-semibold h-11 dark:bg-[#1B1E21] dark:text-[#F1F2F3] dark:hover:bg-[#22262A]"
-                onClick={() => {
-                  setJourneyStep("form");
-                  setFormValues({});
-                  setErrors({});
-                  setRegistrationResult(null);
-                }}
-              >
-                <span>Register Another</span>
-              </Button>
-            </div>
-          </div>
-        ) : journeyStep === "review" ? (
-          /* State E: Dynamic Review & Confirm Step */
-          <div className="space-y-6 max-w-xl mx-auto">
-            <div>
-              <h2 className="text-lg font-bold text-[#17191C] dark:text-[#F1F2F3]">Review Registration Details</h2>
-              <p className="text-xs text-[#656B73] dark:text-[#8A9098] mt-0.5">
-                Confirm your submission information before generating your verified event entry pass.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#8A9098] font-medium">Selected Experience:</span>
-                  <strong className="text-[#17191C] dark:text-[#F1F2F3]">{event.title}</strong>
-                </div>
-              </div>
-
-              {formSchema.sections.map((section) => {
-                const visibleFields = section.fields.filter(
-                  (f) => f.type !== "info" && isFieldVisible(f, formValues)
-                );
-                if (visibleFields.length === 0) return null;
-
-                return (
-                  <div
-                    key={section.id}
-                    className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-5 space-y-3 text-xs"
+              {/* Action Buttons */}
+              <div className="max-w-md mx-auto space-y-3 pt-2">
+                {registrationResult.liveTicketUrl && (
+                  <Link
+                    href={registrationResult.liveTicketUrl.replace(/^https?:\/\/[^/]+/, "")}
+                    className="btn-brutal w-full py-4 rounded-full bg-retro-orange text-white font-quicksand font-black text-sm border-2 border-ink shadow-brutal-btn flex items-center justify-center gap-2"
                   >
-                    <div className="font-bold text-[#17191C] dark:text-[#F1F2F3] border-b border-[#F0F1F2] dark:border-[#262A2E] pb-2 text-[13px]">
-                      {section.title}
-                    </div>
-                    <div className="space-y-2">
-                      {visibleFields.map((field) => {
-                        const val = formValues[field.id];
-                        let displayVal = "—";
-                        if (val !== undefined && val !== null && val !== "") {
-                          if (Array.isArray(val)) {
-                            displayVal = val.join(", ");
-                          } else if (typeof val === "boolean") {
-                            displayVal = val ? "Yes" : "No";
-                          } else {
-                            displayVal = String(val);
-                          }
-                        }
+                    <Ticket className="h-4 w-4" />
+                    <span>View Verified Admission Pass</span>
+                    <ArrowRight className="h-4 w-4 stroke-[3]" />
+                  </Link>
+                )}
 
-                        return (
-                          <div
-                            key={field.id}
-                            className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-[#F0F1F2]/60 dark:border-[#262A2E]/60 gap-1"
-                          >
-                            <span className="text-[#8A9098] shrink-0 font-medium sm:max-w-[45%]">
-                              {field.label}:
-                            </span>
-                            <span className="text-[#17191C] dark:text-[#F1F2F3] font-semibold sm:text-right break-words">
-                              {displayVal}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {duplicateRecord ? (
-              <div className="rounded-2xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 p-4 text-xs text-amber-900 dark:text-amber-200 space-y-3">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                  <div className="space-y-1">
-                    <p className="font-bold text-sm text-amber-900 dark:text-amber-200">Already Registered</p>
-                    <p className="leading-relaxed">
-                      An active registration already exists for <strong>{duplicateRecord.email}</strong>. Duplicate registrations for the same participant are strictly disallowed.
-                    </p>
-                  </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDownloadPassSvg}
+                    className="btn-brutal flex-1 py-3 rounded-full bg-cream-plus text-ink font-quicksand font-bold text-xs border-2 border-ink shadow-brutal-flat flex items-center justify-center gap-1.5"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download SVG</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setJourneyStep("form");
+                      setFormValues({});
+                      setErrors({});
+                      setRegistrationResult(null);
+                    }}
+                    className="btn-brutal flex-1 py-3 rounded-full bg-cream text-ink font-quicksand font-bold text-xs border-2 border-ink shadow-brutal-flat"
+                  >
+                    Register Another
+                  </button>
                 </div>
-                <div className="pt-1 flex items-center gap-2">
-                  <Button
+              </div>
+            </div>
+          ) : journeyStep === "review" ? (
+            /* State E: Dynamic Review Step */
+            <div className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-10 shadow-brutal-card space-y-6 max-w-2xl mx-auto">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <NeoBadge bg="bg-retro-yellow" rotate="-rotate-1">
+                    Step 2 of 2
+                  </NeoBadge>
+                  <span className="font-quicksand font-bold text-xs uppercase tracking-wider text-ink/60">
+                    Admission Summary
+                  </span>
+                </div>
+                <h2 className="font-peachy font-black text-3xl text-ink">
+                  Review Your Details
+                </h2>
+                <p className="font-quicksand font-semibold text-xs text-ink/70">
+                  Please verify your information before generating your official verified pass.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl border-2 border-ink bg-[#FFFDF7] p-4 flex items-center justify-between text-xs font-quicksand shadow-brutal-flat">
+                  <span className="font-bold text-ink/60">Experience:</span>
+                  <span className="font-black text-ink">{event.title}</span>
+                </div>
+
+                {formSchema.sections.map((section) => {
+                  const visibleFields = section.fields.filter(
+                    (f) => f.type !== "info" && isFieldVisible(f, formValues)
+                  );
+                  if (visibleFields.length === 0) return null;
+
+                  return (
+                    <div
+                      key={section.id}
+                      className="rounded-2xl border-2 border-ink bg-[#FFFDF7] p-5 space-y-3 shadow-brutal-flat font-quicksand"
+                    >
+                      <h4 className="font-peachy font-black text-lg text-ink border-b-2 border-ink/15 pb-2">
+                        {section.title}
+                      </h4>
+                      <div className="space-y-2.5">
+                        {visibleFields.map((field) => {
+                          const val = formValues[field.id];
+                          let displayVal = "—";
+                          if (val !== undefined && val !== null && val !== "") {
+                            if (Array.isArray(val)) {
+                              displayVal = val.join(", ");
+                            } else if (typeof val === "boolean") {
+                              displayVal = val ? "Yes" : "No";
+                            } else {
+                              displayVal = String(val);
+                            }
+                          }
+
+                          return (
+                            <div
+                              key={field.id}
+                              className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-1 border-b border-ink/10 text-xs gap-1"
+                            >
+                              <span className="font-bold text-ink/60">
+                                {field.label}:
+                              </span>
+                              <span className="font-black text-ink sm:text-right break-words">
+                                {displayVal}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {duplicateRecord ? (
+                <div className="rounded-2xl border-2 border-retro-orange bg-retro-orange/15 p-4 text-xs font-quicksand space-y-2 text-ink shadow-brutal-flat">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-retro-orange shrink-0 stroke-[2.5]" />
+                    <span className="font-black text-sm">Already Registered</span>
+                  </div>
+                  <p className="font-semibold text-ink/80 leading-relaxed">
+                    An active registration already exists for <strong>{duplicateRecord.email}</strong>.
+                  </p>
+                  <button
                     type="button"
-                    size="sm"
-                    className="rounded-full bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs px-4 h-9 shadow-sm"
                     onClick={() => {
                       setRegistrationResult({
                         ...duplicateRecord,
@@ -1165,88 +1152,122 @@ export default function PublicEventClient({
                       setJourneyStep("confirmed");
                       window.scrollTo({ top: 350, behavior: "smooth" });
                     }}
+                    className="btn-brutal px-4 py-2 rounded-full border-2 border-ink bg-retro-yellow text-ink font-black text-xs shadow-brutal-flat inline-flex items-center gap-1.5"
                   >
-                    <Ticket className="h-3.5 w-3.5 mr-1.5" />
-                    View Existing Admission Pass &rarr;
-                  </Button>
+                    <Ticket className="h-4 w-4" />
+                    <span>View Existing Pass &rarr;</span>
+                  </button>
                 </div>
-              </div>
-            ) : submissionError ? (
-              <div className="rounded-2xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-3">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                <div className="space-y-1">
-                  <p className="font-bold">Registration Failed</p>
-                  <p>{submissionError}</p>
+              ) : submissionError ? (
+                <div className="rounded-2xl border-2 border-red-500 bg-red-100 p-4 text-xs font-quicksand text-red-800 space-y-1 shadow-brutal-flat">
+                  <div className="flex items-center gap-2 font-black text-sm">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                    <span>Registration Issue</span>
+                  </div>
+                  <p className="font-semibold text-red-700">{submissionError}</p>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                className="rounded-full text-xs h-11 px-5 border-[#E5E7EA] dark:border-[#30353A] dark:bg-[#1B1E21] dark:text-[#F1F2F3] dark:hover:bg-[#22262A]"
-                onClick={() => {
-                  setSubmissionError(null);
-                  setDuplicateRecord(null);
-                  setJourneyStep("form");
-                }}
-              >
-                <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-                Edit Information
-              </Button>
-              <Button
-                variant="charcoal"
-                className="flex-1 rounded-full text-xs font-bold h-11 shadow-sm"
-                disabled={isSubmitting || Boolean(duplicateRecord)}
-                onClick={handleFinalSubmit}
-              >
-                {isSubmitting ? "Verifying & Generating Pass..." : "Confirm & Claim Pass"}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          /* State F: Main Dynamic Registration Form */
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-[#17191C] dark:text-[#F1F2F3]">
-                {event.hasTeams ? "Team Pass Registration" : "Attendee Pass Registration"}
-              </h2>
-              <p className="mt-1 text-xs text-[#656B73] dark:text-[#8A9098]">
-                Direct registration for campus creators and technologists. Complete the form below to claim your verified pass.
-              </p>
-            </div>
-
-            {/* Dynamic Form Engine */}
-            <form onSubmit={handleProceedToReview} className="space-y-6">
-              <DynamicFormRenderer
-                schema={formSchema}
-                values={formValues}
-                onChange={handleFieldChange}
-                errors={errors}
-              />
-
-              {/* Terms & Submit */}
-              <div className="pt-4 border-t border-[#F0F1F2] dark:border-[#262A2E]">
-                <Button
-                  type="submit"
-                  variant="charcoal"
-                  size="lg"
-                  className="w-full rounded-full font-bold shadow-sm h-11"
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmissionError(null);
+                    setDuplicateRecord(null);
+                    setJourneyStep("form");
+                  }}
+                  className="btn-brutal py-3.5 px-6 rounded-full border-2 border-ink bg-cream text-ink font-quicksand font-bold text-xs shadow-brutal-flat flex items-center justify-center gap-1.5"
                 >
-                  <span>Review Registration & Claim Pass</span>
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Edit Information</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting || Boolean(duplicateRecord)}
+                  onClick={handleFinalSubmit}
+                  className="btn-brutal flex-1 py-4 px-8 rounded-full border-2 border-ink bg-retro-orange text-white font-quicksand font-black text-sm sm:text-base shadow-brutal-btn flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <span>Issuing Official Pass...</span>
+                  ) : (
+                    <>
+                      <span>Confirm & Claim Pass</span>
+                      <ArrowRight className="h-4 w-4 stroke-[3]" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* State F: Main Form Screen */
+            <div className="space-y-6">
+              {/* Form Hero Header */}
+              <div className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-8 shadow-brutal-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <NeoBadge bg="bg-retro-yellow" rotate="-rotate-1">
+                      Step 1 of 2
+                    </NeoBadge>
+                    <span className="font-quicksand font-bold text-xs uppercase tracking-wider text-ink/60">
+                      Official Entry
+                    </span>
+                  </div>
+                  <h2 className="font-peachy font-black text-3xl sm:text-4xl text-ink">
+                    {event.hasTeams ? "Register Your Team" : "Claim Your Pass"}
+                  </h2>
+                  <p className="font-quicksand font-semibold text-xs sm:text-sm text-ink/75 leading-relaxed">
+                    Direct registration for student creators. Fill in the fields below to generate your official festival admission QR pass.
+                  </p>
+                </div>
+
+                <div className="hidden sm:flex shrink-0">
+                  <SmilingSun className="w-14 h-14" />
+                </div>
               </div>
 
-              <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-[#8A9098]">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#25292F] dark:text-[#E8EAED]" />
-                <span>Instant verified registration. Free entry pass generated upon submission.</span>
-              </div>
-            </form>
+              {/* Dynamic Form Engine in FlowFest Retro Theme */}
+              <form onSubmit={handleProceedToReview} className="space-y-6">
+                <DynamicFormRenderer
+                  schema={formSchema}
+                  values={formValues}
+                  onChange={handleFieldChange}
+                  errors={errors}
+                  variant="retro"
+                />
+
+                {/* Submit Action Bar */}
+                <div className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-8 shadow-brutal-card space-y-4">
+                  <button
+                    type="submit"
+                    className="btn-brutal w-full py-4 px-8 rounded-full bg-retro-orange text-white font-quicksand font-black text-base sm:text-lg border-2 border-ink shadow-brutal-btn flex items-center justify-center gap-2"
+                  >
+                    <span>Review Registration & Claim Pass</span>
+                    <ArrowRight className="h-5 w-5 stroke-[3]" />
+                  </button>
+
+                  <div className="flex items-center justify-center gap-2 text-xs font-quicksand font-bold text-ink/60">
+                    <ShieldCheck className="h-4 w-4 stroke-[2.5] text-ink" />
+                    <span>Instant verified admission. Scannable QR pass sent directly to your email.</span>
+                  </div>
+                </div>
+              </form>
+            </div>
+          )}
+        </section>
+
+        {/* BOTTOM SCALLOPED WAVE ACCENT */}
+        <div className="pt-8 overflow-hidden rounded-3xl border-2 border-ink bg-cream-plus shadow-brutal-card p-6 text-center space-y-3">
+          <div className="flex justify-center">
+            <SmilingSun className="w-12 h-12" />
           </div>
-        )}
-      </div>
+          <p className="font-peachy font-black text-2xl text-ink">
+            SKETCH EVENT OPERATIONS
+          </p>
+          <p className="font-quicksand font-bold text-xs text-ink/60">
+            Powered by the SKETCH campus event platform. See you at the arena!
+          </p>
+        </div>
+      </main>
     </div>
-  </div>
   );
 }

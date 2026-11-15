@@ -1,9 +1,13 @@
-/* Route-scoped ambient event background styles for /e/[slug] */
+/* FlowFest-inspired vintage cream retro background for public event pages */
 
 .ambientWrapper {
   position: relative;
   width: 100%;
+  min-height: 100vh;
+  background-color: #F3ECD2;
+  color: #121212;
   overflow-x: clip;
+  font-family: var(--font-quicksand, system-ui, -apple-system, sans-serif);
 }
 
 .ambientBackground {
@@ -12,93 +16,59 @@
   pointer-events: none;
   overflow: hidden;
   z-index: 0;
+  background-color: #F3ECD2;
 }
 
-/* Dynamic Blurred Event Cover Image Layer */
+/* Subtle vintage warm grain / radial tint */
+.ambientFallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(244, 137, 163, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 90% 15%, rgba(240, 187, 13, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(249, 112, 40, 0.10) 0%, transparent 50%),
+    #F3ECD2;
+  pointer-events: none;
+}
+
+/* Dynamic event cover image with retro warm blend */
 .ambientImage {
   position: absolute;
-  top: -60px;
-  left: -60px;
-  right: -60px;
-  bottom: -60px;
-  width: calc(100% + 120px);
-  height: calc(100% + 120px);
+  top: -40px;
+  left: -40px;
+  right: -40px;
+  bottom: -40px;
+  width: calc(100% + 80px);
+  height: calc(100% + 80px);
   object-fit: cover;
-  background-size: cover;
-  background-repeat: no-repeat;
-  filter: blur(28px) brightness(0.92) saturate(1.25) contrast(1.05);
-  opacity: 0.85;
-  transform: scale(1.15);
-  will-change: transform, opacity;
+  filter: blur(40px) saturate(1.2) brightness(0.95);
+  opacity: 0.18;
+  transform: scale(1.1);
   pointer-events: none;
   user-select: none;
 }
 
-:global(.dark) .ambientImage {
-  opacity: 0.82;
-}
-
-/* Elegant dark ambient fallback when event has no cover image or on image error */
-.ambientFallback {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 50% 20%,
-    rgba(30, 41, 59, 0.45) 0%,
-    rgba(17, 24, 39, 0.70) 45%,
-    rgba(10, 12, 16, 0.95) 100%
-  );
-  pointer-events: none;
-}
-
-:global(.dark) .ambientFallback {
-  background: radial-gradient(
-    ellipse at 50% 20%,
-    rgba(25, 33, 44, 0.50) 0%,
-    rgba(13, 17, 23, 0.80) 45%,
-    rgba(7, 9, 12, 0.98) 100%
-  );
-}
-
-/* Subtle Ambient Glow to enhance color depth and visual warmth */
 .ambientGlow {
   position: absolute;
   inset: 0;
   background: radial-gradient(
     ellipse at 50% 0%,
-    rgba(56, 189, 248, 0.10) 0%,
-    rgba(139, 92, 246, 0.06) 35%,
-    transparent 70%
+    rgba(240, 187, 13, 0.15) 0%,
+    transparent 60%
   );
-  mix-blend-mode: screen;
   pointer-events: none;
 }
 
-/* Dark Readability Overlay with adjustable opacity */
 .ambientOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(10, 12, 16, 0.38) 0%,
-    rgba(13, 16, 20, 0.44) 45%,
-    rgba(7, 9, 12, 0.50) 100%
-  );
+  background: rgba(243, 236, 210, 0.4);
   pointer-events: none;
-  transition: opacity 0.3s ease;
 }
 
-:global(.dark) .ambientOverlay {
-  background: linear-gradient(
-    180deg,
-    rgba(7, 9, 12, 0.40) 0%,
-    rgba(10, 12, 16, 0.46) 45%,
-    rgba(5, 7, 9, 0.52) 100%
-  );
-}
-
-/* Sharp, Interactive Foreground Content */
+/* Sharp, interactive foreground content container */
 .contentContainer {
   position: relative;
   z-index: 10;
+  width: 100%;
 }

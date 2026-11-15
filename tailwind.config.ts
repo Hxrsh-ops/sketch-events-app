@@ -96,6 +96,34 @@ const config: Config = {
           btn: "#E3E5E8",
           icon: "#777E86",
         },
+        // FlowFest Retro Festival Tokens
+        cream: {
+          DEFAULT: "#F3ECD2",
+          plus: "#FFFEFB",
+        },
+        ink: "#121212",
+        retro: {
+          pink: "#F489A3",
+          mango: "#F3A20F",
+          orange: "#F97028",
+          yellow: "#F0BB0D",
+        },
+      },
+      fontFamily: {
+        peachy: ['"Sugar Peachy"', "Impact", "sans-serif"],
+        quicksand: ["Quicksand", "system-ui", "sans-serif"],
+        sans: ["var(--font-manrope)", "var(--font-inter)", "system-ui", "-apple-system", "sans-serif"],
+      },
+      boxShadow: {
+        "brutal-btn": "0 4px 0 0 #121212",
+        "brutal-btn-hover": "0 2px 0 0 #121212",
+        "brutal-card": "5px 5px 0 0 #121212",
+        "brutal-badge": "2px 2px 0 0 #121212",
+        "brutal-flat": "3px 3px 0 0 #121212",
+        subtle: "0 1px 2px rgba(0,0,0,0.02)",
+        card: "0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.02)",
+        elevated: "0 4px 12px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)",
+        xs: "0 1px 2px rgba(0,0,0,0.02)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -104,15 +132,6 @@ const config: Config = {
         "2xl": "14px",
         "3xl": "18px",
         "4xl": "22px",
-      },
-      fontFamily: {
-        sans: ["var(--font-manrope)", "var(--font-inter)", "system-ui", "-apple-system", "sans-serif"],
-      },
-      boxShadow: {
-        subtle: "0 1px 2px rgba(0,0,0,0.02)",
-        card: "0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.02)",
-        elevated: "0 4px 12px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)",
-        xs: "0 1px 2px rgba(0,0,0,0.02)",
       },
     },
   },

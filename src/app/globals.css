@@ -2,6 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Sugar Peachy';
+  src: url('/fonts/SugarPeachy-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sugar Peachy';
+  src: url('/fonts/SugarPeachy-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sugar Peachy';
+  src: url('/fonts/SugarPeachy-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Quicksand';
+  src: url('/fonts/Quicksand-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Quicksand';
+  src: url('/fonts/Quicksand-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Neo-brutalist tactile button base */
+.btn-brutal {
+  transition: all 0.15s cubic-bezier(0.625, 0.05, 0, 1);
+  box-shadow: 0 4px 0 0 #121212;
+}
+
+.btn-brutal:hover {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 0 #121212;
+}
+
+.btn-brutal:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 0 #121212;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 14s linear infinite;
+}
+
 @layer base {
   :root {
     --background: #F8F9FA;

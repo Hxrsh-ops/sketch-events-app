@@ -30,6 +30,7 @@ interface DynamicFormRendererProps {
   errors?: Record<string, string>;
   disabled?: boolean;
   isPreview?: boolean;
+  variant?: "default" | "retro";
 }
 
 /**
@@ -72,19 +73,27 @@ export function DynamicFormRenderer({
   errors = {},
   disabled = false,
   isPreview = false,
+  variant = "retro",
 }: DynamicFormRendererProps) {
   const baseId = useId();
+  const isRetro = variant === "retro";
 
   if (!schema || !schema.sections || schema.sections.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-[#E5E7EA] dark:border-[#30353A] p-8 text-center text-xs text-[#8A9098]">
+      <div
+        className={
+          isRetro
+            ? "rounded-2xl border-2 border-dashed border-ink/40 bg-cream-plus p-8 text-center text-xs font-quicksand font-bold text-ink/70"
+            : "rounded-2xl border border-dashed border-[#E5E7EA] dark:border-[#30353A] p-8 text-center text-xs text-[#8A9098]"
+        }
+      >
         No registration fields have been added yet. Add fields from the library to build the form.
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className={isRetro ? "space-y-6" : "space-y-6"}>
       {schema.sections.map((section, sIdx) => {
         // Filter fields that are visible
         const visibleFields = section.fields.filter((field) =>
@@ -99,18 +108,40 @@ export function DynamicFormRenderer({
         return (
           <div
             key={section.id || `sec-${sIdx}`}
-            className="rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 sm:p-5 space-y-4"
+            className={
+              isRetro
+                ? "rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-8 shadow-brutal-card space-y-6"
+                : "rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-[#F9FAFB] dark:bg-[#151719] p-4 sm:p-5 space-y-4"
+            }
           >
             {/* Section Header */}
             {(section.title || section.description) && (
-              <div className="border-b border-[#E5E7EA] dark:border-[#262A2E] pb-3">
+              <div
+                className={
+                  isRetro
+                    ? "border-b-2 border-ink/15 pb-4"
+                    : "border-b border-[#E5E7EA] dark:border-[#262A2E] pb-3"
+                }
+              >
                 {section.title && (
-                  <h3 className="text-sm font-bold text-[#17191C] dark:text-[#F1F2F3] tracking-tight">
+                  <h3
+                    className={
+                      isRetro
+                        ? "font-peachy font-black text-2xl text-ink tracking-tight"
+                        : "text-sm font-bold text-[#17191C] dark:text-[#F1F2F3] tracking-tight"
+                    }
+                  >
                     {section.title}
                   </h3>
                 )}
                 {section.description && (
-                  <p className="mt-1 text-xs text-[#656B73] dark:text-[#8A9098] whitespace-pre-line leading-relaxed">
+                  <p
+                    className={
+                      isRetro
+                        ? "mt-1.5 text-xs font-quicksand font-bold text-ink/70 whitespace-pre-line leading-relaxed"
+                        : "mt-1 text-xs text-[#656B73] dark:text-[#8A9098] whitespace-pre-line leading-relaxed"
+                    }
+                  >
                     {section.description}
                   </p>
                 )}
@@ -118,7 +149,7 @@ export function DynamicFormRenderer({
             )}
 
             {/* Section Fields */}
-            <div className="space-y-4">
+            <div className={isRetro ? "space-y-5" : "space-y-4"}>
               {visibleFields.map((field) => {
                 const fieldId = field.id;
                 const value = values[fieldId];
@@ -126,18 +157,42 @@ export function DynamicFormRenderer({
                 const htmlId = `${baseId}-${fieldId}`;
 
                 return (
-                  <div key={fieldId} className="space-y-1.5">
+                  <div key={fieldId} className={isRetro ? "space-y-2" : "space-y-1.5"}>
                     {/* Informational Callout Type */}
                     {field.type === "info" ? (
-                      <div className="rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 space-y-1.5">
+                      <div
+                        className={
+                          isRetro
+                            ? "rounded-2xl border-2 border-ink bg-retro-yellow/20 p-4 space-y-2 shadow-brutal-flat"
+                            : "rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3.5 space-y-1.5"
+                        }
+                      >
                         <div className="flex items-center gap-2">
-                          <Info className="h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0" />
-                          <h4 className="text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]">
+                          <Info
+                            className={
+                              isRetro
+                                ? "h-4 w-4 text-ink shrink-0 stroke-[2.5]"
+                                : "h-4 w-4 text-[#25292F] dark:text-[#E8EAED] shrink-0"
+                            }
+                          />
+                          <h4
+                            className={
+                              isRetro
+                                ? "font-quicksand font-black text-xs uppercase tracking-wider text-ink"
+                                : "text-xs font-bold text-[#17191C] dark:text-[#F1F2F3]"
+                            }
+                          >
                             {field.label}
                           </h4>
                         </div>
                         {field.description && (
-                          <p className="text-xs text-[#656B73] dark:text-[#8A9098] whitespace-pre-line leading-relaxed pl-6">
+                          <p
+                            className={
+                              isRetro
+                                ? "text-xs font-quicksand font-semibold text-ink/80 whitespace-pre-line leading-relaxed pl-6"
+                                : "text-xs text-[#656B73] dark:text-[#8A9098] whitespace-pre-line leading-relaxed pl-6"
+                            }
+                          >
                             {field.description}
                           </p>
                         )}
@@ -148,19 +203,37 @@ export function DynamicFormRenderer({
                         <div className="flex items-baseline justify-between">
                           <label
                             htmlFor={htmlId}
-                            className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]"
+                            className={
+                              isRetro
+                                ? "text-xs font-quicksand font-black uppercase tracking-wider text-ink"
+                                : "text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]"
+                            }
                           >
                             {field.label}
                             {field.required && (
-                              <span className="text-red-500 ml-1 font-bold">*</span>
+                              <span className={isRetro ? "text-retro-pink ml-1 font-black" : "text-red-500 ml-1 font-bold"}>
+                                *
+                              </span>
                             )}
                           </label>
                           {field.required ? (
-                            <span className="text-[10px] uppercase font-bold text-red-500/80">
+                            <span
+                              className={
+                                isRetro
+                                  ? "text-[10px] uppercase font-quicksand font-black text-retro-pink bg-retro-pink/15 px-2 py-0.5 rounded-full border border-retro-pink/30"
+                                  : "text-[10px] uppercase font-bold text-red-500/80"
+                              }
+                            >
                               Required
                             </span>
                           ) : (
-                            <span className="text-[10px] text-[#8A9098] dark:text-[#656B73]">
+                            <span
+                              className={
+                                isRetro
+                                  ? "text-[10px] uppercase font-quicksand font-bold text-ink/50"
+                                  : "text-[10px] text-[#8A9098] dark:text-[#656B73]"
+                              }
+                            >
                               Optional
                             </span>
                           )}
@@ -168,7 +241,13 @@ export function DynamicFormRenderer({
 
                         {/* Helper Description */}
                         {field.description && (
-                          <p className="text-[11px] text-[#656B73] dark:text-[#8A9098] leading-tight">
+                          <p
+                            className={
+                              isRetro
+                                ? "text-xs font-quicksand font-semibold text-ink/65 leading-tight"
+                                : "text-[11px] text-[#656B73] dark:text-[#8A9098] leading-tight"
+                            }
+                          >
                             {field.description}
                           </p>
                         )}
@@ -176,14 +255,20 @@ export function DynamicFormRenderer({
                         {/* Render Field Input based on Type */}
                         <div>
                           {field.type === "text" && (
-                            <Input
+                            <input
                               id={htmlId}
                               type="text"
                               placeholder={field.placeholder || "Enter text..."}
                               value={(value as string) || ""}
                               onChange={(e) => onChange(fieldId, e.target.value)}
                               disabled={disabled}
-                              className={error ? "border-red-500 ring-1 ring-red-500" : ""}
+                              className={
+                                isRetro
+                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                      error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                    }`
+                                  : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
+                              }
                             />
                           )}
 
@@ -195,40 +280,58 @@ export function DynamicFormRenderer({
                               value={(value as string) || ""}
                               onChange={(e) => onChange(fieldId, e.target.value)}
                               disabled={disabled}
-                              className={`w-full rounded-2xl border bg-white dark:bg-[#1B1E21] p-3 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] transition-all focus:outline-none focus:ring-1 ${
-                                error
-                                  ? "border-red-500 ring-1 ring-red-500"
-                                  : "border-[#E5E7EA] dark:border-[#30353A] focus:border-[#25292F] dark:focus:border-[#E8EAED] focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
-                              }`}
+                              className={
+                                isRetro
+                                  ? `w-full rounded-xl border-2 border-ink bg-cream-plus p-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                      error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                    }`
+                                  : `w-full rounded-2xl border bg-white dark:bg-[#1B1E21] p-3 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] transition-all focus:outline-none focus:ring-1 ${
+                                      error
+                                        ? "border-red-500 ring-1 ring-red-500"
+                                        : "border-[#E5E7EA] dark:border-[#30353A] focus:border-[#25292F] dark:focus:border-[#E8EAED] focus:ring-[#25292F] dark:focus:ring-[#E8EAED]"
+                                    }`
+                              }
                             />
                           )}
 
                           {field.type === "email" && (
-                            <Input
+                            <input
                               id={htmlId}
                               type="email"
                               placeholder={field.placeholder || "e.g., alex@college.edu"}
                               value={(value as string) || ""}
                               onChange={(e) => onChange(fieldId, e.target.value)}
                               disabled={disabled}
-                              className={error ? "border-red-500 ring-1 ring-red-500" : ""}
+                              className={
+                                isRetro
+                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                      error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                    }`
+                                  : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
+                              }
                             />
                           )}
 
                           {field.type === "phone" && (
-                            <Input
+                            <input
                               id={htmlId}
                               type="tel"
                               placeholder={field.placeholder || "e.g., +91 98765 43210"}
                               value={(value as string) || ""}
                               onChange={(e) => onChange(fieldId, e.target.value)}
                               disabled={disabled}
-                              className={error ? "border-red-500 ring-1 ring-red-500" : ""}
+                              className={
+                                isRetro
+                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                      error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                    }`
+                                  : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
+                              }
                             />
                           )}
 
                           {field.type === "number" && (
-                            <Input
+                            <input
                               id={htmlId}
                               type="number"
                               min={field.validation?.min}
@@ -237,30 +340,48 @@ export function DynamicFormRenderer({
                               value={(value as string) || ""}
                               onChange={(e) => onChange(fieldId, e.target.value)}
                               disabled={disabled}
-                              className={error ? "border-red-500 ring-1 ring-red-500" : ""}
+                              className={
+                                isRetro
+                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                      error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                    }`
+                                  : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
+                              }
                             />
                           )}
 
                           {field.type === "url" && (
-                            <Input
+                            <input
                               id={htmlId}
                               type="url"
                               placeholder={field.placeholder || "https://..."}
                               value={(value as string) || ""}
                               onChange={(e) => onChange(fieldId, e.target.value)}
                               disabled={disabled}
-                              className={error ? "border-red-500 ring-1 ring-red-500" : ""}
+                              className={
+                                isRetro
+                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                      error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                    }`
+                                  : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
+                              }
                             />
                           )}
 
                           {field.type === "date" && (
-                            <Input
+                            <input
                               id={htmlId}
                               type="date"
                               value={(value as string) || ""}
                               onChange={(e) => onChange(fieldId, e.target.value)}
                               disabled={disabled}
-                              className={error ? "border-red-500 ring-1 ring-red-500" : ""}
+                              className={
+                                isRetro
+                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                      error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                    }`
+                                  : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
+                              }
                             />
                           )}
 
@@ -274,22 +395,38 @@ export function DynamicFormRenderer({
                               }
                               value={(value as string) || ""}
                               onChange={(val) => onChange(fieldId, val)}
-                              className={error ? "border-red-500" : ""}
+                              className={
+                                isRetro
+                                  ? `rounded-xl border-2 border-ink bg-cream-plus text-ink font-quicksand font-bold shadow-brutal-flat ${
+                                      error ? "border-red-600 ring-2 ring-red-500" : ""
+                                    }`
+                                  : error
+                                  ? "border-red-500"
+                                  : ""
+                              }
                             />
                           )}
 
                           {field.type === "radio" && (
-                            <div className="space-y-2 pt-1">
+                            <div className="space-y-2.5 pt-1">
                               {(field.options || []).map((opt) => {
                                 const isSelected = value === opt.value;
                                 return (
                                   <label
                                     key={opt.value}
-                                    className={`flex items-center gap-3 rounded-xl border p-3 transition-colors cursor-pointer select-none ${
-                                      isSelected
-                                        ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
-                                        : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 hover:bg-white dark:hover:bg-[#1B1E21]"
-                                    }`}
+                                    className={
+                                      isRetro
+                                        ? `flex items-center gap-3.5 rounded-xl border-2 border-ink p-3.5 transition-all cursor-pointer select-none font-quicksand font-bold text-xs text-ink ${
+                                            isSelected
+                                              ? "bg-retro-yellow/40 shadow-brutal-flat"
+                                              : "bg-cream-plus hover:bg-cream shadow-none"
+                                          }`
+                                        : `flex items-center gap-3 rounded-xl border p-3 transition-colors cursor-pointer select-none ${
+                                            isSelected
+                                              ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
+                                              : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 hover:bg-white dark:hover:bg-[#1B1E21]"
+                                          }`
+                                    }
                                   >
                                     <input
                                       type="radio"
@@ -298,9 +435,19 @@ export function DynamicFormRenderer({
                                       checked={isSelected}
                                       onChange={() => onChange(fieldId, opt.value)}
                                       disabled={disabled}
-                                      className="h-4 w-4 accent-[#25292F] dark:accent-[#E8EAED]"
+                                      className={
+                                        isRetro
+                                          ? "h-4 w-4 accent-ink"
+                                          : "h-4 w-4 accent-[#25292F] dark:accent-[#E8EAED]"
+                                      }
                                     />
-                                    <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                                    <span
+                                      className={
+                                        isRetro
+                                          ? "text-xs font-quicksand font-bold text-ink"
+                                          : "text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]"
+                                      }
+                                    >
                                       {opt.label}
                                     </span>
                                   </label>
@@ -310,7 +457,7 @@ export function DynamicFormRenderer({
                           )}
 
                           {field.type === "checkbox" && (
-                            <div className="space-y-2 pt-1">
+                            <div className="space-y-2.5 pt-1">
                               {field.options && field.options.length > 0 ? (
                                 field.options.map((opt) => {
                                   const currentArr = Array.isArray(value) ? value : [];
@@ -318,11 +465,19 @@ export function DynamicFormRenderer({
                                   return (
                                     <label
                                       key={opt.value}
-                                      className={`flex items-center gap-3 rounded-xl border p-3 transition-colors cursor-pointer select-none ${
-                                        isChecked
-                                          ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
-                                          : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 hover:bg-white dark:hover:bg-[#1B1E21]"
-                                      }`}
+                                      className={
+                                        isRetro
+                                          ? `flex items-center gap-3.5 rounded-xl border-2 border-ink p-3.5 transition-all cursor-pointer select-none font-quicksand font-bold text-xs text-ink ${
+                                              isChecked
+                                                ? "bg-retro-yellow/40 shadow-brutal-flat"
+                                                : "bg-cream-plus hover:bg-cream shadow-none"
+                                            }`
+                                          : `flex items-center gap-3 rounded-xl border p-3 transition-colors cursor-pointer select-none ${
+                                              isChecked
+                                                ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
+                                                : "border-[#E5E7EA] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 hover:bg-white dark:hover:bg-[#1B1E21]"
+                                            }`
+                                      }
                                     >
                                       <input
                                         type="checkbox"
@@ -338,24 +493,50 @@ export function DynamicFormRenderer({
                                           }
                                         }}
                                         disabled={disabled}
-                                        className="h-4 w-4 rounded border-[#E5E7EA] dark:border-[#30353A] accent-[#25292F] dark:accent-[#E8EAED]"
+                                        className={
+                                          isRetro
+                                            ? "h-4 w-4 rounded border-2 border-ink accent-ink"
+                                            : "h-4 w-4 rounded border-[#E5E7EA] dark:border-[#30353A] accent-[#25292F] dark:accent-[#E8EAED]"
+                                        }
                                       />
-                                      <span className="text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]">
+                                      <span
+                                        className={
+                                          isRetro
+                                            ? "text-xs font-quicksand font-bold text-ink"
+                                            : "text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]"
+                                        }
+                                      >
                                         {opt.label}
                                       </span>
                                     </label>
                                   );
                                 })
                               ) : (
-                                <label className="flex items-center gap-3 rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3 cursor-pointer select-none">
+                                <label
+                                  className={
+                                    isRetro
+                                      ? "flex items-center gap-3.5 rounded-xl border-2 border-ink bg-cream-plus p-3.5 cursor-pointer select-none shadow-brutal-flat"
+                                      : "flex items-center gap-3 rounded-xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-3 cursor-pointer select-none"
+                                  }
+                                >
                                   <input
                                     type="checkbox"
                                     checked={Boolean(value)}
                                     onChange={(e) => onChange(fieldId, e.target.checked)}
                                     disabled={disabled}
-                                    className="h-4 w-4 rounded border-[#E5E7EA] dark:border-[#30353A] accent-[#25292F] dark:accent-[#E8EAED]"
+                                    className={
+                                      isRetro
+                                        ? "h-4 w-4 rounded border-2 border-ink accent-ink"
+                                        : "h-4 w-4 rounded border-[#E5E7EA] dark:border-[#30353A] accent-[#25292F] dark:accent-[#E8EAED]"
+                                    }
                                   />
-                                  <span className="text-xs font-medium text-[#17191C] dark:text-[#F1F2F3]">
+                                  <span
+                                    className={
+                                      isRetro
+                                        ? "text-xs font-quicksand font-bold text-ink"
+                                        : "text-xs font-medium text-[#17191C] dark:text-[#F1F2F3]"
+                                    }
+                                  >
                                     {field.placeholder || "I agree to the above condition"}
                                   </span>
                                 </label>
@@ -366,7 +547,13 @@ export function DynamicFormRenderer({
 
                         {/* Error Message */}
                         {error && (
-                          <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
+                          <p
+                            className={
+                              isRetro
+                                ? "text-xs font-quicksand font-black text-red-700 bg-red-100/90 border border-red-400 rounded-lg px-3 py-1 inline-block"
+                                : "text-[11px] font-medium text-red-600 dark:text-red-400"
+                            }
+                          >
                             {error}
                           </p>
                         )}

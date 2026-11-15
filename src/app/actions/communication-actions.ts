@@ -7,6 +7,18 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { SketchRepository } from "@/lib/supabase/repository";
 import { ActionResult } from "@/app/actions/event-actions";
 import { AdminUser } from "@/types";
+import { headers } from "next/headers";
+import QRCode from "qrcode";
+import { generateTicketBearerToken } from "@/lib/ticket/rotating-qr";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { EmailOutboxWorker } from "@/lib/email/worker";
+
+const BatchRedispatchPassesSchema = z.object({
+  eventId: z.string().min(1, "Event identifier is required"),
+  recipientEmail: z.string().email().optional(),
+});
+
+export type BatchRedispatchPassesInput = z.infer<typeof BatchRedispatchPassesSchema>;
 
 const EnqueueDispatchSchema = z.object({
   eventId: z.string().min(1, "Event identifier is required"),
@@ -366,6 +378,149 @@ export async function archiveOutboxJobsAction(
       success: false,
       error: "INTERNAL_ERROR",
       message: errorMessage || "Failed to archive outbox records.",
+    };
+  }
+}
+
+/**
+ * Server Action: Batch or Individual Pass Re-dispatch
+ *
+ * Enforces admin session and 'communications:send' permission.
+ * Resolves event attendees, issues/reconciles official ticket pass payloads,
+ * enqueues them in communications_outbox, and immediately processes delivery.
+ */
+export async function batchRedispatchPassesAction(
+  rawData: unknown
+): Promise<ActionResult<{ dispatchedCount: number; message: string }>> {
+  try {
+    const auth = await requireCommunicationsAccess("re-dispatch event passes");
+    if (!auth.ok) return auth.response;
+
+    const parseResult = BatchRedispatchPassesSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return {
+        success: false,
+        error: "VALIDATION_FAILED",
+        message: parseResult.error.issues[0]?.message || "Invalid pass re-dispatch request.",
+      };
+    }
+
+    const { eventId, recipientEmail } = parseResult.data;
+
+    const event = await SketchRepository.getEventById(eventId);
+    if (!event) {
+      return {
+        success: false,
+        error: "EVENT_NOT_FOUND",
+        message: "The specified event could not be found.",
+      };
+    }
+
+    const allParticipants = await SketchRepository.listParticipants({ eventId });
+    const targetParticipants = recipientEmail
+      ? allParticipants.filter((p) => p.email.toLowerCase().trim() === recipientEmail.toLowerCase().trim())
+      : allParticipants.filter((p) => p.status !== "cancelled");
+
+    if (targetParticipants.length === 0) {
+      return {
+        success: false,
+        error: "NO_RECIPIENTS",
+        message: recipientEmail
+          ? `No confirmed registration found for email "${recipientEmail}".`
+          : "No confirmed attendees found for this event.",
+      };
+    }
+
+    // Determine canonical app URL
+    let appUrl = "https://sketchhub-liard.vercel.app";
+    try {
+      const headerList = await headers();
+      const host = headerList.get("x-forwarded-host") || headerList.get("host");
+      const proto = headerList.get("x-forwarded-proto") || "https";
+      if (host && !host.includes("localhost")) {
+        appUrl = `${proto}://${host}`;
+      }
+    } catch {
+      // fallback
+    }
+
+    const supabase: any = createAdminClient() || (await createClient());
+
+    for (const p of targetParticipants) {
+      const { rawToken, tokenHash } = generateTicketBearerToken();
+      const ticketNumber = p.ticketNumber || `TKT-${p.registrationId.replace(/^REG-/, "")}`;
+
+      await SketchRepository.issueOrReconcileTicket({
+        registrationId: p.id,
+        bearerTokenHash: tokenHash,
+        ticketNumber,
+      });
+
+      const liveTicketUrl = `${appUrl}/tickets/${rawToken}`;
+      let qrCodeDataUrl: string | undefined;
+      try {
+        qrCodeDataUrl = await QRCode.toDataURL(liveTicketUrl, {
+          margin: 1,
+          width: 200,
+          color: { dark: "#17191C", light: "#FFFFFF" },
+        });
+      } catch {
+        // non-critical
+      }
+
+      const passPayload = {
+        event_title: event.title,
+        venue: event.venue || "Campus Venue",
+        start_date: event.startDate,
+        registration_id: p.registrationId,
+        qr_credential_id: p.qrCredentialId,
+        ticket_number: ticketNumber,
+        live_ticket_url: liveTicketUrl,
+        qr_code_data_url: qrCodeDataUrl,
+        team_name: p.teamName,
+      };
+
+      if (supabase && typeof supabase.from === "function") {
+        await supabase.from("communications_outbox").insert({
+          event_id: eventId,
+          recipient_email: p.email,
+          recipient_name: p.name,
+          subject: `Official Admission Pass: ${event.title}`,
+          template_type: "ticket_pass",
+          payload: passPayload,
+          status: "queued",
+          attempts: 0,
+          scheduled_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Immediately trigger outbox worker processing for instant delivery
+    try {
+      const worker = new EmailOutboxWorker();
+      await worker.processBatch(Math.max(targetParticipants.length, 10));
+    } catch (workerErr: any) {
+      console.error("[batchRedispatchPassesAction] Outbox batch worker exception:", workerErr?.message);
+    }
+
+    revalidatePath(`/events/${eventId}`);
+    revalidatePath("/communications");
+
+    return {
+      success: true,
+      data: {
+        dispatchedCount: targetParticipants.length,
+        message: `Successfully dispatched official pass to ${targetParticipants.length} attendee(s).`,
+      },
+      message: `Successfully dispatched official pass to ${targetParticipants.length} attendee(s).`,
+    };
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Internal server error";
+    console.error("[batchRedispatchPassesAction] Failure:", errorMessage);
+    return {
+      success: false,
+      error: "REDISPATCH_FAILED",
+      message: errorMessage || "Failed to re-dispatch event passes.",
     };
   }
 }

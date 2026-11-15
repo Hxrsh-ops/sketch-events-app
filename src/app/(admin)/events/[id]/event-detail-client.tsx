@@ -41,6 +41,7 @@ import { formatDate } from "@/lib/utils";
 import { Participant, EventItem, AdminRole, Round } from "@/types";
 import { updateEventAction, setEventLifecycleAction, deleteEventAction } from "@/app/actions/event-actions";
 import { toggleAttendanceAction } from "@/app/actions/participant-actions";
+import { batchRedispatchPassesAction } from "@/app/actions/communication-actions";
 
 interface EventDetailClientProps {
   initialEvent: EventItem;
@@ -114,6 +115,55 @@ export default function EventDetailClient({
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastBody, setBroadcastBody] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Pass Re-dispatch state
+  const [isResendingPasses, setIsResendingPasses] = useState(false);
+  const [redispatchFeedback, setRedispatchFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isResendingIndividual, setIsResendingIndividual] = useState(false);
+  const [individualNotice, setIndividualNotice] = useState<string | null>(null);
+
+  const handleBatchRedispatch = async () => {
+    setIsResendingPasses(true);
+    setRedispatchFeedback(null);
+    try {
+      const res = await batchRedispatchPassesAction({ eventId: event.id });
+      if (res.success) {
+        setRedispatchFeedback({
+          type: "success",
+          message: res.message || "Passes successfully queued and dispatched to confirmed attendees!",
+        });
+      } else {
+        setRedispatchFeedback({
+          type: "error",
+          message: res.message || "Failed to re-dispatch passes.",
+        });
+      }
+    } catch (err: any) {
+      setRedispatchFeedback({
+        type: "error",
+        message: err?.message || "Unexpected failure during pass re-dispatch.",
+      });
+    } finally {
+      setIsResendingPasses(false);
+    }
+  };
+
+  const handleIndividualRedispatch = async (email: string) => {
+    setIsResendingIndividual(true);
+    setIndividualNotice(null);
+    try {
+      const res = await batchRedispatchPassesAction({ eventId: event.id, recipientEmail: email });
+      if (res.success) {
+        setIndividualNotice(`Pass re-sent to ${email}!`);
+      } else {
+        setIndividualNotice(`Failed: ${res.message}`);
+      }
+    } catch (err: any) {
+      setIndividualNotice(`Failed: ${err?.message || "Error"}`);
+    } finally {
+      setIsResendingIndividual(false);
+    }
+  };
 
   // Delete modal state
   const router = useRouter();
@@ -1061,6 +1111,24 @@ export default function EventDetailClient({
                 </p>
               </div>
 
+              {redispatchFeedback && (
+                <div
+                  className={`p-3.5 rounded-xl border text-xs font-medium flex items-center justify-between ${
+                    redispatchFeedback.type === "success"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
+                      : "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300"
+                  }`}
+                >
+                  <span>{redispatchFeedback.message}</span>
+                  <button
+                    onClick={() => setRedispatchFeedback(null)}
+                    className="ml-2 text-current opacity-70 hover:opacity-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#E5E7E9]  bg-[#F9FAFB] ">
                   <div>
@@ -1070,10 +1138,18 @@ export default function EventDetailClient({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full border-[#E5E7E9]  text-xs font-semibold"
-                    onClick={() => alert(`Batch pass re-dispatch simulated for ${event.registeredCount} attendees.`)}
+                    disabled={isResendingPasses}
+                    className="rounded-full border-[#E5E7E9] text-xs font-semibold"
+                    onClick={handleBatchRedispatch}
                   >
-                    Re-send Passes
+                    {isResendingPasses ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                        <span>Dispatching...</span>
+                      </>
+                    ) : (
+                      "Re-send Passes"
+                    )}
                   </Button>
                 </div>
 
@@ -1140,13 +1216,37 @@ export default function EventDetailClient({
               </div>
             </div>
 
-            <Button
-              variant={selectedParticipant.attendanceStatus === "checked_in" ? "outline" : "charcoal"}
-              className="w-full h-10 rounded-full text-xs font-semibold"
-              onClick={() => toggleCheckIn(selectedParticipant.id)}
-            >
-              {selectedParticipant.attendanceStatus === "checked_in" ? "Undo Check-in" : "Mark as Checked In"}
-            </Button>
+            <div className="space-y-2">
+              <Button
+                variant={selectedParticipant.attendanceStatus === "checked_in" ? "outline" : "charcoal"}
+                className="w-full h-10 rounded-full text-xs font-semibold"
+                onClick={() => toggleCheckIn(selectedParticipant.id)}
+              >
+                {selectedParticipant.attendanceStatus === "checked_in" ? "Undo Check-in" : "Mark as Checked In"}
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full h-10 rounded-full text-xs font-semibold border-[#E5E7E9]"
+                disabled={isResendingIndividual}
+                onClick={() => handleIndividualRedispatch(selectedParticipant.email)}
+              >
+                {isResendingIndividual ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                    <span>Re-sending...</span>
+                  </>
+                ) : (
+                  <span>Re-send Pass to this Attendee</span>
+                )}
+              </Button>
+
+              {individualNotice && (
+                <p className="text-[11px] text-center font-medium text-emerald-600 dark:text-emerald-400">
+                  {individualNotice}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </SlideOver>

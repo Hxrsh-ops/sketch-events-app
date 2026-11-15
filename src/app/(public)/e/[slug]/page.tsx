@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { AlertCircle, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { SketchRepository } from "@/lib/supabase/repository";
 import PublicEventClient from "./public-event-client";
+import { SmilingSun } from "@/components/public/retro-elements";
 import styles from "./ambient-bg.module.css";
 
 interface PublicEventPageProps {
@@ -23,43 +23,40 @@ export default async function PublicEventPage({ params }: PublicEventPageProps) 
       rounds = await SketchRepository.listRounds(event.id);
     }
   } catch (err: any) {
-    // Transparently capture production repository failures
     fetchError = err.message || "Failed to load event.";
   }
 
-  // Database Infrastructure Failure State (Honest error without leaking internal secrets)
+  // Database Failure State
   if (fetchError) {
     return (
       <div className={styles.ambientWrapper}>
         <div className={styles.ambientBackground} aria-hidden="true">
           <div className={styles.ambientFallback} />
-          <div className={styles.ambientGlow} />
-          <div className={styles.ambientOverlay} />
         </div>
         <div className={`${styles.contentContainer} min-h-[70vh] flex items-center justify-center p-4`}>
-          <div className="max-w-md w-full rounded-[24px] border border-rose-300 dark:border-rose-900 bg-white dark:bg-[#1B1E21] p-8 text-center shadow-lg space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
-              <AlertCircle className="h-6 w-6" />
+          <div className="max-w-md w-full rounded-3xl border-2 border-ink bg-cream-plus p-8 text-center shadow-brutal-card space-y-4">
+            <div className="flex justify-center">
+              <SmilingSun className="w-12 h-12" spin={false} />
             </div>
             <div className="space-y-1.5">
-              <h1 className="text-xl font-bold text-[#17191C] dark:text-[#F1F2F3]">
+              <h1 className="font-peachy font-black text-2xl text-ink">
                 Service Temporarily Unavailable
               </h1>
-              <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] leading-relaxed">
+              <p className="font-quicksand font-semibold text-xs text-ink/75 leading-relaxed">
                 We are experiencing difficulties communicating with the event data service. Please try again in a moment.
               </p>
             </div>
-            <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="flex items-center justify-center gap-3 pt-2">
               <Link href="/">
-                <Button variant="outline" size="sm" className="rounded-full text-xs font-semibold px-4 border-[#E5E7EA] dark:border-[#30353A]">
+                <button className="btn-brutal px-5 py-2.5 rounded-full border-2 border-ink bg-cream text-ink font-quicksand font-bold text-xs shadow-brutal-flat">
                   Return to Home
-                </Button>
+                </button>
               </Link>
               <Link href={`/e/${slug}`}>
-                <Button variant="charcoal" size="sm" className="rounded-full text-xs font-semibold px-4 gap-1.5 shadow-sm">
-                  <RefreshCw className="h-3 w-3" />
+                <button className="btn-brutal px-5 py-2.5 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn flex items-center gap-1.5">
+                  <RefreshCw className="h-3.5 w-3.5" />
                   <span>Retry</span>
-                </Button>
+                </button>
               </Link>
             </div>
           </div>
@@ -68,31 +65,31 @@ export default async function PublicEventPage({ params }: PublicEventPageProps) 
     );
   }
 
-  // Missing, Draft, or Archived Events (Public Draft Protection)
+  // Missing, Draft, or Archived Events
   if (!event || (event.lifecycle !== "published" && event.lifecycle !== "live")) {
     return (
       <div className={styles.ambientWrapper}>
         <div className={styles.ambientBackground} aria-hidden="true">
           <div className={styles.ambientFallback} />
-          <div className={styles.ambientGlow} />
-          <div className={styles.ambientOverlay} />
         </div>
         <div className={`${styles.contentContainer} min-h-[70vh] flex items-center justify-center p-4`}>
-          <div className="max-w-md w-full rounded-[24px] border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-8 text-center shadow-lg space-y-4">
-            <AlertCircle className="mx-auto h-12 w-12 text-[#8A9098] dark:text-[#7D858F] opacity-50" />
+          <div className="max-w-md w-full rounded-3xl border-2 border-ink bg-cream-plus p-8 text-center shadow-brutal-card space-y-4">
+            <div className="flex justify-center">
+              <SmilingSun className="w-12 h-12" spin={false} />
+            </div>
             <div className="space-y-1.5">
-              <h1 className="text-xl font-bold text-[#17191C] dark:text-[#F1F2F3]">
+              <h1 className="font-peachy font-black text-2xl text-ink">
                 Event Not Available
               </h1>
-              <p className="text-xs text-[#656B73] dark:text-[#A6ADB5] leading-relaxed">
+              <p className="font-quicksand font-semibold text-xs text-ink/75 leading-relaxed">
                 This event could not be found or is not currently open to the public. If you believe this is an error, please verify the URL or contact the organizing team.
               </p>
             </div>
             <div className="pt-2">
               <Link href="/">
-                <Button variant="charcoal" size="sm" className="rounded-full text-xs font-semibold px-5">
-                  Return to Home
-                </Button>
+                <button className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn">
+                  Explore Open Experiences
+                </button>
               </Link>
             </div>
           </div>
