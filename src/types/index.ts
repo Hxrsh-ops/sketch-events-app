@@ -128,6 +128,7 @@ export interface Participant {
   attendanceStatus: "not_checked_in" | "checked_in";
   checkedInAt?: string;
   qrCredentialId: string;
+  ticketNumber?: string;
   customAnswers?: Record<string, unknown>;
 }
 

@@ -163,7 +163,7 @@ describe("UnifiedTicketCard Rendering & Visual Invariants", () => {
     expect(html).toContain("SAMPLE PREVIEW • NOT VALID");
   });
 
-  it("6. Renders live rotating QR code and countdown timer when live mode is active", () => {
+  it("6. Renders permanent admission QR pass without rotating timer", () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <UnifiedTicketCard
         design={baseDesign}
@@ -175,16 +175,15 @@ describe("UnifiedTicketCard Rendering & Visual Invariants", () => {
           ticketStatus: "active",
         }}
         qr={{
-          type: "live",
+          type: "static",
           qrDataUrl: "data:image/png;base64,mockqr",
-          secondsRemaining: 24,
         }}
       />
     );
 
     expect(html).toContain("alt=\"Ticket QR Code\"");
-    expect(html).toContain("Refreshes in");
-    expect(html).toContain("24s");
+    expect(html).toContain("Present at venue desk");
+    expect(html).toContain("TKT-LIVE-0001");
   });
 
   it("7. Shows Checked In status overlay on QR code when participant is checked in", () => {

@@ -312,6 +312,9 @@ export class SketchRepository {
         teams (
           id,
           name
+        ),
+        tickets (
+          ticket_number
         )
       `)
       .order("created_at", { ascending: false });
@@ -348,6 +351,7 @@ export class SketchRepository {
       attendanceStatus: r.attendance_status,
       checkedInAt: r.checked_in_at || undefined,
       qrCredentialId: r.qr_credential_id,
+      ticketNumber: Array.isArray(r.tickets) ? r.tickets[0]?.ticket_number : r.tickets?.ticket_number || undefined,
       customAnswers: r.custom_answers || undefined,
     }));
 
@@ -858,7 +862,7 @@ export class SketchRepository {
         event_id: input.eventId,
         name: input.name.trim(),
         round_order: targetOrder,
-        start_time: input.startTime,
+        start_time: input.startTime || new Date().toISOString(),
         venue: input.venue ? input.venue.trim() : "Main Auditorium",
         status: input.status || "upcoming",
         eligible_count: input.eligibleCount ?? 10,
@@ -1213,6 +1217,7 @@ export class SketchRepository {
       venue?: string;
       venueMode?: "in-person" | "online" | "hybrid";
       capacity?: number;
+      lifecycle?: "draft" | "published" | "live" | "completed" | "archived";
       registrationState?: "upcoming" | "open" | "closed" | "full";
       hasTeams?: boolean;
       minTeamSize?: number | null;
@@ -1271,6 +1276,7 @@ export class SketchRepository {
       ...(input.venue !== undefined && { venue: input.venue.trim() }),
       ...(input.venueMode !== undefined && { venue_mode: input.venueMode }),
       ...(input.capacity !== undefined && { capacity: input.capacity }),
+      ...(input.lifecycle !== undefined && { lifecycle: input.lifecycle }),
       ...(input.registrationState !== undefined && { registration_state: input.registrationState }),
       ...(input.hasTeams !== undefined && { has_teams: input.hasTeams }),
       ...(input.minTeamSize !== undefined && { min_team_size: input.minTeamSize }),

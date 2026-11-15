@@ -441,26 +441,11 @@ export function UnifiedTicketCard({
               )}
             </div>
 
-            {/* Stub Footer: Timer or Gate Instructions */}
+            {/* Stub Footer: Gate Instructions */}
             <div className="w-full space-y-1">
-              {qr.type === "live" && !isCheckedIn && !isRevoked ? (
-                <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-white/85">
-                  <span
-                    className="h-1.5 w-1.5 rounded-full animate-ping"
-                    style={{ backgroundColor: accentColor }}
-                  />
-                  <span>
-                    Refreshes in{" "}
-                    <strong className="text-white">
-                      {qr.secondsRemaining ?? 30}s
-                    </strong>
-                  </span>
-                </div>
-              ) : (
-                <span className="text-[9px] text-white/60 block font-medium">
-                  Present at venue desk
-                </span>
-              )}
+              <span className="text-[9px] text-white/60 block font-medium">
+                {isCheckedIn ? "Verified Entry" : isRevoked ? "Pass Revoked" : "Present at venue desk"}
+              </span>
 
               <span className="text-[8.5px] text-white/40 block font-mono truncate">
                 {displayTicketNumber}

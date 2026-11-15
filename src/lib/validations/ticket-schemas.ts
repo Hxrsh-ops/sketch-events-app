@@ -48,8 +48,8 @@ export const TicketStubSchema = z.object({
 export const TicketQrConfigSchema = z.object({
   size: z.number().min(100).max(300).default(180),
   label: z.string().max(40).default("SCAN TO VERIFY"),
-  rotating: z.boolean().default(true),
-  refreshIntervalSec: z.number().min(15).max(120).default(30),
+  rotating: z.boolean().default(false),
+  refreshIntervalSec: z.number().min(0).max(120).default(0),
 });
 
 /**
@@ -171,8 +171,8 @@ export const TicketDesignDataSchema = z.object({
   qr: TicketQrConfigSchema.default({
     size: 180,
     label: "SCAN TO VERIFY",
-    rotating: true,
-    refreshIntervalSec: 30,
+    rotating: false,
+    refreshIntervalSec: 0,
   }),
   backgroundImage: TicketBackgroundImageSchema.optional(),
   elements: z.array(CanvasElementSchema).default([]),

@@ -23,7 +23,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isLoginPage = pathname === "/login";
+  const isLoginPage = pathname === "/login" || pathname === "/ops/gateway";
   const isPublicRoute =
     pathname === "/api/health" ||
     pathname.startsWith("/e/") ||
@@ -63,6 +63,7 @@ export async function updateSession(request: NextRequest) {
       loginUrl.searchParams.set("redirect", pathname);
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set("Cache-Control", "no-store, max-age=0, must-revalidate");
+      redirectResponse.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
       return redirectResponse;
     }
 
@@ -81,11 +82,12 @@ export async function updateSession(request: NextRequest) {
     }
 
     const response = NextResponse.next();
-    if (!isPublicRoute && !isLoginPage) {
-      // Sensitive admin pages must never be cached by browser history / bfcache
+    if (!isPublicRoute) {
+      // Sensitive admin & ops gateway pages must never be indexed or cached by browser history / bfcache
       response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       response.headers.set("Pragma", "no-cache");
       response.headers.set("Expires", "0");
+      response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
     }
     return response;
   }
@@ -142,6 +144,7 @@ export async function updateSession(request: NextRequest) {
     loginUrl.searchParams.set("redirect", pathname);
     const redirectResponse = NextResponse.redirect(loginUrl);
     redirectResponse.headers.set("Cache-Control", "no-store, max-age=0, must-revalidate");
+    redirectResponse.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
     return redirectResponse;
   }
 
@@ -171,11 +174,12 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // For protected admin routes, add no-store cache controls
-  if (!isPublicRoute && !isLoginPage) {
+  // For protected admin routes & ops gateway, add no-store cache controls and no-index
+  if (!isPublicRoute) {
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     response.headers.set("Pragma", "no-cache");
     response.headers.set("Expires", "0");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
 
   return response;

@@ -427,16 +427,25 @@ export default function AttendanceClient({
       return;
     }
 
-    // 2. Fallback to standard manual identifier / badge lookup (Registration ID, Email, Name)
-    const cleanCode = trimmedCode.toLowerCase();
+    // 2. Standard identifier / badge / static QR lookup (Registration ID, Ticket Number, QR Credential ID, Email, Name)
+    let cleanCode = trimmedCode.toLowerCase();
 
-    // Find participant matching registration ID, email, qrCredentialId, or name
+    // If scanned value is a full URL (e.g. from camera scanning ticket link https://.../tickets/tkt_pass_...)
+    if (cleanCode.includes("/tickets/")) {
+      const parts = cleanCode.split("/tickets/");
+      cleanCode = parts[parts.length - 1].split("?")[0].toLowerCase();
+    }
+
+    // Find participant matching registration ID, ticketNumber, email, qrCredentialId, name, or cross-matching TKT-/REG- prefixes
     const found = participants.find(
       (p) =>
         p.eventId === selectedEventId &&
         (p.registrationId.toLowerCase() === cleanCode ||
-          p.email.toLowerCase() === cleanCode ||
+          (p.ticketNumber && p.ticketNumber.toLowerCase() === cleanCode) ||
+          p.registrationId.toLowerCase() === cleanCode.replace(/^tkt-/, "reg-") ||
+          (p.ticketNumber && p.ticketNumber.toLowerCase() === cleanCode.replace(/^reg-/, "tkt-")) ||
           p.qrCredentialId.toLowerCase() === cleanCode ||
+          p.email.toLowerCase() === cleanCode ||
           p.name.toLowerCase() === cleanCode)
     );
 
@@ -446,6 +455,8 @@ export default function AttendanceClient({
       const otherEventMatch = participants.find(
         (p) =>
           p.registrationId.toLowerCase() === cleanCode ||
+          (p.ticketNumber && p.ticketNumber.toLowerCase() === cleanCode) ||
+          p.registrationId.toLowerCase() === cleanCode.replace(/^tkt-/, "reg-") ||
           p.email.toLowerCase() === cleanCode ||
           p.qrCredentialId.toLowerCase() === cleanCode
       );
