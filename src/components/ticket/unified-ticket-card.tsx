@@ -41,6 +41,7 @@ export interface UnifiedTicketCardProps {
   };
   showVariableKeys?: boolean;
   className?: string;
+  responsive?: boolean;
 }
 
 export function UnifiedTicketCard({
@@ -50,6 +51,7 @@ export function UnifiedTicketCard({
   qr,
   showVariableKeys = false,
   className = "",
+  responsive = false,
 }: UnifiedTicketCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -147,15 +149,25 @@ export function UnifiedTicketCard({
 
   return (
     <div
-      className={`unified-ticket-wrapper relative select-none shrink-0 print:m-0 print:p-0 ${className}`}
-      style={{
-        width: `${design.canvas.width || 800}px`,
-        height: `${design.canvas.height || 380}px`,
-      }}
+      className={`unified-ticket-wrapper relative select-none shrink-0 print:m-0 print:p-0 ${
+        responsive
+          ? "w-full max-w-[390px] sm:max-w-md md:max-w-none md:w-[800px] md:h-[380px] print:w-[800px] print:h-[380px]"
+          : ""
+      } ${className}`}
+      style={
+        responsive
+          ? undefined
+          : {
+              width: `${design.canvas.width || 800}px`,
+              height: `${design.canvas.height || 380}px`,
+            }
+      }
     >
       {/* Container Ticket Card */}
       <div
-        className="unified-ticket-root w-full h-full rounded-2xl border flex overflow-hidden shadow-[0_24px_60px_-15px_rgba(0,0,0,0.45)] relative text-white print:border-neutral-300 print:shadow-none"
+        className={`unified-ticket-root w-full rounded-2xl border flex overflow-hidden shadow-[0_24px_60px_-15px_rgba(0,0,0,0.45)] relative text-white print:border-neutral-300 print:shadow-none ${
+          responsive ? "h-auto md:h-full flex-col md:flex-row" : "h-full flex-row"
+        }`}
         style={{
           backgroundColor: bgColor,
           borderColor,
@@ -364,29 +376,52 @@ export function UnifiedTicketCard({
           </div>
         )}
 
-        {/* Layer 2: Perforated Divider (Notches & Vertical Line) */}
+        {/* Layer 2: Perforated Divider (Notches & Perforation Line) */}
         {design.stub.perforationPosition === "right" && (
-          <div className="perforated-divider relative w-0 flex flex-col justify-between items-center py-0 z-20">
-            {/* Top semicircular notch */}
-            <div className="w-5 h-5 -mt-2.5 bg-[#0A0B0D] rounded-full border border-white/15 print:bg-white print:border-neutral-400" />
-            {/* Vertical perforation line */}
-            <div className="h-full border-r border-dashed border-white/25 my-1 print:border-neutral-400" />
-            {/* Bottom semicircular notch */}
-            <div className="w-5 h-5 -mb-2.5 bg-[#0A0B0D] rounded-full border border-white/15 print:bg-white print:border-neutral-400" />
-          </div>
+          <>
+            {/* Desktop / Landscape Vertical Divider */}
+            <div className={`perforated-divider relative w-0 ${responsive ? "hidden md:flex" : "flex"} flex-col justify-between items-center py-0 z-20`}>
+              {/* Top semicircular notch */}
+              <div className="w-5 h-5 -mt-2.5 bg-[#0A0B0D] rounded-full border border-white/15 print:bg-white print:border-neutral-400" />
+              {/* Vertical perforation line */}
+              <div className="h-full border-r border-dashed border-white/25 my-1 print:border-neutral-400" />
+              {/* Bottom semicircular notch */}
+              <div className="w-5 h-5 -mb-2.5 bg-[#0A0B0D] rounded-full border border-white/15 print:bg-white print:border-neutral-400" />
+            </div>
+
+            {/* Mobile Portrait Horizontal Divider (when responsive) */}
+            {responsive && (
+              <div className="perforated-divider-horizontal relative h-0 w-full flex md:hidden items-center justify-between px-0 z-20">
+                {/* Left semicircular notch */}
+                <div className="w-5 h-5 -ml-2.5 bg-[#0A0B0D] rounded-full border border-white/15" />
+                {/* Horizontal perforation line */}
+                <div className="w-full border-b border-dashed border-white/25 mx-1" />
+                {/* Right semicircular notch */}
+                <div className="w-5 h-5 -mr-2.5 bg-[#0A0B0D] rounded-full border border-white/15" />
+              </div>
+            )}
+          </>
         )}
 
-        {/* Layer 3: DETACHABLE VERIFICATION STUB (Approx 28% width) */}
+        {/* Layer 3: DETACHABLE VERIFICATION STUB */}
         {design.stub.perforationPosition === "right" && (
           <div
-            className={`verification-stub p-5 sm:p-6 flex flex-col items-center justify-between text-center relative z-10 border-l border-white/10 ${
+            className={`verification-stub p-5 sm:p-6 flex flex-col items-center justify-between text-center relative z-10 ${
+              responsive
+                ? "w-full md:w-[240px] md:h-full border-t md:border-t-0 md:border-l border-white/10"
+                : "border-l border-white/10"
+            } ${
               hasBgImage
                 ? "bg-black/70 backdrop-blur-md"
                 : "bg-black/25"
             }`}
-            style={{
-              width: `${design.stub.stubWidth || 240}px`,
-            }}
+            style={
+              responsive
+                ? undefined
+                : {
+                    width: `${design.stub.stubWidth || 240}px`,
+                  }
+            }
           >
             {/* Stub Header */}
             <div className="space-y-1 w-full">
@@ -414,7 +449,7 @@ export function UnifiedTicketCard({
                   <img
                     src={qr.qrDataUrl}
                     alt="Ticket QR Code"
-                    className="w-24 h-24 sm:w-28 sm:h-28 object-contain"
+                    className="w-28 h-28 sm:w-32 sm:h-32 object-contain"
                   />
                   {isCheckedIn && (
                     <div className="absolute inset-0 bg-emerald-600/95 rounded-lg flex flex-col items-center justify-center text-white p-1 text-center font-bold text-xs">

@@ -11,20 +11,20 @@ export default async function AdminLayout({
 }) {
   const sessionResult = await verifyAdminSession();
 
-  // If unauthenticated (in either production or preview mode without active session), redirect to login
+  // If unauthenticated (in either production or preview mode without active session), redirect to secret gateway
   if (!sessionResult.isAuthenticated) {
     if (sessionResult.error === "BACKEND_UNAVAILABLE") {
-      redirect("/login?error=backend_unavailable");
+      redirect("/ops/gateway?error=backend_unavailable");
     }
-    redirect("/login");
+    redirect("/ops/gateway");
   }
 
   // If authenticated in Supabase but lacks admin_profiles entry in database
   if (!sessionResult.isAdmin) {
     if (sessionResult.error === "BACKEND_UNAVAILABLE") {
-      redirect("/login?error=backend_unavailable");
+      redirect("/ops/gateway?error=backend_unavailable");
     }
-    redirect("/login?error=not_an_admin");
+    redirect("/ops/gateway?error=not_an_admin");
   }
 
   const isPreview = SketchRepository.isPreview();

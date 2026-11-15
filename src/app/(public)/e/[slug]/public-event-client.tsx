@@ -129,6 +129,7 @@ export default function PublicEventClient({
   const [journeyStep, setJourneyStep] = useState<"form" | "review" | "confirmed">("form");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [duplicateRecord, setDuplicateRecord] = useState<any | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
 
@@ -153,10 +154,17 @@ export default function PublicEventClient({
       return;
     }
     let cancelled = false;
+    const rawTicketUrl = registrationResult.liveTicketUrl;
+    const cleanRelativePath = rawTicketUrl ? rawTicketUrl.replace(/^https?:\/\/[^/]+/, "") : "";
+    const canonicalLiveUrl =
+      cleanRelativePath && typeof window !== "undefined"
+        ? `${window.location.origin}${cleanRelativePath}`
+        : rawTicketUrl;
+
     const qrPayload =
-      registrationResult.liveTicketUrl && typeof window !== "undefined"
-        ? `${window.location.origin}${registrationResult.liveTicketUrl}`
-        : registrationResult.qrCredentialId || registrationResult.registrationId;
+      canonicalLiveUrl ||
+      registrationResult.qrCredentialId ||
+      registrationResult.registrationId;
 
     QRCode.toDataURL(qrPayload, {
       width: 220,
@@ -463,28 +471,21 @@ export default function PublicEventClient({
 
         if (!result.success) {
           if (result.error === "ALREADY_REGISTERED" && result.data) {
-            setRegistrationResult({
-              registrationId: result.data.registrationId,
-              qrCredentialId: result.data.qrCredentialId,
-              registeredAt: result.data.registeredAt,
-              attendeeName: result.data.attendeeName,
-              email: result.data.email,
-              teamName: result.data.teamName,
-              ticketNumber: result.data.ticketNumber,
-              liveTicketUrl: result.data.liveTicketUrl,
-              isExisting: true,
-              isMockPreview: false,
-            });
+            setDuplicateRecord(result.data);
+            setSubmissionError(
+              `This email address (${result.data.email}) is already registered for this event. Duplicate submissions are not accepted.`
+            );
             setIsSubmitting(false);
-            setJourneyStep("confirmed");
-            window.scrollTo({ top: 350, behavior: "smooth" });
             return;
           }
 
+          setDuplicateRecord(null);
           setSubmissionError(result.message || "Registration could not be completed.");
           setIsSubmitting(false);
           return;
         }
+
+        setDuplicateRecord(null);
 
         setRegistrationResult({
           registrationId: result.data.registrationId,
@@ -531,8 +532,10 @@ export default function PublicEventClient({
           teamName: registrationResult.teamName,
         },
         qrPayload:
+          (registrationResult.liveTicketUrl && typeof window !== "undefined"
+            ? `${window.location.origin}${registrationResult.liveTicketUrl.replace(/^https?:\/\/[^/]+/, "")}`
+            : registrationResult.liveTicketUrl) ||
           registrationResult.qrCredentialId ||
-          registrationResult.liveTicketUrl ||
           ticketNum,
       });
 
@@ -980,10 +983,12 @@ export default function PublicEventClient({
 
             {/* Existing Registration Notice */}
             {registrationResult.isExisting && (
-              <div className="max-w-md mx-auto rounded-2xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 p-3 text-center text-xs text-amber-800 dark:text-amber-300">
-                <span className="font-semibold">Existing Registration Found</span>
-                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-                  You were already registered for this event. Your verified pass has been safely retrieved.
+              <div className="max-w-md mx-auto rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-center text-xs text-amber-800 dark:text-amber-200">
+                <span className="font-semibold block text-amber-900 dark:text-amber-200">
+                  Existing Registration Retrieved
+                </span>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                  You are already registered for this event. Your verified pass has been retrieved safely without creating a duplicate.
                 </p>
               </div>
             )}
@@ -992,7 +997,7 @@ export default function PublicEventClient({
             {registrationResult.liveTicketUrl && (
               <div className="max-w-md mx-auto text-center pt-1">
                 <Link
-                  href={registrationResult.liveTicketUrl}
+                  href={registrationResult.liveTicketUrl.replace(/^https?:\/\/[^/]+/, "")}
                   className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#17191C] dark:bg-white text-white dark:text-[#17191C] text-xs font-bold shadow-lg hover:scale-[1.01] transition-transform"
                 >
                   <Ticket className="h-4 w-4" />
@@ -1135,7 +1140,38 @@ export default function PublicEventClient({
               })}
             </div>
 
-            {submissionError && (
+            {duplicateRecord ? (
+              <div className="rounded-2xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 p-4 text-xs text-amber-900 dark:text-amber-200 space-y-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-sm text-amber-900 dark:text-amber-200">Already Registered</p>
+                    <p className="leading-relaxed">
+                      An active registration already exists for <strong>{duplicateRecord.email}</strong>. Duplicate registrations for the same participant are strictly disallowed.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-1 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-full bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs px-4 h-9 shadow-sm"
+                    onClick={() => {
+                      setRegistrationResult({
+                        ...duplicateRecord,
+                        isExisting: true,
+                        isMockPreview: false,
+                      });
+                      setJourneyStep("confirmed");
+                      window.scrollTo({ top: 350, behavior: "smooth" });
+                    }}
+                  >
+                    <Ticket className="h-3.5 w-3.5 mr-1.5" />
+                    View Existing Admission Pass &rarr;
+                  </Button>
+                </div>
+              </div>
+            ) : submissionError ? (
               <div className="rounded-2xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-3">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
                 <div className="space-y-1">
@@ -1143,7 +1179,7 @@ export default function PublicEventClient({
                   <p>{submissionError}</p>
                 </div>
               </div>
-            )}
+            ) : null}
 
             <div className="flex gap-3 pt-2">
               <Button
@@ -1151,6 +1187,7 @@ export default function PublicEventClient({
                 className="rounded-full text-xs h-11 px-5 border-[#E5E7EA] dark:border-[#30353A] dark:bg-[#1B1E21] dark:text-[#F1F2F3] dark:hover:bg-[#22262A]"
                 onClick={() => {
                   setSubmissionError(null);
+                  setDuplicateRecord(null);
                   setJourneyStep("form");
                 }}
               >
@@ -1160,7 +1197,7 @@ export default function PublicEventClient({
               <Button
                 variant="charcoal"
                 className="flex-1 rounded-full text-xs font-bold h-11 shadow-sm"
-                disabled={isSubmitting}
+                disabled={isSubmitting || Boolean(duplicateRecord)}
                 onClick={handleFinalSubmit}
               >
                 {isSubmitting ? "Verifying & Generating Pass..." : "Confirm & Claim Pass"}

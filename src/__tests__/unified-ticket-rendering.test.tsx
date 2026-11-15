@@ -243,4 +243,22 @@ describe("UnifiedTicketCard Rendering & Visual Invariants", () => {
     expect(html).toContain("{{attendee_name}}");
     expect(html).toContain("{{ticket_number}}");
   });
+
+  it("10. Supports responsive mode adapting for mobile boarding pass & desktop cinematic layouts", () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <UnifiedTicketCard
+        design={baseDesign}
+        event={{ title: "Responsive Summit 2026", category: "TECH" }}
+        attendee={{ name: "Mobile User", ticketNumber: "TKT-RESP-01" }}
+        qr={{ type: "synthetic" }}
+        responsive={true}
+      />
+    );
+
+    expect(html).toContain("perforated-divider-horizontal");
+    expect(html).toContain("md:flex-row");
+    expect(html).toContain("flex-col");
+    expect(html).toContain("max-w-[390px]");
+    expect(html).toContain("TKT-RESP-01");
+  });
 });

@@ -1,4 +1,4 @@
-import LoginPage from "@/app/(auth)/login/page";
+import AdminLoginView from "@/components/auth/admin-login-view";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function OpsGatewayPage() {
-  return <LoginPage />;
+  return <AdminLoginView />;
 }

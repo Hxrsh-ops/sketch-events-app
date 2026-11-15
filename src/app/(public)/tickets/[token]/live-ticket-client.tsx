@@ -57,12 +57,15 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [isDownloadingSvg, setIsDownloadingSvg] = useState<boolean>(false);
 
-  // Generate permanent, static QR code once from attendee ticket number
+  // Generate permanent, static QR code once from canonical ticket pass URL
   useEffect(() => {
     let isMounted = true;
-    const staticPayload = ticket.ticketNumber || bearerToken;
+    const canonicalLiveUrl =
+      typeof window !== "undefined" && window.location.href
+        ? window.location.href
+        : `https://sketchhub-liard.vercel.app/tickets/${bearerToken}`;
 
-    QRCode.toDataURL(staticPayload, {
+    QRCode.toDataURL(canonicalLiveUrl, {
       margin: 1,
       width: 260,
       color: { dark: "#17191C", light: "#FFFFFF" },
@@ -83,7 +86,7 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
     return () => {
       isMounted = false;
     };
-  }, [ticket.ticketNumber, bearerToken]);
+  }, [bearerToken]);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -104,6 +107,11 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
   const handleDownloadSvg = async () => {
     setIsDownloadingSvg(true);
     try {
+      const canonicalLiveUrl =
+        typeof window !== "undefined" && window.location.href
+          ? window.location.href
+          : `https://sketchhub-liard.vercel.app/tickets/${bearerToken}`;
+
       const svg = await generateUnifiedTicketSvg({
         design: resolvedDesign,
         event: {
@@ -118,7 +126,7 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
           ticketNumber: ticket.ticketNumber,
           teamName: ticket.teamName,
         },
-        qrPayload: ticket.ticketNumber || bearerToken,
+        qrPayload: canonicalLiveUrl,
       });
 
       const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
@@ -203,8 +211,9 @@ export default function LiveTicketClient({ ticket, bearerToken }: LiveTicketClie
         </div>
 
         {/* Central High-Fidelity Ticket Pass */}
-        <div className="w-full flex justify-center overflow-x-auto py-2">
+        <div className="w-full flex justify-center py-2 px-1">
           <UnifiedTicketCard
+            responsive={true}
             design={resolvedDesign}
             event={{
               title: ticket.eventTitle,

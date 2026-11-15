@@ -130,7 +130,7 @@ export function AuthProvider({
     } finally {
       setUser(null);
       // Replace location so back button does not retain previous state in history
-      window.location.replace("/login");
+      window.location.replace("/ops/gateway?signed_out=true");
     }
   };
 

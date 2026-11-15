@@ -217,7 +217,7 @@ describe("Direct Google OAuth Flow (No *.supabase.co Consent Redirect)", () => {
     const res = await oauthCallbackHandler(req);
     expect(res.status).toBe(307);
     const location = res.headers.get("location") || "";
-    expect(location).toContain("/login");
+    expect(location).toContain("/ops/gateway");
     expect(location).toContain("error=auth_exchange_failed");
 
     const setCookie = res.headers.get("set-cookie") || "";
@@ -275,7 +275,7 @@ describe("Direct Google OAuth Flow (No *.supabase.co Consent Redirect)", () => {
 
     const res = await oauthCallbackHandler(req);
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("/login?error=not_an_admin");
+    expect(res.headers.get("location")).toContain("/ops/gateway?error=not_an_admin");
     expect(signOutMock).toHaveBeenCalledTimes(1);
 
     const setCookie = res.headers.get("set-cookie") || "";

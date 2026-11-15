@@ -124,10 +124,16 @@ export function renderTicketPassEmail(
             </td>
           </tr>
 
-          <!-- Dashed Ticket Tear Divider -->
+          <!-- Perforated Ticket Tear Divider with Notches -->
           <tr>
-            <td style="padding:0 24px;">
-              <div style="border-top:1px dashed #2E343D;height:1px;"></div>
+            <td style="padding:0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0;border-collapse:collapse;">
+                <tr>
+                  <td width="16" style="width:16px;height:24px;background-color:#F3F4F6;border-radius:0 12px 12px 0;border:1px solid ${escapeHtml(borderColor)};border-left:none;">&nbsp;</td>
+                  <td style="border-bottom:1px dashed #3A4048;height:24px;vertical-align:middle;">&nbsp;</td>
+                  <td width="16" style="width:16px;height:24px;background-color:#F3F4F6;border-radius:12px 0 0 12px;border:1px solid ${escapeHtml(borderColor)};border-right:none;">&nbsp;</td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -148,7 +154,7 @@ export function renderTicketPassEmail(
                 </tr>
               </table>
 
-              <!-- Attached SVG Pass Notice -->
+              <!-- Attached Pass Notice -->
               <div style="margin-top:18px;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;text-align:center;">
                 <p style="margin:0;font-size:11px;color:#9CA3AF;">
                   Official Pass Attached: <strong style="color:#FFFFFF;font-family:monospace;">${escapeHtml(
@@ -162,12 +168,14 @@ export function renderTicketPassEmail(
                   ? `<div style="text-align:center;margin-top:18px;">
                       <a href="${escapeHtml(
                         payload.live_ticket_url
-                      )}" style="display:inline-block;padding:13px 26px;background:#FFFFFF;color:#111316;text-decoration:none;font-size:13px;font-weight:800;border-radius:9999px;">
+                      )}" style="display:inline-block;padding:13px 28px;background:${escapeHtml(
+                      accent
+                    )};color:#111316;text-decoration:none;font-size:13px;font-weight:800;letter-spacing:0.04em;border-radius:9999px;box-shadow:0 4px 14px rgba(226,184,87,0.35);">
                         Open Live Admission Pass &rarr;
                       </a>
                     </div>
                     <p style="margin:14px 0 0 0;font-size:11px;color:#6B7280;text-align:center;line-height:1.5;">
-                      <strong>Anti-Replay Notice:</strong> Your official entry QR code rotates continuously on your live ticket page.
+                      <strong>Entry Notice:</strong> Present this official admission pass or live ticket at venue check-in.
                     </p>`
                   : ""
               }

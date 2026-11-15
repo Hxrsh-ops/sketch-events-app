@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getServerEnv } from "@/lib/env.server";
 import { EmailDeliveryJob, EmailProviderAdapter, EmailAttachment } from "./types";
 import { ResendEmailAdapter, BrevoEmailAdapter, TestEmailAdapter, MailpitEmailAdapter } from "./adapters";
+import { dispatchAdminAlert } from "@/lib/alerts/admin-alerts";
 import { renderTicketPassEmail, renderCertificateEmail, renderAnnouncementEmail } from "./templates";
 import { getStoredCommunications, updateStoredCommunication } from "@/lib/registration-store";
 import { generateUnifiedTicketSvg, DEFAULT_UNIFIED_TICKET_DESIGN } from "@/lib/ticket/ticket-renderer";
@@ -209,6 +210,33 @@ export class EmailOutboxWorker {
 
         if (isTerminal) {
           result.terminalFailures++;
+        }
+
+        // Notify administrators if provider limit/quota or terminal failure occurs
+        const isLimitError =
+          sendRes.error?.includes("429") ||
+          sendRes.error?.includes("402") ||
+          sendRes.error?.toLowerCase().includes("limit") ||
+          sendRes.error?.toLowerCase().includes("quota") ||
+          sendRes.error?.toLowerCase().includes("credit");
+
+        if (isLimitError || isTerminal) {
+          dispatchAdminAlert({
+            category: isLimitError ? "EMAIL_PROVIDER_LIMIT" : "EMAIL_DISPATCH_FAILURE",
+            title: isLimitError
+              ? "Email Dispatch Limit or Quota Reached"
+              : `Terminal Delivery Failure (${job.recipientEmail})`,
+            details: `Outbox email delivery failed with provider message: ${sendRes.error || "Unknown delivery error"}`,
+            severity: isLimitError ? "critical" : "warning",
+            dedupKey: isLimitError ? "EMAIL_PROVIDER_LIMIT" : `DELIVERY_FAIL:${job.recipientEmail}`,
+            metadata: {
+              jobId: job.id,
+              recipient: job.recipientEmail,
+              subject: job.subject,
+              attempts: nextAttempts,
+              error: sendRes.error,
+            },
+          }).catch(() => {});
         }
 
         // Compute exponential backoff: scheduled_at = now + (2^(attempts-1) * baseBackoff)

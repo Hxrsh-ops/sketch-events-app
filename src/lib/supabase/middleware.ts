@@ -23,7 +23,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isLoginPage = pathname === "/login" || pathname === "/ops/gateway";
+  const isLoginPage = pathname === "/ops/gateway";
   const isPublicRoute =
     pathname === "/api/health" ||
     pathname.startsWith("/e/") ||
@@ -59,7 +59,7 @@ export async function updateSession(request: NextRequest) {
     // If unauthenticated in preview and trying to access an admin route, redirect to login
     if (!hasPreviewSession && !isLoginPage && !isPublicRoute) {
       const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
+      loginUrl.pathname = "/ops/gateway";
       loginUrl.searchParams.set("redirect", pathname);
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set("Cache-Control", "no-store, max-age=0, must-revalidate");
@@ -140,7 +140,7 @@ export async function updateSession(request: NextRequest) {
   // If unauthenticated in production and accessing admin route, redirect to login
   if (!user && !isLoginPage && !isPublicRoute) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
+    loginUrl.pathname = "/ops/gateway";
     loginUrl.searchParams.set("redirect", pathname);
     const redirectResponse = NextResponse.redirect(loginUrl);
     redirectResponse.headers.set("Cache-Control", "no-store, max-age=0, must-revalidate");

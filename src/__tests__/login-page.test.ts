@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import React from "react";
-import LoginPage from "@/app/(auth)/login/page";
+import AdminLoginView from "@/components/auth/admin-login-view";
 import { sanitizeInternalRedirect } from "@/lib/auth/redirect";
 import { getAuthErrorMessage } from "@/lib/auth/auth-errors";
 import { resetAppEnvCache } from "@/lib/env";
@@ -190,8 +190,8 @@ describe("Slice 2.3 & Commit 10: Administrator Login & Security Boundaries", () 
   });
 
   describe("5. Component Structure & Suspense Wrapper", () => {
-    it("exports LoginPage wrapped in a React Suspense boundary with BrandedInitScreen fallback", () => {
-      const element = LoginPage();
+    it("exports AdminLoginView wrapped in a React Suspense boundary with BrandedInitScreen fallback", () => {
+      const element = AdminLoginView();
       expect(element).toBeDefined();
       expect(element.type).toBe(React.Suspense);
       expect(element.props.fallback).toBeDefined();
@@ -203,24 +203,35 @@ describe("Slice 2.3 & Commit 10: Administrator Login & Security Boundaries", () 
     it("ensures SKETCHADMIN and temporary login bypass are completely eliminated from login page source", async () => {
       const fs = await import("fs");
       const path = await import("path");
-      const loginPageSource = fs.readFileSync(
-        path.join(process.cwd(), "src/app/(auth)/login/page.tsx"),
+      const gatewaySource = fs.readFileSync(
+        path.join(process.cwd(), "src/components/auth/admin-login-view.tsx"),
         "utf8"
       );
 
       // 1. SKETCHADMIN must not appear anywhere in user-facing copy or code
-      expect(loginPageSource.toLowerCase()).not.toContain("sketchadmin");
+      expect(gatewaySource.toLowerCase()).not.toContain("sketchadmin");
 
       // 2. Placeholder must be strictly "Administrator email"
-      expect(loginPageSource).toContain('placeholder="Administrator email"');
+      expect(gatewaySource).toContain('placeholder="Administrator email"');
 
       // 3. Email input must be type="email"
-      expect(loginPageSource).toContain('type="email"');
+      expect(gatewaySource).toContain('type="email"');
 
       // 4. Temporary preview bypasses must not exist
-      expect(loginPageSource).not.toContain("handleQuickPreviewFill");
-      expect(loginPageSource).not.toContain("isPreviewMode");
-      expect(loginPageSource).not.toContain("/api/auth/preview-login");
+      expect(gatewaySource).not.toContain("handleQuickPreviewFill");
+      expect(gatewaySource).not.toContain("isPreviewMode");
+      expect(gatewaySource).not.toContain("/api/auth/preview-login");
+    });
+
+    it("ensures public /login is strictly decommissioned with notFound() stealth gate", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const loginRouteSource = fs.readFileSync(
+        path.join(process.cwd(), "src/app/(auth)/login/page.tsx"),
+        "utf8"
+      );
+
+      expect(loginRouteSource).toContain("notFound()");
     });
   });
 
@@ -229,7 +240,7 @@ describe("Slice 2.3 & Commit 10: Administrator Login & Security Boundaries", () 
       const fs = await import("fs");
       const path = await import("path");
       const loginPageSource = fs.readFileSync(
-        path.join(process.cwd(), "src/app/(auth)/login/page.tsx"),
+        path.join(process.cwd(), "src/components/auth/admin-login-view.tsx"),
         "utf8"
       );
 

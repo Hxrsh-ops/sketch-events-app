@@ -439,7 +439,7 @@ describe.runIf(isLiveDb)("Real-Life Sketch Event Lifecycle & Security Hardening 
     });
     const certsRes = await updateSession(certsReq);
     expect(certsRes.status).toBe(307);
-    expect(certsRes.headers.get("location")).toContain("/login?redirect=%2Fcertificates");
+    expect(certsRes.headers.get("location")).toContain("/ops/gateway?redirect=%2Fcertificates");
     expect(certsRes.headers.get("X-Robots-Tag")).toBe("noindex, nofollow, noarchive");
     expect(certsRes.headers.get("Cache-Control")).toContain("no-store");
 

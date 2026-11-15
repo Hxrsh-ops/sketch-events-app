@@ -22,7 +22,7 @@ describe("Slice 2.2: OAuth Callback Security & Redirect Boundaries", () => {
     const res = await oauthCallbackHandler(req);
     expect(res.status).toBe(307);
     const location = res.headers.get("location");
-    expect(location).toContain("/login");
+    expect(location).toContain("/ops/gateway");
     expect(location).toContain("error=oauth_provider_error");
     expect(location).toContain("details=User");
   });
@@ -35,7 +35,7 @@ describe("Slice 2.2: OAuth Callback Security & Redirect Boundaries", () => {
     const res = await oauthCallbackHandler(req);
     expect(res.status).toBe(307);
     const location = res.headers.get("location");
-    expect(location).toContain("/login");
+    expect(location).toContain("/ops/gateway");
     expect(location).toContain("error=missing_auth_code");
   });
 
@@ -50,7 +50,7 @@ describe("Slice 2.2: OAuth Callback Security & Redirect Boundaries", () => {
     const res = await oauthCallbackHandler(req);
     expect(res.status).toBe(307);
     const location = res.headers.get("location");
-    expect(location).toContain("/login");
+    expect(location).toContain("/ops/gateway");
     // Does not redirect to malicious external domain
     expect(location).not.toContain("//malicious-site.com");
   });
@@ -69,7 +69,7 @@ describe("Slice 2.2: OAuth Callback Security & Redirect Boundaries", () => {
     const res = await oauthCallbackHandler(req);
     expect(res.status).toBe(307);
     const location = res.headers.get("location");
-    expect(location).toContain("/login");
+    expect(location).toContain("/ops/gateway");
     // Since code is invalid / not mock-exchanged, fails with exchange failed or not_an_admin
     expect(location).toMatch(/error=(auth_exchange_failed|not_an_admin)/);
   });
@@ -119,7 +119,7 @@ describe("Slice 2.2: OAuth Callback Security & Redirect Boundaries", () => {
     expect(signOutMock).toHaveBeenCalledTimes(1);
 
     const location = res.headers.get("location");
-    expect(location).toContain("/login?error=not_an_admin");
+    expect(location).toContain("/ops/gateway?error=not_an_admin");
 
     // Must delete the sb- auth cookie on the redirect response
     const setCookie = res.headers.get("set-cookie") || "";

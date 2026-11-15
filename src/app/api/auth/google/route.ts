@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   const env = getAppEnv();
   if (env.mode === "preview" || !env.supabaseUrl || !env.supabaseAnonKey) {
-    const errorUrl = new URL("/login", origin);
+    const errorUrl = new URL("/ops/gateway", origin);
     errorUrl.searchParams.set("error", "preview_oauth_unsupported");
     return NextResponse.redirect(errorUrl);
   }
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     if (!supabase) {
-      const errorUrl = new URL("/login", origin);
+      const errorUrl = new URL("/ops/gateway", origin);
       errorUrl.searchParams.set("error", "auth_client_unavailable");
       return NextResponse.redirect(errorUrl);
     }
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         errorMsg.toLowerCase().includes("network") ||
         errorMsg.toLowerCase().includes("503");
 
-      const errorUrl = new URL("/login", origin);
+      const errorUrl = new URL("/ops/gateway", origin);
       errorUrl.searchParams.set("error", isBackendDown ? "backend_unavailable" : "oauth_provider_error");
       errorUrl.searchParams.set("details", errorMsg);
       return NextResponse.redirect(errorUrl);
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(data.url);
   } catch (err: any) {
-    const errorUrl = new URL("/login", origin);
+    const errorUrl = new URL("/ops/gateway", origin);
     errorUrl.searchParams.set("error", "oauth_provider_error");
     errorUrl.searchParams.set("details", err?.message || "Google OAuth initialization failed.");
     return NextResponse.redirect(errorUrl);

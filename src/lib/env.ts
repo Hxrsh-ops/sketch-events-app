@@ -145,7 +145,17 @@ export function getAppEnv(): AppEnv {
   const appMode = parseAppMode();
   const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const rawSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+  let rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
+  let appUrl = rawAppUrl || "";
+  if (!appUrl || (appMode === "production" && appUrl.includes("localhost"))) {
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      appUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`.replace(/\/+$/, "");
+    } else if (process.env.VERCEL_URL) {
+      appUrl = `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "");
+    } else {
+      appUrl = appMode === "production" ? "https://sketchhub-liard.vercel.app" : "http://localhost:3000";
+    }
+  }
 
   let supabaseUrl = rawSupabaseUrl ? sanitizeSupabaseUrl(rawSupabaseUrl) : undefined;
   let supabaseAnonKey = rawSupabaseAnonKey ? sanitizeSupabaseKey(rawSupabaseAnonKey) : undefined;

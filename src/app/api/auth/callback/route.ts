@@ -39,14 +39,14 @@ export async function GET(request: NextRequest) {
 
   // Handle OAuth provider errors / cancellation directly
   if (error) {
-    const errorUrl = new URL("/login", origin);
+    const errorUrl = new URL("/ops/gateway", origin);
     errorUrl.searchParams.set("error", "oauth_provider_error");
     errorUrl.searchParams.set("details", errorDescription || error);
     return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
   }
 
   if (!code) {
-    const errorUrl = new URL("/login", origin);
+    const errorUrl = new URL("/ops/gateway", origin);
     errorUrl.searchParams.set("error", "missing_auth_code");
     return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
   }
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
   // If invoked in preview mode where Supabase is not active
   if (env.mode === "preview" || !env.supabaseUrl) {
-    const errorUrl = new URL("/login", origin);
+    const errorUrl = new URL("/ops/gateway", origin);
     errorUrl.searchParams.set("error", "preview_oauth_unsupported");
     return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
   }
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     if (!supabase) {
-      const errorUrl = new URL("/login", origin);
+      const errorUrl = new URL("/ops/gateway", origin);
       errorUrl.searchParams.set("error", "auth_client_unavailable");
       return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
     }
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       // Verify CSRF state & signed transaction cookie, exchange code with Google, then sign in via ID token.
       const tx = verifyGoogleOAuthTxToken(txCookie);
       if (!tx || !stateParam || !timingSafeStringEqual(tx.state, stateParam)) {
-        const errorUrl = new URL("/login", origin);
+        const errorUrl = new URL("/ops/gateway", origin);
         errorUrl.searchParams.set("error", "auth_exchange_failed");
         errorUrl.searchParams.set("details", "Invalid or expired Google OAuth state. Please try signing in again.");
         return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 
       const googleConfig = getGoogleOAuthConfig();
       if (!googleConfig.isConfigured || !googleConfig.clientId || !googleConfig.clientSecret) {
-        const errorUrl = new URL("/login", origin);
+        const errorUrl = new URL("/ops/gateway", origin);
         errorUrl.searchParams.set("error", "auth_client_unavailable");
         return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
       }
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
           message: tokenRes.error,
           isNetworkError: tokenRes.isNetworkError,
         });
-        const errorUrl = new URL("/login", origin);
+        const errorUrl = new URL("/ops/gateway", origin);
         errorUrl.searchParams.set(
           "error",
           tokenRes.isNetworkError ? "backend_unavailable" : "auth_exchange_failed"
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
         keyPrefix: env.supabaseAnonKey ? env.supabaseAnonKey.slice(0, 15) : "missing",
       });
 
-      const errorUrl = new URL("/login", origin);
+      const errorUrl = new URL("/ops/gateway", origin);
       errorUrl.searchParams.set("error", isBackendDown ? "backend_unavailable" : "auth_exchange_failed");
       errorUrl.searchParams.set("details", errorMsg);
       return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
         message: profileError.message,
       });
       // Do not mistake backend downtime for invalid credentials
-      const errorUrl = new URL("/login", origin);
+      const errorUrl = new URL("/ops/gateway", origin);
       errorUrl.searchParams.set("error", "backend_unavailable");
       errorUrl.searchParams.set("details", "Database error verifying administrator profile.");
       return clearTxCookieIfPresent(NextResponse.redirect(errorUrl), hasTxCookie);
@@ -248,7 +248,7 @@ export async function GET(request: NextRequest) {
     ) {
       // Revoke the session immediately — authenticated user is NOT an authorized administrator
       await supabase.auth.signOut();
-      const errorUrl = new URL("/login", origin);
+      const errorUrl = new URL("/ops/gateway", origin);
       errorUrl.searchParams.set("error", "not_an_admin");
       const redirectRes = NextResponse.redirect(errorUrl);
 
@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
       isNetworkOrDns,
     });
 
-    const errorUrl = new URL("/login", origin);
+    const errorUrl = new URL("/ops/gateway", origin);
     errorUrl.searchParams.set(
       "error",
       isNetworkOrDns ? "backend_unavailable" : "auth_exchange_failed"

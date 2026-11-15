@@ -50,7 +50,7 @@ import {
 import { MOCK_EVENTS, MOCK_PARTICIPANTS } from "@/lib/mock-data";
 import { Participant, EventItem } from "@/types";
 import { toggleAttendanceAction } from "@/app/actions/participant-actions";
-import { verifyRotatingQrAction } from "@/app/actions/ticket-actions";
+import { verifyRotatingQrAction, getLiveTicketAction } from "@/app/actions/ticket-actions";
 
 interface ScanOutcome {
   status: "idle" | "accepted" | "already_checked_in" | "not_found";
@@ -427,13 +427,26 @@ export default function AttendanceClient({
       return;
     }
 
-    // 2. Standard identifier / badge / static QR lookup (Registration ID, Ticket Number, QR Credential ID, Email, Name)
+    // 2. Standard identifier / badge / static QR lookup (Registration ID, Ticket Number, QR Credential ID, Email, Name, or Live Pass URL)
     let cleanCode = trimmedCode.toLowerCase();
+    let resolvedTicketNumber = "";
 
     // If scanned value is a full URL (e.g. from camera scanning ticket link https://.../tickets/tkt_pass_...)
     if (cleanCode.includes("/tickets/")) {
       const parts = cleanCode.split("/tickets/");
       cleanCode = parts[parts.length - 1].split("?")[0].toLowerCase();
+    }
+
+    // If scanned code is a ticket bearer token, resolve authoritative ticket data from server
+    if (cleanCode.startsWith("tkt_pass_")) {
+      try {
+        const liveRes = await getLiveTicketAction(cleanCode);
+        if (liveRes.success && liveRes.data?.ticketNumber) {
+          resolvedTicketNumber = liveRes.data.ticketNumber.toLowerCase();
+        }
+      } catch {
+        // Fallback to local roster matching
+      }
     }
 
     // Find participant matching registration ID, ticketNumber, email, qrCredentialId, name, or cross-matching TKT-/REG- prefixes
@@ -444,6 +457,10 @@ export default function AttendanceClient({
           (p.ticketNumber && p.ticketNumber.toLowerCase() === cleanCode) ||
           p.registrationId.toLowerCase() === cleanCode.replace(/^tkt-/, "reg-") ||
           (p.ticketNumber && p.ticketNumber.toLowerCase() === cleanCode.replace(/^reg-/, "tkt-")) ||
+          (resolvedTicketNumber && (
+            (p.ticketNumber && p.ticketNumber.toLowerCase() === resolvedTicketNumber) ||
+            p.registrationId.toLowerCase() === resolvedTicketNumber.replace(/^tkt-/, "reg-")
+          )) ||
           p.qrCredentialId.toLowerCase() === cleanCode ||
           p.email.toLowerCase() === cleanCode ||
           p.name.toLowerCase() === cleanCode)
@@ -457,6 +474,10 @@ export default function AttendanceClient({
           p.registrationId.toLowerCase() === cleanCode ||
           (p.ticketNumber && p.ticketNumber.toLowerCase() === cleanCode) ||
           p.registrationId.toLowerCase() === cleanCode.replace(/^tkt-/, "reg-") ||
+          (resolvedTicketNumber && (
+            (p.ticketNumber && p.ticketNumber.toLowerCase() === resolvedTicketNumber) ||
+            p.registrationId.toLowerCase() === resolvedTicketNumber.replace(/^tkt-/, "reg-")
+          )) ||
           p.email.toLowerCase() === cleanCode ||
           p.qrCredentialId.toLowerCase() === cleanCode
       );

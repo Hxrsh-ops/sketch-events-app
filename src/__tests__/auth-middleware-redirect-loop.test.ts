@@ -20,8 +20,8 @@ describe("Middleware Authentication & Redirect Loop Invariants", () => {
       delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     });
 
-    it("does NOT auto-redirect to dashboard when visiting /login with an error parameter", async () => {
-      const req = new NextRequest("http://localhost:3000/login?error=not_an_admin", {
+    it("does NOT auto-redirect to dashboard when visiting /ops/gateway with an error parameter", async () => {
+      const req = new NextRequest("http://localhost:3000/ops/gateway?error=not_an_admin", {
         headers: {
           cookie: `${PREVIEW_SESSION_COOKIE}=mock-preview-session-token`,
         },
@@ -34,8 +34,8 @@ describe("Middleware Authentication & Redirect Loop Invariants", () => {
       expect(res.headers.get("location")).toBeNull();
     });
 
-    it("auto-redirects to dashboard when visiting /login without errors if session exists", async () => {
-      const req = new NextRequest("http://localhost:3000/login", {
+    it("auto-redirects to dashboard when visiting /ops/gateway without errors if session exists", async () => {
+      const req = new NextRequest("http://localhost:3000/ops/gateway", {
         headers: {
           cookie: `${PREVIEW_SESSION_COOKIE}=mock-preview-session-token`,
         },
@@ -46,14 +46,14 @@ describe("Middleware Authentication & Redirect Loop Invariants", () => {
       expect(res.headers.get("location")).toBe("http://localhost:3000/");
     });
 
-    it("redirects unauthenticated user accessing protected route to /login", async () => {
+    it("redirects unauthenticated user accessing protected route to /ops/gateway", async () => {
       const req = new NextRequest("http://localhost:3000/events", {
         headers: {},
       });
 
       const res = await updateSession(req);
       expect(res.status).toBe(307);
-      expect(res.headers.get("location")).toContain("/login?redirect=%2Fevents");
+      expect(res.headers.get("location")).toContain("/ops/gateway?redirect=%2Fevents");
     });
   });
 
@@ -65,8 +65,8 @@ describe("Middleware Authentication & Redirect Loop Invariants", () => {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
     });
 
-    it("strictly prevents redirect loop when navigating to /login?error=not_an_admin", async () => {
-      const req = new NextRequest("http://localhost:3000/login?error=not_an_admin", {
+    it("strictly prevents redirect loop when navigating to /ops/gateway?error=not_an_admin", async () => {
+      const req = new NextRequest("http://localhost:3000/ops/gateway?error=not_an_admin", {
         headers: {
           cookie: "sb-auth-token=active-token",
         },
@@ -77,7 +77,7 @@ describe("Middleware Authentication & Redirect Loop Invariants", () => {
       expect(res.headers.get("location")).not.toBe("http://localhost:3000/");
     });
 
-    it("exempts /api/cron/process-outbox from /login redirects so CRON_SECRET auth handles it", async () => {
+    it("exempts /api/cron/process-outbox from /ops/gateway redirects so CRON_SECRET auth handles it", async () => {
       const postReq = new NextRequest("http://localhost:3000/api/cron/process-outbox", {
         method: "POST",
         headers: {

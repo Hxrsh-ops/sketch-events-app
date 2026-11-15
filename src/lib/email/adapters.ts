@@ -151,13 +151,22 @@ export class BrevoEmailAdapter implements EmailProviderAdapter {
       let htmlContent = options.html;
       const attachments: Array<{ name: string; content: string }> = [];
 
-      // Include explicit file attachments
+      // Allowed file extensions strictly enforced by Brevo API
+      // Brevo rejects non-conforming extensions (such as .svg) with HTTP 400 'Unsupported file format'
+      const BREVO_SUPPORTED_EXTENSIONS = /\.(xlsx|xls|ods|docx|docm|doc|csv|pdf|txt|gif|jpg|jpeg|png|tif|tiff|rtf|odp|pptx|pptm|ppt)$/i;
+
+      // Include explicit file attachments supported by Brevo
       if (options.attachments && options.attachments.length > 0) {
         for (const att of options.attachments) {
-          attachments.push({
-            name: att.filename || att.name || "attachment",
-            content: att.content,
-          });
+          const name = att.filename || att.name || "attachment";
+          if (BREVO_SUPPORTED_EXTENSIONS.test(name)) {
+            attachments.push({
+              name,
+              content: att.content,
+            });
+          } else {
+            console.warn(`[BrevoEmailAdapter] Filtered unsupported attachment "${name}" for Brevo compliance.`);
+          }
         }
       }
 

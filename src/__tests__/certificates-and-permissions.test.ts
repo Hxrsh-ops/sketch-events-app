@@ -138,7 +138,7 @@ describe("Public Route Middleware Matching Rules", () => {
     "/certificates/verify/SKETCH-CERT-TEST-1234",
     "/verify/TKT-001",
     "/tickets/tkt-001/rotating-qr",
-    "/login",
+    "/ops/gateway",
   ];
 
   const adminPaths = [
@@ -159,7 +159,7 @@ describe("Public Route Middleware Matching Rules", () => {
   it("distinguishes public verification & ticket paths from admin management paths", () => {
     const isPublic = (path: string) => {
       if (
-        path === "/login" ||
+        path === "/ops/gateway" ||
         path.startsWith("/api/public") ||
         path.startsWith("/api/cron") ||
         path.startsWith("/api/certificates/verify") ||
