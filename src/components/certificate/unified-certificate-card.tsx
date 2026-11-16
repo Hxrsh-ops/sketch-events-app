@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import QRCode from "qrcode";
 import { QrCode, Award, ShieldCheck } from "lucide-react";
 import { CertificateDesignData, CertificateElement } from "@/types/certificate-template";
 
@@ -30,6 +31,36 @@ export function UnifiedCertificateCard({
   className = "",
 }: UnifiedCertificateCardProps) {
   const [bgFailed, setBgFailed] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const certNumber = certificate.certificateNumber || "SKETCH-CERT-SAMPLE";
+    const baseUrl =
+      typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const verifyUrl = `${baseUrl}/certificates/verify/${encodeURIComponent(certNumber)}`;
+
+    let isMounted = true;
+    QRCode.toDataURL(verifyUrl, {
+      margin: 1,
+      width: 256,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    })
+      .then((url) => {
+        if (isMounted) setQrDataUrl(url);
+      })
+      .catch((err) => {
+        console.error("Failed to generate QR data URL:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [certificate.certificateNumber]);
 
   const canvasWidth = design.canvas?.width || 842;
   const canvasHeight = design.canvas?.height || 595;
@@ -201,11 +232,19 @@ export function UnifiedCertificateCard({
                   transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
                   transformOrigin: "center center",
                 }}
-                className={`flex items-center justify-center bg-white p-2 rounded-xl shadow-lg border border-neutral-200 ${
+                className={`flex items-center justify-center bg-white p-2 rounded-xl shadow-lg border border-neutral-200 overflow-hidden ${
                   interactive ? "cursor-move" : ""
                 } ${isSelected ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-neutral-900" : ""}`}
               >
-                <QrCode className="h-full w-full text-neutral-900" />
+                {qrDataUrl ? (
+                  <img
+                    src={qrDataUrl}
+                    alt="Certificate Verification QR Code"
+                    className="h-full w-full object-contain pointer-events-none select-none"
+                  />
+                ) : (
+                  <QrCode className="h-full w-full text-neutral-900" />
+                )}
               </div>
             );
           }

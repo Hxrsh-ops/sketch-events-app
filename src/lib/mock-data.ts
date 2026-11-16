@@ -566,6 +566,26 @@ export const MOCK_COMMUNICATIONS: CommunicationJob[] = [
 
 export const MOCK_CERTIFICATES: CertificateRecord[] = [
   {
+    id: "cert-03",
+    eventId: "evt-01",
+    eventTitle: "Annual Design & Tech Summit 2026",
+    recipientName: "Aditi Rao",
+    recipientEmail: "aditi.rao@college.edu",
+    certificateNumber: "SKETCH-CERT-2026-8849",
+    issuedAt: "2026-11-21T10:00:00Z",
+    status: "issued",
+  },
+  {
+    id: "cert-04",
+    eventId: "evt-03",
+    eventTitle: "Visual Storytelling Masterclass",
+    recipientName: "Karthik Subramanian",
+    recipientEmail: "karthik.s@college.edu",
+    certificateNumber: "SKETCH-CERT-2026-REVOKED",
+    issuedAt: "2026-10-02T18:05:00Z",
+    status: "revoked",
+  },
+  {
     id: "cert-01",
     eventId: "evt-03",
     eventTitle: "Visual Storytelling Masterclass",

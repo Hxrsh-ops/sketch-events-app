@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import QRCode from "qrcode";
 import { verifyAdminSession } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/permissions";
 import { SketchRepository } from "@/lib/supabase/repository";
@@ -97,6 +98,36 @@ export async function GET(
     page.drawText(`CERTIFICATE ID: ${certificate.certificateNumber}`, {
       x: 85, y: 80, size: 11, font: bold, color: dark,
     });
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const verifyUrl = `${baseUrl.replace(/\/+$/, "")}/certificates/verify/${encodeURIComponent(certificate.certificateNumber)}`;
+      const qrPngBuffer = await QRCode.toBuffer(verifyUrl, {
+        type: "png",
+        width: 200,
+        margin: 1,
+        color: {
+          dark: "#17191C",
+          light: "#FFFFFF",
+        },
+      });
+      const qrImage = await pdf.embedPng(qrPngBuffer);
+      page.drawImage(qrImage, {
+        x: 690,
+        y: 65,
+        width: 65,
+        height: 65,
+      });
+      page.drawText("SCAN TO VERIFY", {
+        x: 686,
+        y: 53,
+        size: 7,
+        font: bold,
+        color: muted,
+      });
+    } catch (qrErr) {
+      console.error("[certificate-pdf] QR embedding skipped:", qrErr);
+    }
 
     centered("SKETCH DIGITAL CREDENTIAL", 48, 9, regular, muted);
 

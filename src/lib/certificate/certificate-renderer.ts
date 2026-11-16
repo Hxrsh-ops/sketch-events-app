@@ -33,7 +33,12 @@ export async function generateCertificateSvg(props: CertificateRenderProps): Pro
   const textColor = design.theme?.textColor || "#FFFFFF";
   const borderColor = design.theme?.borderColor || "#30363D";
 
-  const verifyUrl = `${props.verificationBaseUrl || ""}/certificates/verify/${encodeURIComponent(
+  const defaultBaseUrl =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+  const baseUrl = (props.verificationBaseUrl || defaultBaseUrl).replace(/\/+$/, "");
+  const verifyUrl = `${baseUrl}/certificates/verify/${encodeURIComponent(
     certificate.certificateNumber
   )}`;
 
