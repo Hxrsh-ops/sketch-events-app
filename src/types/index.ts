@@ -28,6 +28,8 @@ export type FormFieldType =
 export interface FormFieldOption {
   label: string;
   value: string;
+  group?: string;
+  description?: string;
 }
 
 export interface ConditionalRule {

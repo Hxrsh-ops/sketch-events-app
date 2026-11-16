@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { SketchRepository } from "@/lib/supabase/repository";
 import {
   getStoredEvents,
@@ -15,7 +14,6 @@ import { generateTicketBearerToken } from "@/lib/ticket/rotating-qr";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import QRCode from "qrcode";
 import { EmailOutboxWorker } from "@/lib/email/worker";
-import { dispatchAdminAlert } from "@/lib/alerts/admin-alerts";
 
 /**
  * Standard Result Type for Server Actions
@@ -34,31 +32,6 @@ export type { RegistrationPassData, RegisterForEventInput };
 
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-async function getCanonicalAppUrl(): Promise<string> {
-  try {
-    const headerList = await headers();
-    const host = headerList.get("x-forwarded-host") || headerList.get("host");
-    const proto = headerList.get("x-forwarded-proto") || "https";
-    if (host && !host.includes("localhost")) {
-      return `${proto}://${host}`.replace(/\/+$/, "");
-    }
-  } catch {
-    // outside request context
-  }
-
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
-  if (configured && !configured.includes("localhost")) {
-    return configured;
-  }
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`.replace(/\/+$/, "");
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "");
-  }
-  return configured || "https://sketchhub-liard.vercel.app";
-}
 
 const SAFE_BUSINESS_ERRORS: Record<string, string> = {
   EVENT_NOT_FOUND: "Event does not exist.",
@@ -242,20 +215,75 @@ export async function registerForEventAction(
         };
       }
 
-      // Duplicate email checks against preview store
+      // Duplicate registration checks against preview store:
+      // Support registering multiple students using the same email address when allowSharedEmail is true.
+      // Always block when the exact same attendee is already registered under this email (accidental duplicate prevention).
       const storedSubmissions = getStoredSubmissions(event.id);
-      if (storedSubmissions.some((s) => s.email.trim().toLowerCase() === normalizedEmail)) {
+      const existingStudentSubmission = storedSubmissions.find(
+        (s) =>
+          s.eventId === event.id &&
+          s.email.trim().toLowerCase() === normalizedEmail &&
+          s.attendeeName.trim().toLowerCase() === data.attendeeName.trim().toLowerCase() &&
+          s.status !== "cancelled"
+      );
+
+      if (existingStudentSubmission) {
         return {
           success: false,
           error: "ALREADY_REGISTERED",
           message: "You are already registered for this event.",
+          data: {
+            registrationId: existingStudentSubmission.registrationId,
+            qrCredentialId: existingStudentSubmission.qrCredentialId,
+            attendeeName: existingStudentSubmission.attendeeName,
+            email: normalizedEmail,
+            teamName: existingStudentSubmission.teamName,
+            eventTitle: event.title,
+            registeredAt: existingStudentSubmission.submittedAt,
+            isExisting: true,
+          },
+        };
+      }
+
+      // If email exists for another student and allowSharedEmail is not requested:
+      // Return existing registration info to allow starting another student's registration
+      const existingEmailSubmission = storedSubmissions.find(
+        (s) =>
+          s.eventId === event.id &&
+          s.email.trim().toLowerCase() === normalizedEmail &&
+          s.status !== "cancelled"
+      );
+
+      if (existingEmailSubmission && !data.allowSharedEmail) {
+        return {
+          success: false,
+          error: "ALREADY_REGISTERED",
+          message: "You are already registered for this event.",
+          data: {
+            registrationId: existingEmailSubmission.registrationId,
+            qrCredentialId: existingEmailSubmission.qrCredentialId,
+            attendeeName: existingEmailSubmission.attendeeName,
+            email: normalizedEmail,
+            teamName: existingEmailSubmission.teamName,
+            eventTitle: event.title,
+            registeredAt: existingEmailSubmission.submittedAt,
+            isExisting: true,
+          },
         };
       }
 
       if (data.mode === "team") {
         for (const member of data.teamMembers) {
           const mEmail = member.email.trim().toLowerCase();
-          if (storedSubmissions.some((s) => s.email.trim().toLowerCase() === mEmail)) {
+          const mName = member.name.trim().toLowerCase();
+          if (
+            storedSubmissions.some(
+              (s) =>
+                s.email.trim().toLowerCase() === mEmail &&
+                s.attendeeName.trim().toLowerCase() === mName &&
+                s.status !== "cancelled"
+            )
+          ) {
             return {
               success: false,
               error: "MEMBER_ALREADY_REGISTERED",
@@ -360,19 +388,6 @@ export async function registerForEventAction(
     }
 
     if (event.registrationState !== "open") {
-      dispatchAdminAlert({
-        category: "REGISTRATION_DEADLINE_EXPIRED",
-        title: `Registration Attempt On Closed Event: ${event.title}`,
-        details: `A user attempted to register for "${event.title}", but registration state is currently "${event.registrationState}".`,
-        severity: "info",
-        dedupKey: `REG_CLOSED:${authoritativeEventId}`,
-        metadata: {
-          eventId: authoritativeEventId,
-          eventTitle: event.title,
-          state: event.registrationState,
-        },
-      }).catch(() => {});
-
       return {
         success: false,
         error: "REGISTRATION_CLOSED",
@@ -416,20 +431,6 @@ export async function registerForEventAction(
 
     const regCountToAdd = data.mode === "team" ? 1 + data.teamMembers.length : 1;
     if ((event.registeredCount + regCountToAdd) > event.capacity) {
-      dispatchAdminAlert({
-        category: "EVENT_CAPACITY_FULL",
-        title: `Event Registration Full: ${event.title}`,
-        details: `Event "${event.title}" has reached full capacity (${event.registeredCount}/${event.capacity}). New attendees are unable to register.`,
-        severity: "warning",
-        dedupKey: `EVENT_CAPACITY_FULL:${authoritativeEventId}`,
-        metadata: {
-          eventId: authoritativeEventId,
-          eventTitle: event.title,
-          capacity: event.capacity,
-          currentRegistrations: event.registeredCount,
-        },
-      }).catch(() => {});
-
       return {
         success: false,
         error: "CAPACITY_EXCEEDED",
@@ -455,15 +456,13 @@ export async function registerForEventAction(
       if (regResult.error === "ALREADY_REGISTERED") {
         const existing = await SketchRepository.getRegistrationByEventAndEmail(
           authoritativeEventId,
-          normalizedEmail
+          normalizedEmail,
+          data.attendeeName
         );
 
         if (existing) {
-          const appUrl = await getCanonicalAppUrl();
+          const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
           let liveTicketUrl = existing.liveTicketUrl;
-          if (liveTicketUrl && liveTicketUrl.includes("localhost") && !appUrl.includes("localhost")) {
-            liveTicketUrl = liveTicketUrl.replace(/^http:\/\/localhost:\d+/, appUrl);
-          }
           let ticketNumber = existing.ticketNumber;
 
           // If ticket or live url was missing, reconcile it now
@@ -515,19 +514,6 @@ export async function registerForEventAction(
         console.error("[registerForEventAction] Unexpected registration database error:", {
           code: regResult.error,
         });
-
-        dispatchAdminAlert({
-          category: "REGISTRATION_SYSTEM_ERROR",
-          title: `Registration Database Failure: ${event.title}`,
-          details: `Participant registration for "${event.title}" failed with unexpected error code: ${regResult.error}`,
-          severity: "critical",
-          dedupKey: `REG_DB_ERR:${authoritativeEventId}:${regResult.error}`,
-          metadata: {
-            eventId: authoritativeEventId,
-            eventTitle: event.title,
-            error: regResult.error,
-          },
-        }).catch(() => {});
       }
 
       return {
@@ -539,7 +525,7 @@ export async function registerForEventAction(
       };
     }
 
-    const appUrl = await getCanonicalAppUrl();
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
     let issuedTicketNumber = `TKT-${regResult.registrationId!.replace(/^REG-/, "")}`;
     let liveTicketUrl: string | undefined;
 

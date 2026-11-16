@@ -3465,7 +3465,11 @@ export class SketchRepository {
    * Safe lookup of an attendee registration and its associated ticket by event and email.
    * Returns display and reconciliation data without exposing internal credentials.
    */
-  static async getRegistrationByEventAndEmail(eventId: string, email: string): Promise<{
+  static async getRegistrationByEventAndEmail(
+    eventId: string,
+    email: string,
+    attendeeName?: string
+  ): Promise<{
     id: string;
     registrationId: string;
     eventId: string;
@@ -3488,7 +3492,7 @@ export class SketchRepository {
     const supabase: any = createAdminClient() || (await createClient());
     if (!supabase) return null;
 
-    const { data: reg, error } = await supabase
+    let query = supabase
       .from("registrations")
       .select(`
         id,
@@ -3507,7 +3511,13 @@ export class SketchRepository {
       `)
       .eq("event_id", eventId)
       .ilike("email", email.trim().toLowerCase())
-      .neq("status", "cancelled")
+      .neq("status", "cancelled");
+
+    if (attendeeName && attendeeName.trim()) {
+      query = query.ilike("attendee_name", attendeeName.trim());
+    }
+
+    const { data: reg, error } = await query
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

@@ -136,7 +136,12 @@ export function getEventBySlugOrId(slugOrId: string): EventItem | undefined {
 // ==========================================
 
 export function getStoredSubmissions(eventId?: string): RegistrationSubmission[] {
-  if (typeof window === "undefined") return memorySubmissions;
+  if (typeof window === "undefined") {
+    if (eventId && eventId !== "all") {
+      return memorySubmissions.filter((s) => s.eventId === eventId);
+    }
+    return memorySubmissions;
+  }
   const submissions = readStorage<RegistrationSubmission[]>(STORAGE_KEY_SUBMISSIONS, memorySubmissions);
   memorySubmissions = submissions;
 
