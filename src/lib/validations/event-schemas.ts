@@ -34,6 +34,7 @@ export const CreateEventSchema = z
     contactEmail: z.string().email("Contact email must be valid").optional().nullable().or(z.literal("")),
     contactPhone: z.string().optional().nullable(),
     communityLink: z.string().optional().nullable().or(z.literal("")),
+    heroCardConfig: z.record(z.string(), z.unknown()).optional().nullable(),
     registrationForm: z.record(z.string(), z.unknown()).optional(),
   })
   .refine(
@@ -85,6 +86,7 @@ export const UpdateEventSchema = z
     contactEmail: z.string().email().optional().nullable().or(z.literal("")),
     contactPhone: z.string().optional().nullable(),
     communityLink: z.string().url().optional().nullable().or(z.literal("")),
+    heroCardConfig: z.record(z.string(), z.unknown()).optional().nullable(),
     registrationForm: z.record(z.string(), z.unknown()).optional(),
   })
   .refine(

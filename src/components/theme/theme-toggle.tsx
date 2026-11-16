@@ -8,7 +8,12 @@ import { useTheme, Theme } from "./theme-provider";
 export function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -23,6 +28,9 @@ export function ThemeToggle() {
   }, [isOpen]);
 
   const getThemeIcon = () => {
+    if (!mounted) {
+      return <Sun className="h-4 w-4" />;
+    }
     if (theme === "system") {
       return <Laptop className="h-4 w-4" />;
     }
@@ -40,11 +48,12 @@ export function ThemeToggle() {
   ];
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" suppressHydrationWarning>
       <button
         type="button"
+        suppressHydrationWarning
         onClick={() => setIsOpen(!isOpen)}
-        aria-label={`Theme: ${theme}. Click to change theme.`}
+        aria-label={mounted ? `Theme: ${theme}. Click to change theme.` : "Toggle appearance theme"}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"

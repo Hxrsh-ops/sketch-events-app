@@ -264,7 +264,7 @@ export function DynamicFormRenderer({
                               disabled={disabled}
                               className={
                                 isRetro
-                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                  ? `retro-input w-full h-12 rounded-xl border-2 border-ink bg-[#FFFDF7] px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
                                       error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
                                     }`
                                   : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
@@ -282,7 +282,7 @@ export function DynamicFormRenderer({
                               disabled={disabled}
                               className={
                                 isRetro
-                                  ? `w-full rounded-xl border-2 border-ink bg-cream-plus p-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                  ? `retro-input w-full rounded-xl border-2 border-ink bg-[#FFFDF7] p-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
                                       error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
                                     }`
                                   : `w-full rounded-2xl border bg-white dark:bg-[#1B1E21] p-3 text-xs text-[#17191C] dark:text-[#F1F2F3] placeholder:text-[#8A9098] transition-all focus:outline-none focus:ring-1 ${
@@ -304,7 +304,7 @@ export function DynamicFormRenderer({
                               disabled={disabled}
                               className={
                                 isRetro
-                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                  ? `retro-input w-full h-12 rounded-xl border-2 border-ink bg-[#FFFDF7] px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
                                       error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
                                     }`
                                   : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
@@ -322,7 +322,7 @@ export function DynamicFormRenderer({
                               disabled={disabled}
                               className={
                                 isRetro
-                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                  ? `retro-input w-full h-12 rounded-xl border-2 border-ink bg-[#FFFDF7] px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
                                       error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
                                     }`
                                   : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
@@ -342,7 +342,7 @@ export function DynamicFormRenderer({
                               disabled={disabled}
                               className={
                                 isRetro
-                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                  ? `retro-input w-full h-12 rounded-xl border-2 border-ink bg-[#FFFDF7] px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
                                       error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
                                     }`
                                   : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
@@ -360,7 +360,7 @@ export function DynamicFormRenderer({
                               disabled={disabled}
                               className={
                                 isRetro
-                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                  ? `retro-input w-full h-12 rounded-xl border-2 border-ink bg-[#FFFDF7] px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
                                       error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
                                     }`
                                   : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
@@ -377,7 +377,7 @@ export function DynamicFormRenderer({
                               disabled={disabled}
                               className={
                                 isRetro
-                                  ? `w-full h-12 rounded-xl border-2 border-ink bg-cream-plus px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                  ? `retro-input w-full h-12 rounded-xl border-2 border-ink bg-[#FFFDF7] px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
                                       error ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
                                     }`
                                   : `w-full ${error ? "border-red-500 ring-1 ring-red-500" : ""}`
@@ -395,11 +395,10 @@ export function DynamicFormRenderer({
                               }
                               value={(value as string) || ""}
                               onChange={(val) => onChange(fieldId, val)}
+                              variant={isRetro ? "retro" : "default"}
                               className={
                                 isRetro
-                                  ? `rounded-xl border-2 border-ink bg-cream-plus text-ink font-quicksand font-bold shadow-brutal-flat ${
-                                      error ? "border-red-600 ring-2 ring-red-500" : ""
-                                    }`
+                                  ? error ? "ring-2 ring-red-500 rounded-xl" : ""
                                   : error
                                   ? "border-red-500"
                                   : ""

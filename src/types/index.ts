@@ -78,6 +78,19 @@ export interface RegistrationFormSchema {
   teamConfig?: TeamConfig;
 }
 
+export interface HeroCardConfig {
+  kicker?: string;
+  bubbleText?: string;
+  buttonText?: string;
+  photoBadge?: string;
+  photoCaption?: string;
+  polaroidUrl?: string;
+  bgColor?: string;
+  bgImageUrl?: string;
+  showMascot?: boolean;
+  customBadges?: string[];
+}
+
 export interface EventItem {
   id: string;
   slug: string;
@@ -108,6 +121,7 @@ export interface EventItem {
   directoryImageFocalPoint?: string;
   heroImage?: string;
   heroImageFocalPoint?: string;
+  heroCardConfig?: HeroCardConfig;
   registrationForm?: RegistrationFormSchema;
 }
 

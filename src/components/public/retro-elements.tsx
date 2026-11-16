@@ -1,50 +1,476 @@
-import React from "react";
+"use client";
 
+import React, { useState, useEffect, useRef } from "react";
+
+/**
+ * Authentic FlowFest 63x63 Spinning Sun Rays Disk
+ * Exact vector geometry from FlowFest 2025 (127.0.0.1:5173).
+ */
 export const SunRaysSvg: React.FC<{ className?: string }> = ({ className = "w-full h-full" }) => (
   <div className={className}>
-    <svg className="sun__sun-svg" fill="none" viewBox="0 0 63 63" width="100%" xmlns="http://www.w3.org/2000/svg">
+    <svg className="sun__sun-svg w-full h-full" fill="none" viewBox="0 0 63 63" xmlns="http://www.w3.org/2000/svg">
       <path d="M4 32C4 47.464 16.536 60 32 60C47.464 60 60 47.464 60 32C60 16.536 47.464 4 32 4C16.536 4 4 16.536 4 32Z" fill="#F3ECD2" />
       <path d="M59.6769 32.8159C59.678 32.8171 59.6799 32.8171 59.6811 32.816L61.8572 30.8637C62.089 30.6557 62.0742 30.2881 61.8264 30.0994L59.903 28.635C59.6806 28.4657 59.6418 28.1463 59.8172 27.9287L61.3339 26.0473C61.5293 25.8049 61.4557 25.4444 61.1809 25.2979L59.0489 24.1618C58.8023 24.0304 58.7127 23.7213 58.8509 23.4784L60.046 21.378C60.2 21.1073 60.0696 20.7634 59.7748 20.6629L57.4874 19.8829C57.2229 19.7927 57.085 19.502 57.1824 19.2401L58.0254 16.9754C58.134 16.6836 57.9501 16.3649 57.6431 16.313L55.2598 15.9099C54.9843 15.8633 54.8016 15.5985 54.8557 15.3244L55.324 12.9531C55.3843 12.6477 55.1517 12.3627 54.8403 12.3607L52.424 12.3451C52.1445 12.3433 51.9217 12.1113 51.9312 11.832L52.0134 9.41618C52.024 9.10493 51.7486 8.86096 51.4409 8.90897L49.0527 9.28161C48.7766 9.32469 48.5194 9.13143 48.484 8.85426L48.1772 6.45693C48.1377 6.14803 47.8267 5.95144 47.5307 6.04822L45.2343 6.79906C44.9687 6.88591 44.6838 6.73639 44.6043 6.46846L43.9171 4.15114C43.8286 3.8526 43.4902 3.7084 43.2135 3.85133L41.0662 4.96077C40.8179 5.08904 40.5128 4.98714 40.3914 4.73544L39.3415 2.55843C39.2062 2.27792 38.849 2.18988 38.5989 2.37539L36.6579 3.81485C36.4334 3.9813 36.1159 3.92971 35.9557 3.70078L34.5699 1.72062C34.3914 1.46552 34.0248 1.43592 33.8076 1.65908L32.1221 3.39132C31.9273 3.59157 31.6056 3.59157 31.4108 3.39132L29.7253 1.65908C29.5081 1.43592 29.1415 1.46552 28.963 1.72062L27.5772 3.70078C27.417 3.92971 27.0995 3.9813 26.875 3.81485L24.934 2.37539C24.6839 2.18988 24.3267 2.27792 24.1914 2.55843L23.1415 4.73544C23.0201 4.98714 22.715 5.08904 22.4667 4.96077L20.3194 3.85133C20.0427 3.7084 19.7043 3.8526 19.6158 4.15114L18.9286 6.46846C18.8491 6.73639 18.5642 6.88591 18.2986 6.79906L16.0022 6.04822C15.7062 5.95144 15.3952 6.14803 15.3557 6.45693L15.0489 8.85426C15.0135 9.13143 14.7563 9.32469 14.4802 9.28161L12.092 8.90897C11.7843 8.86096 11.509 9.10494 11.5195 9.41619L11.6017 11.831C11.6112 12.1102 11.3884 12.3423 11.1089 12.3441L8.69253 12.3597C8.38116 12.3617 8.14853 12.6466 8.20887 12.9521L8.67717 15.3232C8.73132 15.5974 8.5485 15.8622 8.27292 15.9087L5.88999 16.3111C5.58287 16.3629 5.39888 16.6816 5.5075 16.9735L6.35053 19.2391C6.44798 19.501 6.31007 19.7917 6.04557 19.8819L3.75809 20.6618C3.46334 20.7623 3.33291 21.1063 3.48691 21.377L4.68194 23.4773C4.82015 23.7202 4.7306 24.0293 4.48392 24.1607L2.35112 25.2969C2.07623 25.4433 2.00261 25.8039 2.19808 26.0464L3.71467 27.9278C3.89004 28.1453 3.85129 28.4647 3.62899 28.634L1.70633 30.0984C1.4586 30.287 1.44382 30.6546 1.6756 30.8626L3.4741 32.4762C3.68213 32.6628 3.69507 32.9844 3.50271 33.1871L1.83956 34.9403C1.62518 35.1662 1.66955 35.5315 1.93178 35.6996L3.96603 37.0036C4.20134 37.1544 4.26573 37.4698 4.10838 37.7008L2.74849 39.6974C2.57317 39.9548 2.67551 40.3082 2.96126 40.4321L5.17856 41.3934C5.43494 41.5045 5.54904 41.8053 5.43086 42.0586L4.40853 44.2492C4.27682 44.5314 4.43456 44.8637 4.73647 44.9401L7.07894 45.533C7.3499 45.6016 7.5108 45.8803 7.43469 46.1493L6.7766 48.4749C6.6918 48.7745 6.90078 49.0774 7.21106 49.1044L9.61794 49.3141C9.89635 49.3383 10.0998 49.5876 10.0679 49.8652L9.7916 52.2658C9.75599 52.5752 10.0108 52.8406 10.3214 52.8175L12.7313 52.6383C13.01 52.6175 13.2509 52.8309 13.2639 53.11L13.3765 55.5234C13.3911 55.8345 13.6851 56.0555 13.9879 55.9829L16.3377 55.4197C16.6094 55.3546 16.8813 55.5265 16.939 55.7999L17.4378 58.1656C17.502 58.4703 17.8278 58.6413 18.1151 58.521L20.3444 57.5873C20.6022 57.4793 20.8982 57.6054 20.999 57.8661L21.8703 60.1202C21.9826 60.4107 22.3315 60.5272 22.5958 60.3624L24.6466 59.0837C24.8838 58.9359 25.1962 59.0129 25.3374 59.2541L26.5587 61.3396C26.7161 61.6083 27.0792 61.6674 27.3137 61.4623L29.1328 59.8713C29.3431 59.6873 29.6638 59.7132 29.8419 59.9286L31.3819 61.7909C31.5804 62.0309 31.9484 62.0309 32.1468 61.7909L33.6867 59.9287C33.8648 59.7133 34.1856 59.6874 34.396 59.8714L36.2142 61.4622C36.4486 61.6673 36.8117 61.6083 36.9692 61.3396L38.1903 59.255C38.3315 59.0139 38.6439 58.9369 38.881 59.0847L40.932 60.3634C41.1962 60.5282 41.5451 60.4117 41.6574 60.1213L42.5287 57.8672C42.6295 57.6065 42.9255 57.4804 43.1833 57.5883L45.4127 58.522C45.7 58.6423 46.0257 58.4714 46.09 58.1666L46.5888 55.801C46.6464 55.5276 46.9183 55.3556 47.1901 55.4207L49.5398 55.9839C49.8426 56.0565 50.1367 55.8355 50.1512 55.5244L50.2638 53.1101C50.2769 52.8309 50.5177 52.6175 50.7964 52.6383L53.2063 52.8175C53.5169 52.8406 53.7717 52.5752 53.7361 52.2659L53.4599 49.8652C53.4279 49.5876 53.6314 49.3383 53.9098 49.3141L56.3168 49.1044C56.627 49.0773 56.836 48.7746 56.7513 48.475L56.0939 46.1492C56.0178 45.8803 56.1788 45.6016 56.4497 45.5331L58.7933 44.9401C59.0952 44.8637 59.2529 44.5313 59.1212 44.2491L58.099 42.0586C57.9808 41.8053 58.0949 41.5045 58.3513 41.3934L60.5686 40.432C60.8543 40.3082 60.9567 39.9548 60.7814 39.6974L59.4213 37.6997C59.264 37.4687 59.3284 37.1534 59.5637 37.0026L61.5981 35.6985C61.8603 35.5305 61.9047 35.1652 61.6904 34.9392L59.6769 32.8159Z" fill="#F3A20F" stroke="#121212" strokeWidth="0.74" />
-      <circle cx="31.76" cy="31.74" r="23.83" fill="#F3A20F" stroke="#121212" strokeWidth="1.5" />
+      <path d="M33.3804 1.04308C33.8933 0.623714 34.652 0.684581 35.0911 1.18072L35.1803 1.29412L36.419 3.065L38.156 1.77779L38.2762 1.69831C38.8498 1.3669 39.5886 1.54916 39.9424 2.10929L40.0122 2.23529L40.9504 4.18258L42.8725 3.19004L43.0034 3.13091C43.6228 2.89571 44.3231 3.1947 44.5823 3.80456L44.6308 3.93929L45.2453 6.01162L47.2992 5.34088L47.4388 5.30404C48.0879 5.17109 48.7316 5.57758 48.8898 6.22098L48.916 6.3625L49.1893 8.50655L51.3266 8.17312L51.4691 8.15955C52.1313 8.13223 52.7014 8.63693 52.7544 9.29749L52.7573 9.44191L52.6836 11.6015L54.8451 11.616C55.5748 11.6207 56.1315 12.2472 56.0742 12.9546L56.0548 13.0971L55.6351 15.2179L57.7675 15.5794C58.487 15.7012 58.936 16.4083 58.7659 17.0973L58.7232 17.2349L57.9681 19.2598L60.0153 19.9586L60.149 20.0119C60.7476 20.2957 61.0168 21.0077 60.7568 21.6171L60.6928 21.746L59.6237 23.6244L61.5312 24.6412C62.1753 24.9845 62.3773 25.7978 61.9974 26.3976L61.9141 26.5148L60.5571 28.1966L62.2776 29.507L62.3871 29.601C62.865 30.0598 62.8956 30.8201 62.4559 31.3157L62.3541 31.4175L60.7451 32.8607L62.231 34.4271L62.3241 34.5366C62.7508 35.1039 62.6146 35.931 62.0003 36.325L60.18 37.491L61.3974 39.2784C61.8354 39.9218 61.5793 40.8054 60.8653 41.1151L58.8812 41.9749L59.7962 43.9348L59.8495 44.0676C60.0599 44.6962 59.7329 45.384 59.1129 45.6184L58.9762 45.662L56.8796 46.1922L57.468 48.2723C57.6665 48.9746 57.2196 49.6836 56.5239 49.8251L56.3814 49.8464L54.2286 50.0335L54.4758 52.1805C54.5592 52.9056 54.0046 53.5345 53.2952 53.5627L53.1518 53.5598L50.9951 53.3989L50.8953 55.5594C50.8589 56.3368 50.1236 56.8893 49.3667 56.708L47.2643 56.204L46.8185 58.3199C46.6579 59.0817 45.8433 59.5095 45.1251 59.2087L43.1304 58.3732L42.352 60.3893C42.0889 61.0701 41.3057 61.3688 40.6645 61.0639L40.5385 60.9951L38.7036 59.8514L37.6113 61.7163C37.2421 62.3458 36.4214 62.5146 35.8375 62.1108L35.7241 62.0226L34.0966 60.5997L32.7203 62.2649C32.2551 62.8274 31.4185 62.8626 30.9067 62.3705L30.8088 62.2649L29.4315 60.5997L27.8041 62.0226C27.218 62.5351 26.3103 62.3872 25.9169 61.7153L24.8235 59.8504L22.9896 60.9942C22.3702 61.3802 21.5646 61.1483 21.2352 60.5192L21.1761 60.3884L20.3968 58.3722L18.403 59.2078C17.6849 59.5085 16.8703 59.0808 16.7097 58.3189L16.2628 56.203L14.1614 56.707C13.4517 56.8769 12.7617 56.4017 12.6484 55.7009L12.6329 55.5584L12.5321 53.3989L10.3773 53.5598C9.6009 53.6175 8.96332 52.954 9.05234 52.1805L9.29853 50.0335L7.14673 49.8464C6.37112 49.7789 5.84832 49.0215 6.06016 48.2723L6.64852 46.1913L4.5539 45.662C3.79936 45.471 3.40502 44.6402 3.73388 43.9348L4.64792 41.9749L2.66574 41.1151C1.95138 40.8054 1.6953 39.9219 2.1336 39.2784L3.34908 37.492L1.53071 36.3259C0.875127 35.9057 0.764075 34.993 1.30002 34.4281L2.7869 32.8598L1.17886 31.4165C0.599409 30.8966 0.636108 29.9777 1.25543 29.5061L2.97397 28.1966L1.61891 26.5139C1.13023 25.9076 1.31454 25.0064 2.00178 24.6403L3.90836 23.6225L2.84021 21.745C2.45533 21.0685 2.78119 20.2091 3.51773 19.9577L5.56389 19.2588L4.80979 17.233C4.53841 16.5033 4.99875 15.7071 5.76647 15.5775L7.89792 15.2169L7.47919 13.0961C7.32849 12.3325 7.90955 11.6201 8.68789 11.615L10.8494 11.6005L10.7757 9.44191C10.7509 8.71241 11.3545 8.1305 12.0639 8.15955L12.2074 8.17312L14.3427 8.50655L14.618 6.3625L14.6441 6.22098C14.8025 5.57747 15.4459 5.17075 16.0951 5.30404L16.2337 5.34088L18.2867 6.01162L18.9022 3.93929L18.9506 3.80456C19.2098 3.19472 19.9102 2.89592 20.5296 3.13091L20.6614 3.19004L22.5816 4.18258L23.5208 2.23529L23.5906 2.10929C23.9444 1.54888 24.6841 1.36651 25.2578 1.69831L25.378 1.77779L27.113 3.065L28.3537 1.29412L28.4419 1.18072C28.8809 0.684484 29.6396 0.623863 30.1526 1.04308L30.2593 1.14001L31.7665 2.68892L33.2747 1.14001L33.3804 1.04308ZM34.5697 1.72061C34.3911 1.46574 34.0249 1.43646 33.8078 1.65954L32.1222 3.39165L32.0437 3.45659C31.8766 3.5694 31.6563 3.56951 31.4893 3.45659L31.4108 3.39165L29.7252 1.65954C29.5081 1.4364 29.1419 1.46558 28.9633 1.72061L27.5773 3.70085L27.5104 3.77839C27.3638 3.91614 27.1464 3.95169 26.9637 3.86757L26.8755 3.81523L24.934 2.37584C24.684 2.1904 24.3269 2.27779 24.1916 2.55807L23.1418 4.73507L23.0885 4.82231C22.9659 4.98234 22.7564 5.05272 22.5622 4.99872L22.4672 4.96092L20.3193 3.85109C20.0427 3.70849 19.7041 3.85317 19.6156 4.15157L18.9284 6.46815L18.8896 6.56314C18.7941 6.74039 18.5992 6.84305 18.3991 6.82097L18.2993 6.79868L16.0021 6.04845C15.7063 5.95189 15.3953 6.14793 15.3556 6.45652L15.0493 8.85452L15.026 8.95436C14.9602 9.14444 14.7839 9.27645 14.5831 9.28682L14.4803 9.28198L12.092 8.9088C11.7844 8.86099 11.5095 9.10555 11.5201 9.41671L11.6015 11.8312C11.6109 12.1104 11.3885 12.3421 11.1092 12.3439L8.69273 12.3594C8.38153 12.3615 8.14904 12.6464 8.20906 12.9517L8.67722 15.3235C8.73125 15.5976 8.54854 15.8624 8.27303 15.909L5.89054 16.3112C5.58352 16.363 5.39928 16.6814 5.50767 16.9732L6.35095 19.2394C6.44816 19.5012 6.31001 19.7919 6.04562 19.882L3.75812 20.6623C3.46375 20.7629 3.33315 21.1062 3.48672 21.3767L4.68184 23.4771C4.82004 23.72 4.73072 24.029 4.48411 24.1605L2.35169 25.2965C2.07679 25.4429 2.00307 25.8042 2.19854 26.0467L3.7145 27.9281C3.88983 28.1456 3.85136 28.4644 3.6292 28.6337L1.70615 30.0983C1.45861 30.287 1.44438 30.6551 1.6761 30.863L3.47412 32.4759C3.68214 32.6626 3.69553 32.9846 3.5032 33.1874L1.83991 34.9398C1.62553 35.1658 1.66976 35.5317 1.93199 35.6998L3.96651 37.0034C4.20158 37.1542 4.2659 37.4694 4.109 37.7004L2.74909 39.6971C2.57382 39.9544 2.67579 40.3078 2.96137 40.4318L5.17908 41.3933C5.43521 41.5045 5.54902 41.8052 5.4311 42.0583L4.4085 44.2488C4.2768 44.531 4.43519 44.8635 4.73709 44.9399L7.07888 45.5331C7.34983 45.6017 7.51071 45.8807 7.4346 46.1496L6.77646 48.4749C6.69174 48.7745 6.90144 49.0769 7.21167 49.104L9.6184 49.3143C9.89656 49.3387 10.0999 49.5875 10.0681 49.8649L9.7919 52.2658C9.76072 52.5366 9.9521 52.7741 10.2087 52.8134L10.3221 52.8173L12.7317 52.638C13.0103 52.6173 13.2508 52.831 13.2639 53.11L13.3763 55.5235C13.389 55.7956 13.6162 55.9986 13.8755 55.9965L13.9879 55.983L16.3375 55.4198C16.6091 55.3547 16.8817 55.5265 16.9394 55.7998L17.4376 58.1658C17.4939 58.4325 17.7508 58.5964 18.0066 58.5525L18.1151 58.5205L20.3445 57.5871C20.6022 57.4792 20.898 57.6056 20.9987 57.8663L21.8701 60.1199C21.9683 60.3739 22.2481 60.4955 22.4934 60.4116L22.5961 60.3622L24.6471 59.0837C24.8842 58.936 25.196 59.0132 25.3372 59.2543L26.5585 61.3392C26.6962 61.5743 26.9919 61.6495 27.2206 61.5273L27.3136 61.4623L29.133 59.8717C29.3433 59.6877 29.6644 59.7135 29.8425 59.9289L31.3817 61.7909C31.5553 62.0009 31.8589 62.0269 32.065 61.8694L32.1474 61.7909L33.6866 59.9289C33.8648 59.7135 34.1858 59.6877 34.3962 59.8717L36.2145 61.4623C36.4197 61.6417 36.7236 61.6191 36.9018 61.4303L36.9696 61.3392L38.1909 59.2553C38.3321 59.0142 38.6439 58.937 38.881 59.0847L40.932 60.3632C41.1632 60.5073 41.4591 60.4362 41.6047 60.2216L41.658 60.1208L42.5294 57.8672C42.6302 57.6066 42.9259 57.4802 43.1837 57.5881L45.413 58.5225C45.6644 58.6276 45.9454 58.5096 46.0547 58.2743L46.0905 58.1668L46.5888 55.8007C46.6465 55.5274 46.919 55.3557 47.1907 55.4208L49.5402 55.9839C49.805 56.0473 50.0631 55.8863 50.1334 55.6369L50.1518 55.5245L50.2643 53.11C50.2773 52.831 50.5178 52.6174 50.7964 52.638L53.206 52.8173C53.4779 52.8375 53.7071 52.637 53.7362 52.3792V52.2658L53.46 49.8649C53.4283 49.5875 53.6316 49.3387 53.9097 49.3143L56.3174 49.104C56.5885 49.0801 56.7824 48.8461 56.7701 48.5873L56.7517 48.4749L56.0945 46.1496C56.0185 45.8807 56.1793 45.6017 56.4502 45.5331L58.794 44.9399C59.058 44.8729 59.2115 44.6101 59.1574 44.3564L59.1216 44.2488L58.099 42.0583C57.9811 41.8051 58.0957 41.5044 58.352 41.3933L60.5687 40.4318C60.8187 40.3234 60.9282 40.0397 60.8343 39.7979L60.782 39.6971L59.4211 37.6994C59.2642 37.4685 59.3286 37.1532 59.5636 37.0025L61.5981 35.6988C61.8275 35.5518 61.8904 35.2536 61.759 35.03L61.6902 34.9389L59.677 32.8162C59.6781 32.8173 59.6806 32.8172 59.6818 32.8162L61.8579 30.864C62.0607 30.6819 62.0741 30.3773 61.9083 30.1778L61.8268 30.0993L59.9028 28.6347C59.6809 28.4653 59.6424 28.1465 59.8175 27.929L61.3344 26.0477C61.5055 25.8355 61.47 25.5328 61.2744 25.3624L61.1813 25.2984L59.0489 24.1614C58.8025 24.0299 58.713 23.7209 58.8511 23.4781L60.0463 21.3776C60.1807 21.1409 60.0977 20.8486 59.8776 20.7118L59.7749 20.6633L57.4874 19.883C57.223 19.7928 57.0856 19.5022 57.183 19.2404L58.0253 16.9752C58.1203 16.7197 57.9916 16.4438 57.752 16.3442L57.6434 16.3132L55.26 15.9099C54.9845 15.8633 54.8017 15.5986 54.8558 15.3245L55.3239 12.9536C55.3767 12.6865 55.2058 12.4342 54.9537 12.374L54.8403 12.3604L52.4238 12.3449C52.1446 12.3429 51.922 12.1113 51.9314 11.8322L52.0138 9.41574C52.0241 9.10472 51.7485 8.86081 51.441 8.9088L49.0527 9.28198L48.9509 9.28682C48.7498 9.27668 48.5739 9.14453 48.5079 8.95436L48.4847 8.85452L48.1774 6.45652C48.1376 6.14787 47.8268 5.95172 47.5309 6.04845L45.2347 6.79868L45.1348 6.82097C44.9345 6.84333 44.7389 6.74066 44.6434 6.56314L44.6046 6.46815L43.9174 4.15157C43.8289 3.85306 43.4903 3.70824 43.2137 3.85109L41.0668 4.96092L40.9708 4.99872C40.7768 5.05251 40.568 4.98204 40.4454 4.82231L40.3912 4.73507L39.3414 2.55807C39.206 2.2779 38.849 2.19043 38.599 2.37584L36.6585 3.81523L36.5703 3.86757C36.3874 3.95202 36.1693 3.91642 36.0226 3.77839L35.9557 3.70085L34.5697 1.72061ZM36.0275 5.23425C36.0539 5.23639 36.0802 5.24052 36.106 5.24685L40.2167 6.26072C40.2425 6.2671 40.2678 6.27549 40.2923 6.28593L44.1859 7.94437C44.2103 7.95476 44.2333 7.96802 44.2557 7.98217L47.8372 10.2454C47.8597 10.2597 47.8812 10.2763 47.9012 10.2939L51.0688 13.1C51.0886 13.1176 51.1072 13.1366 51.124 13.1572L53.8041 16.4401C53.821 16.4608 53.8363 16.4829 53.8497 16.506L55.9646 20.168C55.978 20.1911 55.9891 20.2157 55.9986 20.2407L57.499 24.1983C57.5084 24.2232 57.516 24.2497 57.5213 24.2758L58.3684 28.4263C58.3738 28.4524 58.3771 28.4791 58.3781 28.5058L58.5487 32.7318C58.5498 32.7583 58.549 32.785 58.5458 32.8113L58.035 37.017L58.0195 37.0955L56.8409 41.1636L56.8127 41.2382L54.9992 45.0582L54.9595 45.128L52.5518 48.6155L52.5014 48.6765L49.5712 51.7278L49.5111 51.7811L46.1245 54.3265L46.0566 54.3691L42.3113 56.3358L42.2376 56.3668L38.2229 57.7073L38.1453 57.7267L33.9251 58.412H33.9222L33.9202 58.411H29.6506L29.5711 58.4042L25.3925 57.7257L25.315 57.7063L21.2953 56.3649L21.2226 56.3338L17.4802 54.3701L17.4124 54.3274L14.0209 51.7792L13.9608 51.7259L11.0306 48.6746L10.9802 48.6135L8.57642 45.1309L8.53668 45.0621L6.72121 41.2363L6.6931 41.1617L5.51446 37.0917L5.49798 37.0141L4.98814 32.8142C4.98494 32.7878 4.9832 32.7613 4.98426 32.7347L5.15485 28.5019C5.15592 28.4753 5.15924 28.4484 5.16454 28.4224L6.01073 24.2777C6.01603 24.2518 6.02364 24.226 6.03302 24.2012L7.53541 20.2397C7.54486 20.2148 7.55697 20.1901 7.5703 20.167L9.68528 16.5041C9.69856 16.4811 9.71405 16.4588 9.73083 16.4382L12.409 13.1591C12.4258 13.1384 12.4442 13.1186 12.4642 13.1009L15.6347 10.2929C15.6547 10.2753 15.6762 10.2587 15.6987 10.2445L19.2783 7.9812C19.3008 7.96694 19.3245 7.95385 19.349 7.9434L23.2407 6.28593C23.2651 6.27554 23.2906 6.26709 23.3163 6.26072L27.4299 5.24685C27.4558 5.24048 27.4829 5.2364 27.5094 5.23425L31.7277 4.89307C31.7542 4.89093 31.7808 4.89096 31.8072 4.89307L36.0275 5.23425ZM34.4485 57.8847C34.4181 57.8543 34.3842 57.8285 34.3496 57.8042C34.3842 57.8286 34.4182 57.8544 34.4485 57.8847ZM34.3225 57.7849C34.2895 57.7638 34.2554 57.7451 34.2197 57.7296C34.2554 57.7452 34.2896 57.7638 34.3225 57.7849ZM34.1849 57.716C34.1513 57.7034 34.1171 57.6927 34.0821 57.685C34.1172 57.6928 34.1514 57.7033 34.1849 57.716ZM34.0424 57.6782C34.0126 57.6734 33.9825 57.6707 33.9522 57.6695C33.9826 57.6708 34.0126 57.6733 34.0424 57.6782ZM27.5918 5.97382L23.514 6.97896L19.6582 8.62093L16.1116 10.8629L12.9731 13.6437L10.3202 16.8918L8.22554 20.5189L6.73672 24.4435L5.89829 28.5503L5.72867 32.7464L6.2356 36.9085L7.40262 40.9368L9.20258 44.7277L11.5802 48.1725L14.4852 51.1966L17.8437 53.7197L21.5483 55.6641L25.5359 56.9949L29.6728 57.6666H33.8718L38.0067 56.9949L41.9818 55.667L45.6951 53.7178L49.0459 51.1986L51.9508 48.1744L54.3372 44.717L56.1333 40.9329L57.2984 36.9056L57.8043 32.7347L57.6347 28.5552L56.7963 24.4464L55.3104 20.5247L53.2157 16.8967L50.5618 13.6457L47.4223 10.8638L43.8728 8.61996L40.0238 6.97993L35.9441 5.97382L31.7675 5.63651L27.5918 5.97382Z" fill="#121212" />
+      <path d="M31.7666 7.90735C18.6034 7.90737 7.93262 18.5781 7.93262 31.7413C7.93264 44.9045 18.6034 55.5753 31.7666 55.5753C44.9298 55.5753 55.6006 44.9045 55.6006 31.7413C55.6006 18.5781 44.9298 7.90735 31.7666 7.90735Z" fill="#F3A20F" stroke="#121212" strokeWidth="0.744409" />
     </svg>
   </div>
 );
 
-export const SunFaceSvg: React.FC<{ className?: string }> = ({ className = "w-full h-full" }) => (
+/**
+ * Authentic FlowFest 18x20 Interactive Smiling Sun Face
+ * Uses the exact vector paths from FlowFest (127.0.0.1:5173).
+ *
+ * RESTING STATE:
+ * - Left eye: clean solid round circle
+ * - Right eye: clean solid round circle
+ * - Open smiling mouth with cheerful white teeth
+ * Absolutely NO diagonal cut, slash, or glitched line!
+ *
+ * WINKING STATE (on hover or click):
+ * - Right eye becomes a smooth cute winking curve (⌒).
+ * - Left eye remains open.
+ */
+export const InteractiveSunFace: React.FC<{
+  eyeOffset?: { x: number; y: number };
+  isHovered?: boolean;
+  isWinking?: boolean;
+}> = ({
+  eyeOffset = { x: 0, y: 0 },
+  isHovered = false,
+  isWinking = false,
+}) => {
+  const shouldWink = isWinking || isHovered;
+
+  return (
+    <svg
+      className="sun__face-svg w-full h-full text-ink"
+      data-sunny-face=""
+      fill="none"
+      viewBox="0 0 18 20"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{
+        transform: `translate(${eyeOffset.x}px, ${eyeOffset.y}px)`,
+        transition: "transform 0.1s ease-out",
+      }}
+    >
+      {/* Right Eye: Clean solid dot (resting) OR cute curved wink arc (winking) */}
+      {shouldWink ? (
+        <path
+          d="M11.5 3C12.2 1.2 14.8 1.2 15.5 3"
+          stroke="#121212"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          fill="none"
+        />
+      ) : (
+        <circle cx="13.7" cy="2" r="1.6" fill="#121212" />
+      )}
+
+      {/* Left Eye: Always clean solid dot */}
+      <circle cx="2" cy="3" r="1.6" fill="#121212" />
+
+      {/* Authentic FlowFest Open Cheerful Smiling Mouth with Teeth */}
+      <path
+        d="M11.8921 18C5.9557 19.2392 4.66149 14.9968 3.5863 11.9479C3.37455 11.3475 3.80655 10.6869 4.44285 10.6652C9.15161 10.5051 11.2843 10.3509 14.8793 8.66061C15.4922 8.37244 16.2307 8.80754 16.2719 9.48354C16.4616 12.6034 16.766 16.6483 11.8921 18Z"
+        fill="#FFFDF7"
+        stroke="#121212"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M4.5 14C9.24535 14.5931 13.9652 13.5983 16 12"
+        stroke="#121212"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+};
+
+/**
+ * SmilingSun mascot component matching FlowFest 1:1
+ * Centered face disk with mouse-tracking pupils and click-to-wink.
+ */
+export const SmilingSun: React.FC<{
+  className?: string;
+  spin?: boolean;
+  interactive?: boolean;
+}> = ({ className = "w-14 h-14 sm:w-16 sm:h-16", spin = true, interactive = true }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+  const [isWinking, setIsWinking] = useState(false);
+
+  useEffect(() => {
+    if (!interactive) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const deltaX = e.clientX - centerX;
+      const deltaY = e.clientY - centerY;
+      const angle = Math.atan2(deltaY, deltaX);
+      const distance = Math.min(Math.hypot(deltaX, deltaY), 350);
+      const maxOffset = 2.2;
+      const intensity = distance / 350;
+
+      setEyeOffset({
+        x: Math.cos(angle) * maxOffset * intensity,
+        y: Math.sin(angle) * maxOffset * intensity,
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [interactive]);
+
+  const handleClick = () => {
+    setIsWinking(true);
+    setTimeout(() => {
+      setIsWinking(false);
+    }, 850);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      title="Click me for a smile!"
+      className={`relative inline-block cursor-pointer select-none transition-transform duration-200 active:scale-95 ${
+        isHovered ? "scale-105" : "scale-100"
+      } ${className}`}
+    >
+      {/* Outer spinning cog rays */}
+      <div className={spin ? "w-full h-full animate-spin-slow" : "w-full h-full"}>
+        <SunRaysSvg />
+      </div>
+
+      {/* Centered Sun Face with FlowFest 50% proportions inside the yellow disk */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-[50%] h-[50%] flex items-center justify-center">
+          <InteractiveSunFace
+            eyeOffset={eyeOffset}
+            isHovered={isHovered}
+            isWinking={isWinking}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const ChatCloudPoint: React.FC<{ className?: string }> = ({
+  className = "h-4 w-auto absolute bottom-0 left-0 -translate-x-[44%] translate-y-[17%]",
+}) => (
   <div className={className}>
-    <svg fill="none" viewBox="0 0 18 20" width="100%" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="13.7" cy="2" r="2" fill="currentColor" />
-      <circle cx="2" cy="3" r="2" fill="currentColor" />
-      <path d="M4.36526 10.0526C5.48807 11.3236 7.37792 12.4373 8.99134 12.3823C10.3455 12.3362 11.3858 12.1855 12.582 11.4026C13.4381 10.8424 13.9967 10.0329 14.7406 8.66282" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-      <path d="M10.5 2L14.5 1.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-      <path d="M11.8921 18C5.9557 19.2392 4.66149 14.9968 3.5863 11.9479C3.37455 11.3475 3.80655 10.6869 4.44285 10.6652C9.15161 10.5051 11.2843 10.3509 14.8793 8.66061C15.4922 8.37244 16.2307 8.80754 16.2719 9.48354C16.4616 12.6034 16.766 16.6483 11.8921 18Z" fill="#F3ECD2" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-      <path d="M4.5 14C9.24535 14.5931 13.9652 13.5983 16 12" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+    <svg className="h-4 w-auto" fill="none" viewBox="0 0 22 13" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M13.2965 8.70441C15.5695 10.5858 18.4864 11.7165 21.6675 11.7165L21.67 1H8.70396C8.87681 7.22251 4.20993 10.3338 3 10.8523C7.39294 11.651 11.029 10.2151 13.2965 8.70441Z"
+        fill="#F97028"
+      />
+      <path
+        d="M21.6675 11.7165C18.4864 11.7165 15.5695 10.5858 13.2965 8.70441C11.029 10.2151 7.39294 11.651 3 10.8523C4.20993 10.3338 8.87681 7.22251 8.70396 1"
+        stroke="#121212"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
     </svg>
   </div>
 );
 
-export const SmilingSun: React.FC<{ className?: string; spin?: boolean }> = ({ className = "w-10 h-10", spin = true }) => (
-  <div className={"relative inline-block " + className}>
-    <div className={spin ? "w-full h-full animate-spin-slow" : "w-full h-full"}>
-      <SunRaysSvg />
-    </div>
-    <div className="absolute inset-0 flex items-center justify-center p-2 text-ink pointer-events-none">
-      <SunFaceSvg />
-    </div>
+/**
+ * Authentic FlowFest 4-Color Left Rainbow Stripe
+ * Mirror-flipped on X axis (scaleX(-1)), placed along the left viewport edge,
+ * curving OUTWARDS toward the bottom-left corner away from the central cards.
+ * Geometry: M26 0V400C26 510.457 115.543 600 226 600H321
+ */
+export const RainbowSideLeft: React.FC<{
+  className?: string;
+}> = ({ className = "w-72 xl:w-80 h-auto" }) => (
+  <div className={`${className} transform -scale-x-100`}>
+    <svg
+      className="rainbow-sides__left w-full h-auto"
+      fill="none"
+      viewBox="0 0 450 626"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* 4 Black Outline Strokes (width 52) */}
+      <path
+        data-stripe="0"
+        d="M26 0V400C26 510.457 115.543 600 226 600H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="1"
+        d="M76 0V400C76 482.843 143.157 550 226 550H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="2"
+        d="M126 0V400C126 455.228 170.772 500 226 500H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="3"
+        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+
+      {/* 4 Color Fills (width 48) matching FlowFest */}
+      <path
+        data-stripe="0"
+        d="M26 0V400C26 510.457 115.543 600 226 600H450"
+        stroke="#F489A3"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="1"
+        d="M76 0V400C76 482.843 143.157 550 226 550H450"
+        stroke="#F0BB0D"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="2"
+        d="M126 0V400C126 455.228 170.772 500 226 500H450"
+        stroke="#F3A20F"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="3"
+        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        stroke="#F97028"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+    </svg>
   </div>
 );
+
+/**
+ * Authentic FlowFest 4-Color Right Rainbow Stripe
+ * Placed along the right viewport edge in natural orientation,
+ * curving OUTWARDS toward the bottom-right corner away from the central cards.
+ * Geometry: M26 0V400C26 510.457 115.543 600 226 600H450
+ */
+export const RainbowSideRight: React.FC<{
+  className?: string;
+}> = ({ className = "w-72 xl:w-80 h-auto" }) => (
+  <div className={className}>
+    <svg
+      className="rainbow-sides__right w-full h-auto"
+      fill="none"
+      viewBox="0 0 450 626"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* 4 Black Outline Strokes (width 52) */}
+      <path
+        data-stripe="0"
+        d="M26 0V400C26 510.457 115.543 600 226 600H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="1"
+        d="M76 0V400C76 482.843 143.157 550 226 550H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="2"
+        d="M126 0V400C126 455.228 170.772 500 226 500H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="3"
+        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        stroke="#121212"
+        strokeWidth="52"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+
+      {/* 4 Color Fills (width 48) matching FlowFest */}
+      <path
+        data-stripe="0"
+        d="M26 0V400C26 510.457 115.543 600 226 600H450"
+        stroke="#F489A3"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="1"
+        d="M76 0V400C76 482.843 143.157 550 226 550H450"
+        stroke="#F0BB0D"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="2"
+        d="M126 0V400C126 455.228 170.772 500 226 500H450"
+        stroke="#F3A20F"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+      <path
+        data-stripe="3"
+        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        stroke="#F97028"
+        strokeWidth="48"
+        pathLength="100"
+        strokeDasharray="100"
+        strokeDashoffset="95"
+      />
+    </svg>
+  </div>
+);
+
+/**
+ * Flowing Rainbow Side Stripes that frame the page
+ * Fixed along the viewport outer margins, completely clear of the central cards.
+ * Left stripes curve outwards to the bottom-left corner; right stripes curve outwards to the bottom-right corner.
+ * - Dynamically unrolls/draws forward in real time WITH the user's scroll.
+ * - Hardware-fluid 60fps/120fps direct DOM manipulation inside RAF (zero React re-renders, zero lag).
+ */
+export const FlowingRainbowSides: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const leftRef = useRef<HTMLDivElement>(null);
+  const rightRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Cache the paths on mount for maximum performance
+    const paths = containerRef.current.querySelectorAll<SVGPathElement>("path[data-stripe]");
+    let rafId: number;
+    let lastScrollY = -1;
+
+    const onFrame = () => {
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      if (scrollY !== lastScrollY) {
+        lastScrollY = scrollY;
+
+        // Smooth scroll scrub: unrolls smoothly with user's scroll
+        // At scrollY = 0: offset = 95 (only 5% peeks in at top)
+        // At scrollY >= 500: offset = 0 for ALL 4 stripes (100% drawn, ALL 4 touch the corner completely!)
+        const progress = Math.min(Math.max(scrollY / 500, 0), 1);
+        const remaining = 1 - progress;
+
+        // Update stroke-dashoffset directly on cached DOM paths (takes ~0.02ms, zero lag)
+        paths.forEach((p) => {
+          const stripeIdx = Number(p.getAttribute("data-stripe") || 0);
+          // When remaining = 1 (top): offset = 95 for all
+          // When remaining = 0 (bottom): offset = 0 for all
+          const power = 1 + (3 - stripeIdx) * 0.08;
+          const offset = 95 * Math.pow(remaining, power);
+          p.style.strokeDashoffset = offset.toFixed(2);
+        });
+
+        // Gentle GPU compositor parallax glide
+        const translateY = Math.min(scrollY * 0.05, 40);
+        if (leftRef.current) {
+          leftRef.current.style.transform = `translate3d(0, ${translateY}px, 0)`;
+        }
+        if (rightRef.current) {
+          rightRef.current.style.transform = `translate3d(0, ${translateY}px, 0)`;
+        }
+      }
+      rafId = requestAnimationFrame(onFrame);
+    };
+
+    rafId = requestAnimationFrame(onFrame);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="hidden xl:block fixed inset-0 pointer-events-none select-none z-0 overflow-hidden"
+      aria-hidden="true"
+    >
+      {/* Left Rainbow Ribbon - curves OUTWARDS to the bottom-left corner */}
+      <div
+        ref={leftRef}
+        className="absolute -left-16 2xl:-left-10 top-0 w-80 xl:w-96 2xl:w-[28rem] opacity-95"
+        style={{ willChange: "transform" }}
+      >
+        <RainbowSideLeft className="w-full h-auto" />
+      </div>
+
+      {/* Right Rainbow Ribbon - curves OUTWARDS to the bottom-right corner */}
+      <div
+        ref={rightRef}
+        className="absolute -right-16 2xl:-right-10 top-0 w-80 xl:w-96 2xl:w-[28rem] ml-auto opacity-95"
+        style={{ willChange: "transform" }}
+      >
+        <RainbowSideRight className="w-full h-auto" />
+      </div>
+    </div>
+  );
+};
 
 export const ScallopedWave: React.FC<{ className?: string }> = ({ className = "w-full h-auto text-ink" }) => (
   <div className={className}>
-    <svg className="w-full h-auto" fill="none" viewBox="0 0 897 180" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0 50 C 150 120, 300 0, 450 70 C 600 140, 750 20, 897 80 L 897 180 L 0 180 Z" fill="#F0BB0D" stroke="#121212" strokeWidth="2" />
-      <path d="M0 90 C 180 150, 320 40, 480 110 C 640 170, 780 60, 897 120 L 897 180 L 0 180 Z" fill="#F97028" stroke="#121212" strokeWidth="2" />
-      <path d="M0 130 C 200 170, 360 90, 520 140 C 680 190, 800 110, 897 150 L 897 180 L 0 180 Z" fill="#F489A3" stroke="#121212" strokeWidth="2" />
+    <svg className="prefooter__wave w-full h-auto" fill="none" viewBox="0 0 897 625" xmlns="http://www.w3.org/2000/svg">
+      <path d="M896.143 624.091C896.932 558.816 880.569 498.464 838.223 454.461L837.214 453.421C799.597 414.94 752.191 397.418 698.78 390.039C645.347 382.656 585.985 385.433 524.479 387.495C402.029 391.6 271.174 392.876 162.985 304.91L161.714 303.871C102.291 255.091 77.9007 202.295 60.2568 150.152C42.8519 98.7154 32.0491 48.117 0.75 2.40381V624.091H896.143Z" fill="#F3A20F" stroke="#121212" strokeWidth="2"></path>
+      <path d="M737.222 624.091C738.838 568.726 725.751 517.345 690.035 480.212L689.184 479.334C658.454 447.897 619.723 433.578 576.068 427.546C532.391 421.512 483.865 423.781 433.567 425.467C333.838 428.811 227.233 429.866 138.925 358.751L136.843 357.058C86.8435 316.013 67.1601 271.49 52.623 227.667C38.3014 184.492 29.0069 142.181 0.75 104.296V624.091H737.222Z" fill="#F0BB0D" stroke="#121212" strokeWidth="2"></path>
+      <path d="M578.163 624.091C580.664 578.657 570.925 536.216 541.853 505.966L541.158 505.25C517.313 480.856 487.257 469.74 453.357 465.056C419.435 460.369 381.744 462.133 342.654 463.443C265.165 466.04 182.265 466.866 113.59 411.563L111.971 410.247H111.97C71.5402 377.057 56.5978 340.94 45.1484 305.577C33.8854 270.789 26.0287 236.892 0.75 206.956V624.091H578.163Z" fill="#F97028" stroke="#121212" strokeWidth="2"></path>
+      <path d="M418.814 624.091C422.3 588.917 416.179 555.599 394.198 532.273L393.132 531.163C376.173 513.814 354.792 505.9 330.647 502.564C306.481 499.225 279.625 500.481 251.742 501.416C196.493 503.268 137.297 503.866 88.2559 464.374L87.0996 463.433C56.4888 438.303 46.334 410.818 37.9346 384.159C29.6857 357.977 23.1467 332.712 0.75 310.923V624.091H418.814Z" fill="#F0BB0D" stroke="#121212" strokeWidth="2"></path>
+      <path d="M258.651 624.091C263.464 599.006 261.218 574.278 245.853 557.86L245.105 557.079C235.032 546.773 222.324 542.062 207.935 540.074C193.523 538.082 177.504 538.83 160.829 539.389C127.82 540.496 92.3303 540.866 62.9229 517.185L62.2295 516.622C41.93 499.958 36.622 481.549 31.1836 464.083C25.8552 446.971 20.4045 430.767 0.75 417.501V624.091H258.651Z" fill="#F3A20F" stroke="#121212" strokeWidth="2"></path>
     </svg>
   </div>
 );
 
-export const RetroRainbowPill: React.FC<{ className?: string }> = ({ className = "h-3 w-24" }) => (
+export const RetroRainbowPill: React.FC<{ className?: string }> = ({ className = "h-3.5 w-28" }) => (
   <div className={`inline-flex rounded-full overflow-hidden border-2 border-ink shadow-brutal-flat ${className}`}>
     <span className="flex-1 bg-retro-pink" />
     <span className="flex-1 bg-retro-yellow" />
@@ -65,7 +491,7 @@ export const NeoBadge: React.FC<{
   rotate = "",
 }) => (
   <span
-    className={`inline-flex items-center gap-1.5 px-3 py-1 font-quicksand font-bold text-xs uppercase tracking-wider text-ink rounded-full border-2 border-ink shadow-brutal-badge select-none ${bg} ${rotate} ${className}`}
+    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 font-quicksand font-bold text-xs uppercase tracking-wider text-ink rounded-full border-2 border-ink shadow-brutal-badge select-none ${bg} ${rotate} ${className}`}
   >
     {children}
   </span>

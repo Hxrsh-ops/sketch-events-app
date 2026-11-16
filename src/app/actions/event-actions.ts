@@ -93,6 +93,7 @@ export async function createEventAction(
         contactEmail: validData.contactEmail || undefined,
         contactPhone: validData.contactPhone || undefined,
         communityLink: validData.communityLink || undefined,
+        heroCardConfig: validData.heroCardConfig as any,
         registrationForm: validData.registrationForm as any,
       };
 
@@ -216,6 +217,7 @@ export async function updateEventAction(
         communityLink: updateFields.communityLink !== undefined ? (updateFields.communityLink || undefined) : existing.communityLink,
         minTeamSize: updateFields.minTeamSize !== undefined ? (updateFields.minTeamSize || undefined) : existing.minTeamSize,
         maxTeamSize: updateFields.maxTeamSize !== undefined ? (updateFields.maxTeamSize || undefined) : existing.maxTeamSize,
+        heroCardConfig: updateFields.heroCardConfig ? (updateFields.heroCardConfig as any) : existing.heroCardConfig,
         registrationForm: updateFields.registrationForm !== undefined ? (updateFields.registrationForm as any) : existing.registrationForm,
       };
 

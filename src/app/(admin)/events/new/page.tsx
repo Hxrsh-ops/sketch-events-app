@@ -42,9 +42,10 @@ import {
 } from "@/lib/form-templates";
 import { saveEvent } from "@/lib/registration-store";
 import { createEventAction } from "@/app/actions/event-actions";
-import { EventItem, RegistrationFormSchema } from "@/types";
+import { EventItem, RegistrationFormSchema, HeroCardConfig } from "@/types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { AccessDenied } from "@/components/auth/access-denied";
+import { SmilingSun, RetroRainbowPill } from "@/components/public/retro-elements";
 
 const CATEGORY_OPTIONS: SelectOption[] = [
   { value: "Design", label: "Design", description: "Design sprints, UI/UX hackathons, and creative design systems" },
@@ -129,7 +130,7 @@ export default function NewEventPage() {
   const [submittingMode, setSubmittingMode] = useState<"draft" | "publish" | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [activeArtworkTab, setActiveArtworkTab] = useState<"directory" | "hero">("directory");
+  const [activeArtworkTab, setActiveArtworkTab] = useState<"directory" | "hero" | "herobox">("directory");
   const [directoryArtworkMode, setDirectoryArtworkMode] = useState<"preset" | "upload">("preset");
   const [heroArtworkMode, setHeroArtworkMode] = useState<"preset" | "upload">("preset");
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -157,6 +158,18 @@ export default function NewEventPage() {
     isHeroCustomUpload: false,
     heroCustomFileName: "",
     artworkAlt: "",
+    // Retro Hero Card Box Customization (FlowFest Neo-Brutalist Theme)
+    heroCardConfig: {
+      kicker: "CAMPUS CREATORS & INNOVATORS EXPERIENCE",
+      bubbleText: "",
+      buttonText: "Get Pass Now",
+      photoBadge: "Free Entry",
+      photoCaption: "SKETCH Official",
+      polaroidUrl: "",
+      bgColor: "#FFFDF7",
+      bgImageUrl: "",
+      showMascot: true,
+    } as HeroCardConfig,
     capacity: 150,
     registrationDeadline: "",
     participationMode: "individual",
@@ -180,7 +193,10 @@ export default function NewEventPage() {
     ] as RoundConfig[],
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: "directory" | "hero") => {
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    target: "directory" | "hero" | "polaroid" | "herobg"
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -212,7 +228,7 @@ export default function NewEventPage() {
             directoryCustomFileName: file.name,
           }));
           setDirectoryArtworkMode("upload");
-        } else {
+        } else if (target === "hero") {
           setFormData((prev) => ({
             ...prev,
             heroImage: finalDataUrl,
@@ -220,6 +236,22 @@ export default function NewEventPage() {
             heroCustomFileName: file.name,
           }));
           setHeroArtworkMode("upload");
+        } else if (target === "polaroid") {
+          setFormData((prev) => ({
+            ...prev,
+            heroCardConfig: {
+              ...prev.heroCardConfig,
+              polaroidUrl: finalDataUrl,
+            },
+          }));
+        } else if (target === "herobg") {
+          setFormData((prev) => ({
+            ...prev,
+            heroCardConfig: {
+              ...prev.heroCardConfig,
+              bgImageUrl: finalDataUrl,
+            },
+          }));
         }
       };
 
@@ -436,6 +468,7 @@ export default function NewEventPage() {
       maxTeamSize: formData.participationMode === "team" ? Number(formData.maxTeamSize) : null,
       hasRounds: formData.hasRounds,
       featured: false,
+      heroCardConfig: formData.heroCardConfig as unknown as Record<string, unknown>,
       registrationForm: formData.registrationForm as unknown as Record<string, unknown>,
     };
 
@@ -664,15 +697,15 @@ export default function NewEventPage() {
                       </p>
                     </div>
 
-                    {/* Role Tab Selector (Directory vs Hero) */}
-                    <div className="inline-flex rounded-full border border-[#E5E7E9]  bg-white p-0.5 text-xs font-semibold shrink-0">
+                    {/* Role Tab Selector (Directory vs Hero vs HeroBox) */}
+                    <div className="inline-flex rounded-full border border-[#E5E7E9] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-0.5 text-xs font-semibold shrink-0">
                       <button
                         type="button"
                         onClick={() => setActiveArtworkTab("directory")}
                         className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
                           activeArtworkTab === "directory"
                             ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                            : "text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
+                            : "text-[#858B93] hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                         }`}
                       >
                         <span>Directory Card (16:9)</span>
@@ -686,19 +719,31 @@ export default function NewEventPage() {
                         className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
                           activeArtworkTab === "hero"
                             ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
-                            : "text-[#858B93]  hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
+                            : "text-[#858B93] hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
                         }`}
                       >
-                        <span>Public Hero (Panoramic)</span>
+                        <span>Public Banner</span>
                         {formData.isHeroCustomUpload && (
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                         )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveArtworkTab("herobox")}
+                        className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
+                          activeArtworkTab === "herobox"
+                            ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] shadow-xs"
+                            : "text-[#858B93] hover:text-[#34383D] dark:hover:text-[#F1F2F3]"
+                        }`}
+                      >
+                        <Sparkles className="h-3 w-3 text-amber-500" />
+                        <span>Retro Hero Box</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Active Asset Configuration Panel */}
-                  {activeArtworkTab === "directory" ? (
+                  {activeArtworkTab === "directory" && (
                     /* ===================== DIRECTORY ARTWORK TAB ===================== */
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -844,8 +889,10 @@ export default function NewEventPage() {
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    /* ===================== PUBLIC HERO ARTWORK TAB ===================== */
+                  )}
+
+                  {/* ===================== PUBLIC HERO BANNER TAB ===================== */}
+                  {activeArtworkTab === "hero" && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-[#858B93] ">
@@ -985,6 +1032,321 @@ export default function NewEventPage() {
                     </div>
                   )}
 
+                  {/* ===================== RETRO HERO BOX & POLAROID TAB ===================== */}
+                  {activeArtworkTab === "herobox" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#858B93]">
+                          Retro Hero Box & Polaroid Styling (FlowFest Theme)
+                        </span>
+                        <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Applied to Public Event Page
+                        </span>
+                      </div>
+
+                      {/* Controls Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-[#F8F9FA] dark:bg-[#1A1D20] p-3.5 rounded-2xl border border-[#E5E7E9] dark:border-[#2E3338]">
+                        {/* Kicker subtitle */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED]">
+                            Header Kicker Subtitle
+                          </label>
+                          <Input
+                            value={formData.heroCardConfig.kicker || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                heroCardConfig: { ...formData.heroCardConfig, kicker: e.target.value },
+                              })
+                            }
+                            placeholder="e.g. CAMPUS CREATORS & INNOVATORS EXPERIENCE"
+                            className="h-8 text-xs bg-white dark:bg-[#22262A]"
+                          />
+                        </div>
+
+                        {/* Speech Bubble text */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED]">
+                            Mascot Speech Bubble Text
+                          </label>
+                          <Input
+                            value={formData.heroCardConfig.bubbleText || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                heroCardConfig: { ...formData.heroCardConfig, bubbleText: e.target.value },
+                              })
+                            }
+                            placeholder="Auto: Date • Venue (or custom text)"
+                            className="h-8 text-xs bg-white dark:bg-[#22262A]"
+                          />
+                        </div>
+
+                        {/* CTA Button Text */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED]">
+                            Action CTA Button Text
+                          </label>
+                          <Input
+                            value={formData.heroCardConfig.buttonText || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                heroCardConfig: { ...formData.heroCardConfig, buttonText: e.target.value },
+                              })
+                            }
+                            placeholder="e.g. Get Pass Now"
+                            className="h-8 text-xs bg-white dark:bg-[#22262A]"
+                          />
+                        </div>
+
+                        {/* Mascot Sun Toggle */}
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#22262A] border border-[#E5E7E9] dark:border-[#30353A]">
+                          <div>
+                            <span className="text-xs font-bold text-[#34383D] dark:text-[#E8EAED] block">
+                              Show Smiling Sun Mascot
+                            </span>
+                            <span className="text-[10.5px] text-[#858B93]">
+                              Interactive spinning sun with winking face
+                            </span>
+                          </div>
+                          <CustomSwitch
+                            checked={formData.heroCardConfig.showMascot !== false}
+                            onChange={(checked) =>
+                              setFormData({
+                                ...formData,
+                                heroCardConfig: { ...formData.heroCardConfig, showMascot: checked },
+                              })
+                            }
+                          />
+                        </div>
+
+                        {/* Polaroid Corner Badge */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED]">
+                            Polaroid Corner Badge
+                          </label>
+                          <Input
+                            value={formData.heroCardConfig.photoBadge || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                heroCardConfig: { ...formData.heroCardConfig, photoBadge: e.target.value },
+                              })
+                            }
+                            placeholder="e.g. Free Entry, VIP, RSVP"
+                            className="h-8 text-xs bg-white dark:bg-[#22262A]"
+                          />
+                        </div>
+
+                        {/* Polaroid Bottom Caption */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED]">
+                            Polaroid Bottom Caption
+                          </label>
+                          <Input
+                            value={formData.heroCardConfig.photoCaption || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                heroCardConfig: { ...formData.heroCardConfig, photoCaption: e.target.value },
+                              })
+                            }
+                            placeholder="e.g. SKETCH Official"
+                            className="h-8 text-xs bg-white dark:bg-[#22262A]"
+                          />
+                        </div>
+
+                        {/* Card Background Color Selector */}
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED] flex items-center justify-between">
+                            <span>Card Background Color Tint</span>
+                            <span className="text-[10px] text-[#858B93] font-mono">{formData.heroCardConfig.bgColor || "#FFFDF7"}</span>
+                          </label>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {[
+                              { label: "Classic Cream", value: "#FFFDF7" },
+                              { label: "Pure White", value: "#FFFFFF" },
+                              { label: "Warm Sand", value: "#FFF8E7" },
+                              { label: "Peach Glow", value: "#FDF2E9" },
+                              { label: "Soft Mint", value: "#F0FDF4" },
+                            ].map((c) => (
+                              <button
+                                key={c.value}
+                                type="button"
+                                onClick={() =>
+                                  setFormData({
+                                    ...formData,
+                                    heroCardConfig: { ...formData.heroCardConfig, bgColor: c.value },
+                                  })
+                                }
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                                  (formData.heroCardConfig.bgColor || "#FFFDF7") === c.value
+                                    ? "border-[#121212] ring-2 ring-[#121212]/30 shadow-xs bg-white dark:bg-[#22262A]"
+                                    : "border-[#E5E7E9] dark:border-[#3A3F45] bg-white/60 dark:bg-[#1B1E21] hover:opacity-90"
+                                }`}
+                              >
+                                <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: c.value }} />
+                                <span>{c.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Polaroid Photo Custom Upload / URL */}
+                        <div className="sm:col-span-2 space-y-1">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED]">
+                            Custom Polaroid Photo (Optional · Defaults to Event Artwork)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={formData.heroCardConfig.polaroidUrl || ""}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  heroCardConfig: { ...formData.heroCardConfig, polaroidUrl: e.target.value },
+                                })
+                              }
+                              placeholder="Image URL or upload custom photo ->"
+                              className="h-8 text-xs flex-1 bg-white dark:bg-[#22262A]"
+                            />
+                            <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold hover:opacity-90 transition-opacity shrink-0">
+                              <Upload className="h-3 w-3" />
+                              <span>Upload Photo</span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => handleFileUpload(e, "polaroid")}
+                                className="hidden"
+                              />
+                            </label>
+                            {formData.heroCardConfig.polaroidUrl && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData({
+                                    ...formData,
+                                    heroCardConfig: { ...formData.heroCardConfig, polaroidUrl: "" },
+                                  })
+                                }
+                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                                title="Clear custom polaroid"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Background Image Texture */}
+                        <div className="sm:col-span-2 space-y-1">
+                          <label className="text-[11px] font-bold text-[#34383D] dark:text-[#E8EAED]">
+                            Card Background Image Texture / Pattern (Optional)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={formData.heroCardConfig.bgImageUrl || ""}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  heroCardConfig: { ...formData.heroCardConfig, bgImageUrl: e.target.value },
+                                })
+                              }
+                              placeholder="Subtle background pattern or texture URL ->"
+                              className="h-8 text-xs flex-1 bg-white dark:bg-[#22262A]"
+                            />
+                            <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] text-xs font-semibold hover:opacity-90 transition-opacity shrink-0">
+                              <Upload className="h-3 w-3" />
+                              <span>Upload Pattern</span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => handleFileUpload(e, "herobg")}
+                                className="hidden"
+                              />
+                            </label>
+                            {formData.heroCardConfig.bgImageUrl && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData({
+                                    ...formData,
+                                    heroCardConfig: { ...formData.heroCardConfig, bgImageUrl: "" },
+                                  })
+                                }
+                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                                title="Clear texture"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mini Live Preview of the Retro Hero Box */}
+                      <div
+                        className="rounded-2xl border-2 border-black p-4 shadow-[3px_4px_0_0_#121212] space-y-3 transition-colors"
+                        style={{
+                          backgroundColor: formData.heroCardConfig.bgColor || "#FFFDF7",
+                          backgroundImage: formData.heroCardConfig.bgImageUrl ? `url(${formData.heroCardConfig.bgImageUrl})` : undefined,
+                          backgroundSize: "cover",
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-black/60 font-quicksand">
+                            Live Retro Hero Box Preview
+                          </span>
+                          <RetroRainbowPill className="h-2.5 w-14" />
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2">
+                              {formData.heroCardConfig.showMascot !== false && (
+                                <SmilingSun className="w-8 h-8 shrink-0" spin={false} interactive={false} />
+                              )}
+                              <div className="px-3 py-1 rounded-xl bg-retro-orange text-white text-[11px] font-bold border border-black shadow-[2px_2px_0_0_#121212]">
+                                {formData.heroCardConfig.bubbleText || `${formData.startDate ? formData.startDate.slice(0, 10) : "Nov 15, 2026"} • ${formData.venue || "Studio Lab"}`}
+                              </div>
+                            </div>
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-black/60 font-quicksand">
+                              {formData.heroCardConfig.kicker || "CAMPUS CREATORS & INNOVATORS EXPERIENCE"}
+                            </div>
+                            <div className="font-peachy font-black text-xl text-black">
+                              {formData.title || "Sketch Event Title"}
+                            </div>
+                            <button type="button" className="px-4 py-1.5 rounded-full bg-retro-orange text-white text-xs font-black border border-black shadow-[2px_2px_0_0_#121212] flex items-center gap-1 font-quicksand">
+                              <span>{formData.heroCardConfig.buttonText || "Get Pass Now"}</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </button>
+                          </div>
+
+                          {/* Polaroid Mini Card */}
+                          <div className="w-36 rounded-xl border-2 border-black bg-white p-1.5 shadow-[2px_3px_0_0_#121212] rotate-1 shrink-0">
+                            <div className="relative h-24 w-full rounded-lg border border-black overflow-hidden bg-retro-yellow/30">
+                              <img
+                                src={formData.heroCardConfig.polaroidUrl || formData.directoryImage || formData.heroImage || CURATED_POSTERS[0].url}
+                                alt="Polaroid Preview"
+                                className="h-full w-full object-cover"
+                              />
+                              <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-full bg-white text-[8px] font-black border border-black font-quicksand">
+                                {formData.heroCardConfig.photoBadge || "Free Entry"}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between px-1">
+                              <span className="text-[9px] font-bold text-black/70 font-quicksand">
+                                {formData.heroCardConfig.photoCaption || "SKETCH Official"}
+                              </span>
+                              <RetroRainbowPill className="h-1.5 w-8" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {uploadError && (
                     <div className="flex items-center gap-2 text-xs font-medium text-red-600 bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
                       <AlertCircle className="h-4 w-4 shrink-0" />
@@ -992,19 +1354,19 @@ export default function NewEventPage() {
                     </div>
                   )}
 
-                  {/* Dual Independent Live Previews */}
-                  <div className="border-t border-[#F0F1F2]  pt-3">
+                  {/* Triple Independent Live Previews */}
+                  <div className="border-t border-[#F0F1F2] dark:border-[#25292F] pt-3">
                     <span className="text-[10px] font-bold text-[#858B93] uppercase tracking-wider block mb-2">
-                      Dual Live Layout Previews (Real Assets Applied)
+                      Live Layout Previews (Click to Edit Any Asset)
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {/* 1. Directory Card Presentation (Renders directoryImage) */}
                       <div
                         onClick={() => setActiveArtworkTab("directory")}
                         className={`cursor-pointer rounded-xl border p-2 space-y-1.5 transition-all ${
                           activeArtworkTab === "directory"
-                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white shadow-xs"
-                            : "border-[#E5E7E9]  bg-white/60 /60 opacity-80 hover:opacity-100"
+                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
+                            : "border-[#E5E7E9] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 opacity-80 hover:opacity-100"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1012,7 +1374,7 @@ export default function NewEventPage() {
                             1. Directory Card (16:9)
                           </span>
                           {activeArtworkTab === "directory" && (
-                            <span className="text-[9.5px] font-semibold text-[#34383D]  underline">
+                            <span className="text-[9.5px] font-semibold text-[#34383D] dark:text-[#E8EAED] underline">
                               Editing
                             </span>
                           )}
@@ -1038,16 +1400,16 @@ export default function NewEventPage() {
                         onClick={() => setActiveArtworkTab("hero")}
                         className={`cursor-pointer rounded-xl border p-2 space-y-1.5 transition-all ${
                           activeArtworkTab === "hero"
-                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white shadow-xs"
-                            : "border-[#E5E7E9]  bg-white/60 /60 opacity-80 hover:opacity-100"
+                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
+                            : "border-[#E5E7E9] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 opacity-80 hover:opacity-100"
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-bold text-[#858B93] uppercase tracking-wider">
-                            2. Public Hero Banner (Panoramic)
+                            2. Public Banner
                           </span>
                           {activeArtworkTab === "hero" && (
-                            <span className="text-[9.5px] font-semibold text-[#34383D]  underline">
+                            <span className="text-[9.5px] font-semibold text-[#34383D] dark:text-[#E8EAED] underline">
                               Editing
                             </span>
                           )}
@@ -1061,8 +1423,67 @@ export default function NewEventPage() {
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2 text-white">
                             <span className="text-[9.5px] font-mono tracking-wider uppercase text-white/70 truncate">
-                              Official Header Banner
+                              Panoramic Banner
                             </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Retro Hero Box Presentation (Renders heroCardConfig) */}
+                      <div
+                        onClick={() => setActiveArtworkTab("herobox")}
+                        className={`cursor-pointer rounded-xl border p-2 space-y-1.5 transition-all ${
+                          activeArtworkTab === "herobox"
+                            ? "border-[#25292F] dark:border-[#E8EAED] bg-white dark:bg-[#1B1E21] shadow-xs"
+                            : "border-[#E5E7E9] dark:border-[#30353A] bg-white/60 dark:bg-[#1B1E21]/60 opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-[#858B93] uppercase tracking-wider flex items-center gap-1">
+                            <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+                            <span>3. Retro Hero Box</span>
+                          </span>
+                          {activeArtworkTab === "herobox" && (
+                            <span className="text-[9.5px] font-semibold text-[#34383D] dark:text-[#E8EAED] underline">
+                              Editing
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className="relative aspect-video sm:h-[95px] w-full rounded-lg border border-black/30 p-2 flex items-center justify-between overflow-hidden shadow-xs"
+                          style={{
+                            backgroundColor: formData.heroCardConfig.bgColor || "#FFFDF7",
+                            backgroundImage: formData.heroCardConfig.bgImageUrl ? `url(${formData.heroCardConfig.bgImageUrl})` : undefined,
+                            backgroundSize: "cover",
+                          }}
+                        >
+                          <div className="space-y-1 z-10 max-w-[65%]">
+                            <div className="flex items-center gap-1">
+                              {formData.heroCardConfig.showMascot !== false && (
+                                <SmilingSun className="w-4 h-4 shrink-0" spin={false} interactive={false} />
+                              )}
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-retro-orange text-white border border-black truncate">
+                                {formData.heroCardConfig.bubbleText || "Date • Venue"}
+                              </span>
+                            </div>
+                            <p className="font-peachy font-black text-xs text-black truncate leading-tight">
+                              {formData.title || "Sketch Event"}
+                            </p>
+                            <span className="inline-block text-[8px] font-bold px-2 py-0.5 rounded-full bg-retro-orange text-white border border-black">
+                              {formData.heroCardConfig.buttonText || "Get Pass"}
+                            </span>
+                          </div>
+                          <div className="w-14 h-16 rounded border border-black bg-white p-0.5 rotate-2 shrink-0 shadow-xs">
+                            <div className="relative h-10 w-full overflow-hidden rounded-xs bg-retro-yellow/30">
+                              <img
+                                src={formData.heroCardConfig.polaroidUrl || formData.directoryImage || formData.heroImage || CURATED_POSTERS[0].url}
+                                alt="Polaroid"
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="text-[6px] font-bold text-center text-black/70 pt-0.5 truncate">
+                              {formData.heroCardConfig.photoCaption || "SKETCH"}
+                            </div>
                           </div>
                         </div>
                       </div>

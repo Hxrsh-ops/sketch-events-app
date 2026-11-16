@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
+import Lenis from "lenis";
 import {
   Calendar,
   MapPin,
@@ -40,6 +41,8 @@ import { registerForEventAction } from "@/app/actions/registration-actions";
 import { generateUnifiedTicketSvg, DEFAULT_UNIFIED_TICKET_DESIGN } from "@/lib/ticket/ticket-renderer";
 import {
   SmilingSun,
+  ChatCloudPoint,
+  FlowingRainbowSides,
   RetroRainbowPill,
   NeoBadge,
   ScallopedWave,
@@ -179,6 +182,33 @@ export default function PublicEventClient({
         });
     }
   }, [journeyStep, registrationResult]);
+
+  // Initialize Lenis fluid smooth scrolling for authentic FlowFest experience
+  useEffect(() => {
+    let lenis: Lenis | null = null;
+    let rafId: number;
+
+    try {
+      lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+      });
+
+      const raf = (time: number) => {
+        lenis?.raf(time);
+        rafId = requestAnimationFrame(raf);
+      };
+      rafId = requestAnimationFrame(raf);
+    } catch (e) {
+      console.warn("Lenis initialization skipped:", e);
+    }
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      lenis?.destroy();
+    };
+  }, []);
 
   // Field change handler
   const handleFieldChange = (fieldId: string, value: unknown) => {
@@ -541,7 +571,7 @@ export default function PublicEventClient({
   const isRegistrationOpen = !isRegistrationClosed && !isRegistrationFull && !isRegistrationUpcoming;
 
   return (
-    <div className={styles.ambientWrapper}>
+    <div className={`${styles.ambientWrapper} retro-theme`} data-retro-page="true">
       {/* Route-scoped FlowFest Cream Background Layer */}
       <div className={styles.ambientBackground} aria-hidden="true">
         {hasCoverImage ? (
@@ -563,6 +593,9 @@ export default function PublicEventClient({
         />
       </div>
 
+      {/* Dynamic Flowing Rainbow Ribbons on Margins */}
+      <FlowingRainbowSides />
+
       {/* Top Floating Mini Header */}
       <header className="relative z-20 max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-2">
         <div className="flex items-center justify-between">
@@ -580,7 +613,7 @@ export default function PublicEventClient({
           </Link>
 
           <div className="flex items-center gap-2">
-            <SmilingSun className="w-8 h-8" />
+            <SmilingSun className="w-8 h-8" interactive={true} />
             <NeoBadge bg="bg-retro-yellow" rotate="-rotate-1">
               Official Pass
             </NeoBadge>
@@ -591,8 +624,29 @@ export default function PublicEventClient({
       {/* Main Foreground Container */}
       <main className={`${styles.contentContainer} max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-8 pb-20`}>
         {/* HERO SECTION: FlowFest Neo-Brutalist Layout */}
-        <section className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-10 shadow-brutal-card relative overflow-hidden">
-          {/* Top Tilted Badges & Mascot */}
+        <section
+          className="rounded-3xl border-2 border-ink bg-cream-plus p-6 sm:p-10 shadow-brutal-card relative overflow-hidden"
+          style={{
+            backgroundColor: event.heroCardConfig?.bgColor || undefined,
+            backgroundImage: event.heroCardConfig?.bgImageUrl ? `url(${event.heroCardConfig.bgImageUrl})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          {/* Top Date & Venue Mascot Pill matching 127.0.0.1:5173 */}
+          <div className="inline-flex items-center space-x-4 mb-6">
+            {event.heroCardConfig?.showMascot !== false && (
+              <SmilingSun className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0" spin={true} interactive={true} />
+            )}
+            <div className="relative inline-flex items-center bg-retro-orange text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-2xl border-2 border-ink shadow-[3px_4px_0_0_#121212]">
+              <ChatCloudPoint className="h-4 w-auto absolute bottom-0 left-0 -translate-x-[44%] translate-y-[20%]" />
+              <span className="font-bold text-sm sm:text-base tracking-tight text-white font-quicksand whitespace-nowrap">
+                {event.heroCardConfig?.bubbleText || `${formatDate(event.startDate)}${event.venue ? ` • ${event.venue}` : ""}`}
+              </span>
+            </div>
+          </div>
+
+          {/* Badges Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div className="flex flex-wrap items-center gap-2">
               <NeoBadge bg="bg-retro-yellow" rotate="-rotate-2">
@@ -626,7 +680,7 @@ export default function PublicEventClient({
             <div className="lg:col-span-7 space-y-4">
               <div className="space-y-2">
                 <span className="font-quicksand font-bold text-xs uppercase tracking-widest text-ink/60">
-                  CAMPUS CREATORS & INNOVATORS EXPERIENCE
+                  {event.heroCardConfig?.kicker || "CAMPUS CREATORS & INNOVATORS EXPERIENCE"}
                 </span>
                 <h1 className="font-peachy font-black text-3xl sm:text-5xl text-ink leading-[1.08] tracking-tight">
                   {event.title}
@@ -642,7 +696,7 @@ export default function PublicEventClient({
                   href="#register"
                   className="btn-brutal inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-retro-orange text-white font-quicksand font-black text-sm border-2 border-ink shadow-brutal-btn"
                 >
-                  <span>Get Pass Now</span>
+                  <span>{event.heroCardConfig?.buttonText || "Get Pass Now"}</span>
                   <ArrowRight className="h-4 w-4 stroke-[3]" />
                 </a>
 
@@ -664,9 +718,9 @@ export default function PublicEventClient({
             <div className="lg:col-span-5 flex justify-center">
               <div className="w-full max-w-sm rounded-3xl border-2 border-ink bg-[#FFFDF7] p-3 shadow-brutal-card rotate-1 hover:rotate-0 transition-transform duration-300">
                 <div className="relative h-64 sm:h-72 w-full rounded-2xl border-2 border-ink overflow-hidden bg-retro-yellow/30">
-                  {coverImageUrl ? (
+                  {(event.heroCardConfig?.polaroidUrl || coverImageUrl) ? (
                     <img
-                      src={coverImageUrl}
+                      src={event.heroCardConfig?.polaroidUrl || coverImageUrl}
                       alt={event.title}
                       style={{ objectPosition: focalPoint }}
                       className="h-full w-full object-cover"
@@ -681,14 +735,14 @@ export default function PublicEventClient({
                   )}
                   <div className="absolute bottom-2.5 right-2.5">
                     <span className="px-3 py-1 rounded-full bg-cream-plus/95 border-2 border-ink font-quicksand font-black text-[10px] uppercase text-ink shadow-brutal-badge">
-                      Free Entry
+                      {event.heroCardConfig?.photoBadge || "Free Entry"}
                     </span>
                   </div>
                 </div>
 
                 <div className="mt-3 flex items-center justify-between px-2 pt-1">
                   <span className="font-quicksand font-bold text-xs text-ink/75">
-                    SKETCH Official
+                    {event.heroCardConfig?.photoCaption || "SKETCH Official"}
                   </span>
                   <RetroRainbowPill className="h-2.5 w-16" />
                 </div>
@@ -1221,7 +1275,7 @@ export default function PublicEventClient({
                 </div>
 
                 <div className="hidden sm:flex shrink-0">
-                  <SmilingSun className="w-14 h-14" />
+                  <SmilingSun className="w-16 h-16 sm:w-20 sm:h-20" spin={true} interactive={true} />
                 </div>
               </div>
 
@@ -1256,16 +1310,21 @@ export default function PublicEventClient({
         </section>
 
         {/* BOTTOM SCALLOPED WAVE ACCENT */}
-        <div className="pt-8 overflow-hidden rounded-3xl border-2 border-ink bg-cream-plus shadow-brutal-card p-6 text-center space-y-3">
-          <div className="flex justify-center">
-            <SmilingSun className="w-12 h-12" />
+        <div className="rounded-3xl border-2 border-ink bg-cream-plus shadow-brutal-card overflow-hidden">
+          <div className="w-full select-none pointer-events-none -mb-1">
+            <ScallopedWave className="w-full h-8 sm:h-12" />
           </div>
-          <p className="font-peachy font-black text-2xl text-ink">
-            SKETCH EVENT OPERATIONS
-          </p>
-          <p className="font-quicksand font-bold text-xs text-ink/60">
-            Powered by the SKETCH campus event platform. See you at the arena!
-          </p>
+          <div className="p-6 sm:p-8 text-center space-y-3">
+            <div className="flex justify-center">
+              <SmilingSun className="w-16 h-16 sm:w-20 sm:h-20" spin={true} interactive={true} />
+            </div>
+            <p className="font-peachy font-black text-2xl sm:text-3xl text-ink">
+              SKETCH EVENT OPERATIONS
+            </p>
+            <p className="font-quicksand font-bold text-xs sm:text-sm text-ink/60">
+              Powered by the SKETCH campus event platform. See you at the arena!
+            </p>
+          </div>
         </div>
       </main>
     </div>

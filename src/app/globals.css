@@ -298,188 +298,188 @@
 }
 
 /* Low-specificity dark mode overrides for legacy light utility classes (excludes ticket renderers) */
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-white,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-white"]:hover,
-:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:bg-white"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-white,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-white"]:hover,
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="group-hover:bg-white"] {
   background-color: #15181C;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-white/"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-white/"] {
   background-color: rgba(21, 24, 28, 0.88);
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F8F9FA\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F9FAFB\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFAFA\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAF9F7\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FAFBFB\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F9F8F6\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-gray-50,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-slate-50,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-zinc-50,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-neutral-50 {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F8F9FA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F9FAFB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#FAFAFA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#FAF9F7\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#FAFBFB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F9F8F6\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-gray-50,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-slate-50,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-zinc-50,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-neutral-50 {
   background-color: #0D0F12;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F2F3F4\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F2F3F5\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F3F4F6\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F4F5F6\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F6F7F8\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F0F1F2\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#F1F2F3\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#EFEEEA\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-gray-100,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-slate-100,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-zinc-100,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-neutral-100 {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F2F3F4\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F2F3F5\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F3F4F6\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F4F5F6\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F6F7F8\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F0F1F2\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#F1F2F3\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#EFEEEA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-gray-100,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-slate-100,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-zinc-100,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-neutral-100 {
   background-color: #1B1F25;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E3E5E8\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E5E7E9\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E5E7EA\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E5E7EB\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E8EAED\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#EAECEF\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#E2E5E9\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#D9DCE0\] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#E3E5E8\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#E5E7E9\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#E5E7EA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#E5E7EB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#E8EAED\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#EAECEF\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#E2E5E9\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#D9DCE0\] {
   background-color: #252A32;
 }
 
 /* Dark mode hover & group-hover surfaces so rows/buttons never flash bright white */
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-[#F"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-[#E"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-[#D"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-gray-"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-slate-"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-zinc-"]:hover,
-:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:bg-[#E"],
-:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:bg-[#F"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-[#F"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-[#E"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-[#D"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-gray-"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-slate-"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-zinc-"]:hover,
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="group-hover:bg-[#E"],
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="group-hover:bg-[#F"] {
   background-color: #20252C;
 }
 
 /* Dark mode semantic status tints (emerald, amber, rose/red, blue/slate) */
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-emerald-50"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-emerald-50"] {
   background-color: rgba(16, 185, 129, 0.14);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-emerald-200"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-emerald-300"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-emerald-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-emerald-300"] {
   border-color: rgba(16, 185, 129, 0.35);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-emerald-700"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-emerald-800"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-emerald-900"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-emerald-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-emerald-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-emerald-900"] {
   color: #6EE7B7;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-amber-50"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-amber-50"] {
   background-color: rgba(245, 158, 11, 0.14);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-amber-100"]:hover {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-amber-100"]:hover {
   background-color: rgba(245, 158, 11, 0.22);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-amber-200"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-amber-300"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-amber-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-amber-300"] {
   border-color: rgba(245, 158, 11, 0.35);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-amber-700"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-amber-800"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-amber-900"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-amber-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-amber-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-amber-900"] {
   color: #FCD34D;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-rose-50"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-red-50"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FEE2E2\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#FEF2F2\] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-rose-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-red-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#FEE2E2\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#FEF2F2\] {
   background-color: rgba(244, 63, 94, 0.14);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-rose-100"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:bg-red-100"]:hover {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-rose-100"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:bg-red-100"]:hover {
   background-color: rgba(244, 63, 94, 0.22);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-rose-200"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-rose-300"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-red-200"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-red-300"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-rose-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-rose-300"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-red-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-red-300"] {
   border-color: rgba(244, 63, 94, 0.35);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-rose-700"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-rose-800"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-rose-900"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-red-700"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-red-800"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-rose-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-rose-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-rose-900"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-red-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-red-800"] {
   color: #FDA4AF;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-blue-50"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-sky-50"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="bg-indigo-50"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-blue-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-sky-50"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="bg-indigo-50"] {
   background-color: rgba(59, 130, 246, 0.14);
 }
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-blue-700"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-blue-800"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-indigo-700"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-slate-700"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="text-slate-800"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-blue-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-blue-800"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-indigo-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-slate-700"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="text-slate-800"] {
   color: #CBD5E1;
 }
 
 /* Borders & Dividers */
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7E9\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7EA\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#E5E7EB\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D9DCE0\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).border-\[\#D1D5DB\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-slate-200"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="border-gray-200"],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).divide-\[\#E5E7E9\] > :not([hidden]) ~ :not([hidden]),
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).divide-\[\#E5E7EB\] > :not([hidden]) ~ :not([hidden]) {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).border-\[\#E5E7E9\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).border-\[\#E5E7EA\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).border-\[\#E5E7EB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).border-\[\#D9DCE0\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).border-\[\#D1D5DB\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-slate-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="border-gray-200"],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).divide-\[\#E5E7E9\] > :not([hidden]) ~ :not([hidden]),
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).divide-\[\#E5E7EB\] > :not([hidden]) ~ :not([hidden]) {
   border-color: #262B33;
 }
 
 /* Primary & Secondary Typography (including hover/group-hover dark text!) */
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-black,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#000000\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111315\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#111827\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#17191C\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#18181B\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#191A1C\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#25282B\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#25292F\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#30353A\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#34383D\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#374151\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-black"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-[#111"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-[#171"]:hover,
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="hover:text-[#343"]:hover,
-:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:text-black"],
-:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:text-[#111"],
-:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *)[class*="group-hover:text-[#171"] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-black,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#000000\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#111315\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#111827\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#17191C\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#18181B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#191A1C\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#25282B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#25292F\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#30353A\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#34383D\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#374151\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:text-black"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:text-[#111"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:text-[#171"]:hover,
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="hover:text-[#343"]:hover,
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="group-hover:text-black"],
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="group-hover:text-[#111"],
+:where(.dark) .group:hover :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *)[class*="group-hover:text-[#171"] {
   color: #F1F3F5;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#424850\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#4A515A\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#4E545B\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#65666A\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#656B73\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#6B7280\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#777E86\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#7D858F\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#858B93\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#8A9098\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).text-\[\#9CA3AF\] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#424850\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#4A515A\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#4E545B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#65666A\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#656B73\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#6B7280\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#777E86\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#7D858F\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#858B93\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#8A9098\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).text-\[\#9CA3AF\] {
   color: #9BA3AE;
 }
 
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#17191C\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#18181B\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#25292F\],
-:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *).bg-\[\#34383D\] {
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#17191C\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#18181B\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#25292F\],
+:where(.dark) :not(.unified-ticket-wrapper):not(.unified-ticket-wrapper *):not(.retro-theme):not(.retro-theme *):not([data-retro-page]):not([data-retro-page] *).bg-\[\#34383D\] {
   border-color: #323842;
 }
 
@@ -491,18 +491,98 @@
   background: #3B424D;
 }
 
-:where(.dark) input:not(.unified-ticket-wrapper *),
-:where(.dark) textarea:not(.unified-ticket-wrapper *),
-:where(.dark) select:not(.unified-ticket-wrapper *) {
+:where(.dark) input:not(.unified-ticket-wrapper *):not([data-retro-page] *):not(.retro-theme *):not([data-retro-form] *),
+:where(.dark) textarea:not(.unified-ticket-wrapper *):not([data-retro-page] *):not(.retro-theme *):not([data-retro-form] *),
+:where(.dark) select:not(.unified-ticket-wrapper *):not([data-retro-page] *):not(.retro-theme *):not([data-retro-form] *) {
   background-color: #121519;
   color: #F1F3F5;
   border-color: #2A3038;
 }
 
+/* Force light styling for all retro public event pages & forms */
+[data-retro-page],
+[data-retro-page] *,
+.retro-theme,
+.retro-theme * {
+  color-scheme: light !important;
+}
+
+/* Force light background on all retro cards, inputs, selects, buttons */
+[data-retro-page] input:not([type="checkbox"]):not([type="radio"]),
+[data-retro-page] textarea,
+.retro-theme input:not([type="checkbox"]):not([type="radio"]),
+.retro-theme textarea,
+.retro-theme .retro-input,
+.retro-theme .retro-select-trigger,
+:where(.dark) [data-retro-page] input:not([type="checkbox"]):not([type="radio"]),
+:where(.dark) [data-retro-page] textarea,
+:where(.dark) [data-retro-page] .retro-select-trigger,
+:where(.dark) .retro-theme input:not([type="checkbox"]):not([type="radio"]),
+:where(.dark) .retro-theme textarea,
+:where(.dark) .retro-theme .retro-input,
+:where(.dark) .retro-theme .retro-select-trigger {
+  background-color: #FFFDF7 !important;
+  color: #121212 !important;
+  border-color: #121212 !important;
+}
+
+[data-retro-page] input:hover,
+[data-retro-page] textarea:hover,
+.retro-theme input:hover,
+.retro-theme textarea:hover,
+.retro-theme .retro-input:hover,
+.retro-theme .retro-select-trigger:hover,
+:where(.dark) [data-retro-page] input:hover,
+:where(.dark) [data-retro-page] textarea:hover,
+:where(.dark) [data-retro-page] .retro-select-trigger:hover,
+:where(.dark) .retro-theme input:hover,
+:where(.dark) .retro-theme textarea:hover,
+:where(.dark) .retro-theme .retro-input:hover,
+:where(.dark) .retro-theme .retro-select-trigger:hover {
+  background-color: #F8F4EA !important;
+  color: #121212 !important;
+  border-color: #121212 !important;
+}
+
+[data-retro-page] input:focus,
+[data-retro-page] textarea:focus,
+.retro-theme input:focus,
+.retro-theme textarea:focus,
+.retro-theme .retro-input:focus,
+.retro-theme .retro-select-trigger:focus,
+.retro-theme .retro-select-trigger[aria-expanded="true"] {
+  background-color: #FFFFFF !important;
+  color: #121212 !important;
+  border-color: #121212 !important;
+  box-shadow: 0 4px 0 0 #121212 !important;
+}
+
+.retro-theme .retro-dropdown {
+  background-color: #FFFDF7 !important;
+  color: #121212 !important;
+  border: 2px solid #121212 !important;
+}
+
+.retro-theme .retro-option {
+  color: #121212 !important;
+}
+
+.retro-theme .retro-option:hover {
+  background-color: #F3ECD2 !important;
+  color: #121212 !important;
+}
+
+[data-retro-page] input::placeholder,
+[data-retro-page] textarea::placeholder,
+.retro-theme input::placeholder,
+.retro-theme textarea::placeholder {
+  color: rgba(18, 18, 18, 0.45) !important;
+}
+
 /* Clean Form Focus & Selection */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+input:not([data-retro-page] *):not(.retro-theme *):focus-visible,
+textarea:not([data-retro-page] *):not(.retro-theme *):focus-visible,
+select:not([data-retro-page] *):not(.retro-theme *):focus-visible {
   outline: none;
   border-color: #A4A9AF !important;
   box-shadow: 0 0 0 1px #A4A9AF !important;
