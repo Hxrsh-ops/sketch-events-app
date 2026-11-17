@@ -24,7 +24,9 @@ const escapeXml = (str: string) =>
 /**
  * Generate a complete, valid XML SVG Certificate matching the exact design and element placement.
  */
-export async function generateCertificateSvg(props: CertificateRenderProps): Promise<string> {
+export async function generateCertificateSvg(
+  props: CertificateRenderProps
+): Promise<string> {
   const { design, certificate } = props;
   const width = design.canvas?.width || 842;
   const height = design.canvas?.height || 595;
@@ -34,15 +36,32 @@ export async function generateCertificateSvg(props: CertificateRenderProps): Pro
   const borderColor = design.theme?.borderColor || "#30363D";
 
   // Resolve authentic public verification base URL for real-world QR code scanning
-  let resolvedBaseUrl = props.verificationBaseUrl?.replace(/\/+$/, "") || "";
-  if (!resolvedBaseUrl || resolvedBaseUrl.includes("localhost") || resolvedBaseUrl.includes("127.0.0.1")) {
+  let resolvedBaseUrl =
+    props.verificationBaseUrl?.replace(/\/+$/, "") || "";
+
+  if (
+    !resolvedBaseUrl ||
+    resolvedBaseUrl.includes("localhost") ||
+    resolvedBaseUrl.includes("127.0.0.1")
+  ) {
     const envAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
-    if (envAppUrl && !envAppUrl.includes("localhost") && !envAppUrl.includes("127.0.0.1")) {
+
+    if (
+      envAppUrl &&
+      !envAppUrl.includes("localhost") &&
+      !envAppUrl.includes("127.0.0.1")
+    ) {
       resolvedBaseUrl = envAppUrl;
     } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-      resolvedBaseUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`.replace(/\/+$/, "");
+      resolvedBaseUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`.replace(
+        /\/+$/,
+        ""
+      );
     } else if (process.env.VERCEL_URL) {
-      resolvedBaseUrl = `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "");
+      resolvedBaseUrl = `https://${process.env.VERCEL_URL}`.replace(
+        /\/+$/,
+        ""
+      );
     } else {
       resolvedBaseUrl = "https://sketchhub-liard.vercel.app";
     }
@@ -59,6 +78,7 @@ export async function generateCertificateSvg(props: CertificateRenderProps): Pro
       margin: 1,
       color: { dark: "#0D1117", light: "#FFFFFF" },
     });
+
     qrSvgClean = rawQr
       .replace(/<\?xml[\s\S]*?\?>/gi, "")
       .replace(/<!DOCTYPE[\s\S]*?>/gi, "")
@@ -70,6 +90,7 @@ export async function generateCertificateSvg(props: CertificateRenderProps): Pro
           .replace(/\by="[^"]*"/g, "")
           .replace(/\s+/g, " ")
           .trim();
+
         return `<svg ${clean}>`;
       });
   } catch {
@@ -89,7 +110,11 @@ export async function generateCertificateSvg(props: CertificateRenderProps): Pro
   let bgImageSvg = "";
   if (design.backgroundImage?.url) {
     const opacity = design.backgroundImage.overlayOpacity ?? 0.2;
-    const fit = design.backgroundImage.fit === "contain" ? "xMidYMid meet" : "xMidYMid slice";
+    const fit =
+      design.backgroundImage.fit === "contain"
+        ? "xMidYMid meet"
+        : "xMidYMid slice";
+
     bgImageSvg = `
   <image href="${escapeXml(design.backgroundImage.url)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="${fit}" />
   <rect x="0" y="0" width="${width}" height="${height}" fill="${escapeXml(design.backgroundImage.overlayColor || "#000000")}" fill-opacity="${opacity}" />`;
@@ -122,82 +147,102 @@ export async function generateCertificateSvg(props: CertificateRenderProps): Pro
       }
 
       let value = typeof el.text === "string" ? el.text : "";
+
       if (el.bindingKey === "recipient_name") {
         value =
           typeof certificate.recipientName === "string"
             ? certificate.recipientName
             : typeof el.sampleValue === "string"
-            ? el.sampleValue
-            : typeof el.text === "string"
-            ? el.text
-            : "";
+              ? el.sampleValue
+              : typeof el.text === "string"
+                ? el.text
+                : "";
       } else if (el.bindingKey === "event_title") {
         value =
           typeof certificate.eventTitle === "string"
             ? certificate.eventTitle
             : typeof el.sampleValue === "string"
-            ? el.sampleValue
-            : typeof el.text === "string"
-            ? el.text
-            : "";
+              ? el.sampleValue
+              : typeof el.text === "string"
+                ? el.text
+                : "";
       } else if (el.bindingKey === "certificate_number") {
         const num =
           typeof certificate.certificateNumber === "string"
             ? certificate.certificateNumber
             : typeof el.sampleValue === "string"
-            ? el.sampleValue
-            : typeof el.text === "string"
-            ? el.text
-            : "";
+              ? el.sampleValue
+              : typeof el.text === "string"
+                ? el.text
+                : "";
+
         value = num ? (num.startsWith("ID:") ? num : `ID: ${num}`) : "";
       } else if (el.bindingKey === "issue_date") {
         value =
           typeof certificate.issuedAt === "string" && certificate.issuedAt
             ? displayDate
             : typeof el.sampleValue === "string"
-            ? el.sampleValue
-            : typeof el.text === "string"
-            ? el.text
-            : displayDate;
+              ? el.sampleValue
+              : typeof el.text === "string"
+                ? el.text
+                : displayDate;
       } else if (el.bindingKey === "event_date") {
         value =
           typeof certificate.eventDate === "string"
             ? certificate.eventDate
             : typeof certificate.issuedAt === "string" && certificate.issuedAt
-            ? displayDate
-            : typeof el.sampleValue === "string"
-            ? el.sampleValue
-            : typeof el.text === "string"
-            ? el.text
-            : displayDate;
+              ? displayDate
+              : typeof el.sampleValue === "string"
+                ? el.sampleValue
+                : typeof el.text === "string"
+                  ? el.text
+                  : displayDate;
       }
 
       if (!value) return "";
 
       const x = el.x;
-      const y = el.y + (el.height ? Math.min(el.height * 0.72, (el.fontSize || 14) * 1.1) : (el.fontSize || 14));
-      const textAnchor = el.alignment === "center" ? "middle" : el.alignment === "right" ? "end" : "start";
-      const anchorX = el.alignment === "center" ? x + el.width / 2 : el.alignment === "right" ? x + el.width : x;
+      const y =
+        el.y +
+        (el.height
+          ? Math.min(el.height * 0.72, (el.fontSize || 14) * 1.1)
+          : el.fontSize || 14);
+
+      const textAnchor =
+        el.alignment === "center"
+          ? "middle"
+          : el.alignment === "right"
+            ? "end"
+            : "start";
+
+      const anchorX =
+        el.alignment === "center"
+          ? x + el.width / 2
+          : el.alignment === "right"
+            ? x + el.width
+            : x;
 
       const fontFamily =
         el.fontFamily === "serif"
           ? "Georgia, 'Times New Roman', serif"
           : el.fontFamily === "mono"
-          ? "monospace"
-          : el.fontFamily === "cinematic"
-          ? "Impact, sans-serif"
-          : el.fontFamily === "script"
-          ? "'Brush Script MT', cursive, sans-serif"
-          : "sans-serif";
+            ? "monospace"
+            : el.fontFamily === "cinematic"
+              ? "Impact, sans-serif"
+              : el.fontFamily === "script"
+                ? "'Brush Script MT', cursive, sans-serif"
+                : "sans-serif";
 
       const fontWeight =
         el.fontWeight === "bold" || el.fontWeight === "extrabold"
           ? "bold"
           : el.fontWeight === "semibold" || el.fontWeight === "medium"
-          ? "600"
-          : "normal";
+            ? "600"
+            : "normal";
 
-      const letterSpacing = el.letterSpacing ? `letter-spacing="${el.letterSpacing}"` : "";
+      const letterSpacing = el.letterSpacing
+        ? `letter-spacing="${el.letterSpacing}"`
+        : "";
 
       let maskBgSvg = "";
       if (el.backgroundColor) {

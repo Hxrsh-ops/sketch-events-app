@@ -35,6 +35,7 @@ import {
 import {
   STANDARD_INDIVIDUAL_TEMPLATE,
   HACKATHON_TEAM_TEMPLATE,
+  SRMIST_RAMAPURAM_DEPARTMENTS,
 } from "@/lib/form-templates";
 import { saveSubmission } from "@/lib/registration-store";
 import { registerForEventAction } from "@/app/actions/registration-actions";
@@ -54,6 +55,12 @@ import {
   TeamMemberSubmission,
   Round,
 } from "@/types";
+import { toast, ToastContainer } from "@/components/ui/notification-toast";
+import {
+  saveRegistrationDraft,
+  getRegistrationDraft,
+  clearRegistrationDraft,
+} from "@/lib/registration-draft";
 import styles from "./ambient-bg.module.css";
 
 interface PublicEventClientProps {
@@ -90,47 +97,67 @@ export default function PublicEventClient({
         ? HACKATHON_TEAM_TEMPLATE
         : STANDARD_INDIVIDUAL_TEMPLATE;
 
-    if (!event.hasTeams) {
-      return baseSchema;
-    }
+    const hasTeamNameField =
+      !event.hasTeams ||
+      baseSchema.sections.some((sec) =>
+        sec.fields.some(
+          (f) =>
+            f.id.toLowerCase().includes("team_name") ||
+            f.label.toLowerCase().includes("team name")
+        )
+      );
 
-    const hasTeamNameField = baseSchema.sections.some((sec) =>
-      sec.fields.some(
-        (f) =>
-          f.id.toLowerCase().includes("team_name") ||
-          f.label.toLowerCase().includes("team name")
-      )
-    );
-
-    if (hasTeamNameField) {
-      return baseSchema;
-    }
-
-    return {
-      ...baseSchema,
-      sections: [
-        {
-          id: "auto_team_identity",
-          title: "Team Identity",
-          description:
-            event.minTeamSize === 1
-              ? "Enter your team name (or your solo/alias name if participating individually)."
-              : "Enter your team name for roster grouping and pass generation.",
-          fields: [
+    const schemaWithTeam = hasTeamNameField
+      ? baseSchema
+      : {
+          ...baseSchema,
+          sections: [
             {
-              id: "team_name",
-              type: "text",
-              label: "Team Name",
-              placeholder:
+              id: "auto_team_identity",
+              title: "Team Identity",
+              description:
                 event.minTeamSize === 1
-                  ? "e.g., Team Apex or Solo"
-                  : "e.g., Team Apex",
-              required: true,
+                  ? "Enter your team name (or your solo/alias name if participating individually)."
+                  : "Enter your team name for roster grouping and pass generation.",
+              fields: [
+                {
+                  id: "team_name",
+                  type: "text" as const,
+                  label: "Team Name",
+                  placeholder:
+                    event.minTeamSize === 1
+                      ? "e.g., Team Apex or Solo"
+                      : "e.g., Team Apex",
+                  required: true,
+                },
+              ],
             },
+            ...baseSchema.sections,
           ],
-        },
-        ...baseSchema.sections,
-      ],
+        };
+
+    // Ensure any department select field uses the updated official SRMIST Ramapuram structure
+    // rather than any legacy/incomplete hardcoded list from stored events
+    return {
+      ...schemaWithTeam,
+      sections: schemaWithTeam.sections.map((sec) => ({
+        ...sec,
+        fields: sec.fields.map((f) => {
+          const isDept =
+            f.type === "select" &&
+            (f.id.toLowerCase().includes("dept") ||
+              f.id.toLowerCase().includes("department") ||
+              f.label.toLowerCase().includes("department"));
+
+          if (isDept) {
+            return {
+              ...f,
+              options: SRMIST_RAMAPURAM_DEPARTMENTS,
+            };
+          }
+          return f;
+        }),
+      })),
     };
   }, [event]);
 
@@ -141,6 +168,20 @@ export default function PublicEventClient({
   const [duplicateRecord, setDuplicateRecord] = useState<any | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // Restore saved registration draft from localStorage
+  useEffect(() => {
+    if (journeyStep === "form" && Object.keys(formValues).length === 0) {
+      const savedDraft =
+        getRegistrationDraft(event.id) ||
+        (event.slug ? getRegistrationDraft(event.slug) : null);
+      if (savedDraft && Object.keys(savedDraft).length > 0) {
+        setFormValues(savedDraft);
+        setDraftRestored(true);
+      }
+    }
+  }, [event.id, event.slug, journeyStep]);
 
   // Generated Registration Result
   const [registrationResult, setRegistrationResult] = useState<{
@@ -193,6 +234,10 @@ export default function PublicEventClient({
         duration: 1.2,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
+        prevent: (node) =>
+          Boolean(node.closest?.("[data-lenis-prevent]")) ||
+          Boolean(node.closest?.(".retro-dropdown")) ||
+          Boolean(node.closest?.("[role='listbox']")),
       });
 
       const raf = (time: number) => {
@@ -212,10 +257,15 @@ export default function PublicEventClient({
 
   // Field change handler
   const handleFieldChange = (fieldId: string, value: unknown) => {
-    setFormValues((prev) => ({
-      ...prev,
-      [fieldId]: value,
-    }));
+    setFormValues((prev) => {
+      const next = {
+        ...prev,
+        [fieldId]: value,
+      };
+      // Auto-save registration progress to localStorage
+      saveRegistrationDraft(event.id, next, event.slug);
+      return next;
+    });
 
     if (errors[fieldId]) {
       setErrors((prev) => {
@@ -336,9 +386,20 @@ export default function PublicEventClient({
             return;
           }
 
-          if (field.type === "phone" && !/^[0-9+\s\-().]{7,20}$/.test(strVal)) {
-            newErrors[field.id] = "Please enter a valid phone number.";
-            return;
+          if (field.type === "phone") {
+            const digits = strVal.replace(/\D/g, "");
+            if (digits.length !== 10) {
+              newErrors[field.id] = "Mobile number must be exactly 10 digits.";
+              return;
+            }
+          }
+
+          if (field.type === "select" && strVal.toLowerCase() === "other") {
+            const customVal = String(formValues[`${field.id}_custom`] || "").trim();
+            if (!customVal) {
+              newErrors[`${field.id}_custom`] = "Please enter your department name.";
+              return;
+            }
           }
 
           if (
@@ -374,6 +435,8 @@ export default function PublicEventClient({
       setJourneyStep("review");
       window.scrollTo({ top: 350, behavior: "smooth" });
     } else {
+      const firstErrorMessage = Object.values(newErrors)[0];
+      toast.error(firstErrorMessage, "Validation Error");
       const firstErrorId = Object.keys(newErrors)[0];
       const elem = document.getElementById(firstErrorId);
       if (elem) {
@@ -416,6 +479,12 @@ export default function PublicEventClient({
       }
     }
 
+    const rawDept = (formValues["department"] as string) || (formValues["leader_department"] as string);
+    const resolvedDept =
+      String(rawDept || "").toLowerCase() === "other"
+        ? (formValues["department_custom"] as string) || (formValues["leader_department_custom"] as string) || "Other"
+        : rawDept;
+
     if (isPreview) {
       setTimeout(() => {
         const generatedRegId = `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -432,7 +501,7 @@ export default function PublicEventClient({
           attendeeName,
           email,
           phone: (formValues["phone"] as string) || (formValues["leader_phone"] as string) || undefined,
-          department: (formValues["department"] as string) || (formValues["leader_department"] as string) || undefined,
+          department: resolvedDept || undefined,
           year: (formValues["year"] as string) || (formValues["academic_year"] as string) || undefined,
           teamName: event.hasTeams || teamName ? teamName : undefined,
           teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
@@ -443,6 +512,8 @@ export default function PublicEventClient({
         };
 
         saveSubmission(submissionRecord);
+        clearRegistrationDraft(event.id, event.slug);
+        toast.success("Registration confirmed! Your ticket pass is ready.", "Success");
 
         setRegistrationResult({
           registrationId: generatedRegId,
@@ -467,7 +538,7 @@ export default function PublicEventClient({
           attendeeName,
           email,
           phone: (formValues["phone"] as string) || (formValues["leader_phone"] as string) || undefined,
-          department: (formValues["department"] as string) || (formValues["leader_department"] as string) || undefined,
+          department: resolvedDept || undefined,
           year: (formValues["year"] as string) || (formValues["academic_year"] as string) || undefined,
           teamName: event.hasTeams || teamName ? teamName : undefined,
           teamMembers: teamMembers.map((m) => ({
@@ -483,20 +554,24 @@ export default function PublicEventClient({
         if (!result.success) {
           if (result.error === "ALREADY_REGISTERED" && result.data) {
             setDuplicateRecord(result.data);
-            setSubmissionError(
-              `This email address (${result.data.email}) is already registered for this event. Duplicate submissions are not accepted.`
-            );
+            const msg = `This email address (${result.data.email}) is already registered for this event. Duplicate submissions are not accepted.`;
+            setSubmissionError(msg);
+            toast.error(msg, "Already Registered");
             setIsSubmitting(false);
             return;
           }
 
           setDuplicateRecord(null);
-          setSubmissionError(result.message || "Registration could not be completed.");
+          const msg = result.message || "Registration could not be completed.";
+          setSubmissionError(msg);
+          toast.error(msg, "Registration Error");
           setIsSubmitting(false);
           return;
         }
 
         setDuplicateRecord(null);
+        clearRegistrationDraft(event.id, event.slug);
+        toast.success("Registration confirmed! Your ticket pass is ready.", "Success");
 
         setRegistrationResult({
           registrationId: result.data.registrationId,
@@ -515,7 +590,9 @@ export default function PublicEventClient({
         setJourneyStep("confirmed");
         window.scrollTo({ top: 350, behavior: "smooth" });
       } catch {
-        setSubmissionError("Network or server connection error. Please try again.");
+        const networkMsg = "Network or server connection error. Please try again.";
+        setSubmissionError(networkMsg);
+        toast.error(networkMsg, "Error");
         setIsSubmitting(false);
       }
     }
@@ -572,6 +649,7 @@ export default function PublicEventClient({
 
   return (
     <div className={`${styles.ambientWrapper} retro-theme`} data-retro-page="true">
+      <ToastContainer />
       {/* Route-scoped FlowFest Cream Background Layer */}
       <div className={styles.ambientBackground} aria-hidden="true">
         {hasCoverImage ? (
@@ -1077,6 +1155,38 @@ export default function PublicEventClient({
                 </div>
               </div>
 
+              {/* Multiple Students Registration Banner in exact FlowFest Retro Neo-Brutalist Theme */}
+              <div className="max-w-md mx-auto rounded-3xl border-2 border-ink bg-[#FFFDF7] p-5 text-center space-y-2.5 shadow-brutal-card">
+                <div className="flex items-center justify-center gap-2 text-xs font-quicksand font-black text-ink">
+                  <Users className="h-4 w-4 stroke-[2.5]" />
+                  <span>Need to register for another student in the same mail.</span>
+                </div>
+                <p className="text-xs font-quicksand font-semibold text-ink/75 leading-relaxed">
+                  You can register additional students using{" "}
+                  <strong className="text-ink font-black">{registrationResult.email}</strong>.
+                  Each student receives their own unique ticket pass and separate registration record.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const retainedEmail = registrationResult.email;
+                    clearRegistrationDraft(event.id, event.slug);
+                    setFormValues({
+                      email: retainedEmail,
+                      leader_email: retainedEmail,
+                    });
+                    setErrors({});
+                    setRegistrationResult(null);
+                    setDuplicateRecord(null);
+                    setJourneyStep("form");
+                    window.scrollTo({ top: 350, behavior: "smooth" });
+                  }}
+                  className="btn-brutal px-5 py-2.5 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn"
+                >
+                  Register Another Student
+                </button>
+              </div>
+
               {/* Action Buttons */}
               <div className="max-w-md mx-auto space-y-3 pt-2">
                 {registrationResult.liveTicketUrl && (
@@ -1278,6 +1388,24 @@ export default function PublicEventClient({
                   <SmilingSun className="w-16 h-16 sm:w-20 sm:h-20" spin={true} interactive={true} />
                 </div>
               </div>
+
+              {/* Draft Restored Banner */}
+              {draftRestored && (
+                <div className="rounded-2xl border-2 border-ink bg-retro-yellow/30 p-3 sm:p-4 flex items-center justify-between text-xs font-quicksand font-bold text-ink shadow-brutal-flat">
+                  <span>Draft restored from your previous session.</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRegistrationDraft(event.id, event.slug);
+                      setFormValues({});
+                      setDraftRestored(false);
+                    }}
+                    className="btn-brutal px-3 py-1 rounded-full border-2 border-ink bg-white text-ink text-xs font-black shadow-brutal-flat"
+                  >
+                    Start Fresh
+                  </button>
+                </div>
+              )}
 
               {/* Dynamic Form Engine in FlowFest Retro Theme */}
               <form onSubmit={handleProceedToReview} className="space-y-6">

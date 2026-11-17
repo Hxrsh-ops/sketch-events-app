@@ -1,4 +1,306 @@
-import { RegistrationFormSchema } from "@/types";
+import { RegistrationFormSchema, FormFieldOption } from "@/types";
+
+/**
+ * Official SRMIST Ramapuram academic structure and department/program offerings.
+ * Organized strictly by Faculty and School groupings.
+ */
+export const SRMIST_RAMAPURAM_DEPARTMENTS: FormFieldOption[] = [
+  // =========================================================================
+  // Faculty of Engineering & Technology
+  // =========================================================================
+  {
+    label: "Computer Science & Engineering (CSE)",
+    value: "Computer Science & Engineering (CSE)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Artificial Intelligence (AI)",
+    value: "Artificial Intelligence (AI)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Artificial Intelligence & Machine Learning (AIML)",
+    value: "Artificial Intelligence & Machine Learning (AIML)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Big Data Analytics (BDA)",
+    value: "Big Data Analytics (BDA)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Cyber Security",
+    value: "Cyber Security (FET)",
+    group: "Faculty of Engineering & Technology",
+    description: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Cloud Computing",
+    value: "Cloud Computing",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Gaming Technology",
+    value: "Gaming Technology",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Internet of Things (IoT)",
+    value: "Internet of Things (IoT)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Data Science",
+    value: "Data Science (FET)",
+    group: "Faculty of Engineering & Technology",
+    description: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Computer Science & Business Systems (CSBS)",
+    value: "Computer Science & Business Systems (CSBS)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Information Technology (IT)",
+    value: "Information Technology (IT)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Electronics & Communication Engineering (ECE)",
+    value: "Electronics & Communication Engineering (ECE)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Electronics and Computer Engineering",
+    value: "Electronics and Computer Engineering",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Mechanical Engineering",
+    value: "Mechanical Engineering",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Mechanical and Automation Engineering",
+    value: "Mechanical and Automation Engineering",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Civil Engineering",
+    value: "Civil Engineering",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Electrical & Electronics Engineering (EEE)",
+    value: "Electrical & Electronics Engineering (EEE)",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Biomedical Engineering",
+    value: "Biomedical Engineering",
+    group: "Faculty of Engineering & Technology",
+  },
+  {
+    label: "Biotechnology",
+    value: "Biotechnology (FET)",
+    group: "Faculty of Engineering & Technology",
+    description: "Faculty of Engineering & Technology",
+  },
+
+  // =========================================================================
+  // Faculty of Science & Humanities
+  // =========================================================================
+  {
+    label: "Computer Science",
+    value: "Computer Science (FSH)",
+    group: "Faculty of Science & Humanities",
+    description: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Cyber Security",
+    value: "Cyber Security (FSH)",
+    group: "Faculty of Science & Humanities",
+    description: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Artificial Intelligence & Machine Learning",
+    value: "Artificial Intelligence & Machine Learning (FSH)",
+    group: "Faculty of Science & Humanities",
+    description: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Applied Data Science",
+    value: "Applied Data Science",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Computer Applications (BCA)",
+    value: "Computer Applications (BCA)",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Commerce",
+    value: "Commerce",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Corporate Secretaryship",
+    value: "Corporate Secretaryship",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Accounting & Finance",
+    value: "Accounting & Finance",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Information System Management",
+    value: "Information System Management",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Visual Communication",
+    value: "Visual Communication",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Film Technology",
+    value: "Film Technology",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Journalism & Mass Communication",
+    value: "Journalism & Mass Communication",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Fashion Designing",
+    value: "Fashion Designing",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Biotechnology",
+    value: "Biotechnology (FSH)",
+    group: "Faculty of Science & Humanities",
+    description: "Faculty of Science & Humanities",
+  },
+  {
+    label: "English",
+    value: "English",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Psychology",
+    value: "Psychology",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Physics",
+    value: "Physics",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Chemistry",
+    value: "Chemistry",
+    group: "Faculty of Science & Humanities",
+  },
+  {
+    label: "Mathematics",
+    value: "Mathematics",
+    group: "Faculty of Science & Humanities",
+  },
+
+  // =========================================================================
+  // School of Management
+  // =========================================================================
+  {
+    label: "Business Administration (BBA)",
+    value: "Business Administration (BBA)",
+    group: "School of Management",
+  },
+  {
+    label: "Management (MBA)",
+    value: "Management (MBA)",
+    group: "School of Management",
+  },
+
+  // =========================================================================
+  // School of Environment, Architecture & Design
+  // =========================================================================
+  {
+    label: "Architecture (B.Arch)",
+    value: "Architecture (B.Arch)",
+    group: "School of Environment, Architecture & Design",
+  },
+  {
+    label: "Architecture (M.Arch)",
+    value: "Architecture (M.Arch)",
+    group: "School of Environment, Architecture & Design",
+  },
+  {
+    label: "Design (B.Des)",
+    value: "Design (B.Des)",
+    group: "School of Environment, Architecture & Design",
+  },
+
+  // =========================================================================
+  // Dental Sciences
+  // =========================================================================
+  {
+    label: "Dental Surgery (BDS)",
+    value: "Dental Surgery (BDS)",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Endodontics",
+    value: "Endodontics",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Oral & Maxillofacial Surgery",
+    value: "Oral & Maxillofacial Surgery",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Orthodontics",
+    value: "Orthodontics",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Periodontology",
+    value: "Periodontology",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Prosthodontics",
+    value: "Prosthodontics",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Oral Medicine & Radiology",
+    value: "Oral Medicine & Radiology",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Oral Pathology",
+    value: "Oral Pathology",
+    group: "Dental Sciences",
+  },
+  {
+    label: "Public Health Dentistry",
+    value: "Public Health Dentistry",
+    group: "Dental Sciences",
+  },
+
+  // =========================================================================
+  // Other Option
+  // =========================================================================
+  {
+    label: "Other Academic Department / Program",
+    value: "Other",
+    group: "Other",
+  },
+];
 
 /**
  * Reference Configuration modeled directly from the Diet CODE Registration Form PDF
@@ -57,18 +359,9 @@ export const DIET_CODE_TEMPLATE: RegistrationFormSchema = {
           id: "department",
           type: "select",
           label: "DEPARTMENT OF STUDY",
-          description: "Select your active university major",
+          description: "Select your active university major or academic program",
           required: true,
-          options: [
-            { label: "Computer Science & Engineering (CSE)", value: "CSE" },
-            { label: "Artificial Intelligence & Machine Learning (AIML)", value: "AIML" },
-            { label: "Data Science & Computing (C-Tech)", value: "Data Science" },
-            { label: "Electronics & Communication Engineering (ECE)", value: "ECE" },
-            { label: "Electrical & Electronics Engineering (EEE)", value: "EEE" },
-            { label: "Information Technology (IT)", value: "IT" },
-            { label: "Design, Visual Arts & Media Studies", value: "Design" },
-            { label: "Other Academic Department", value: "Other" },
-          ],
+          options: SRMIST_RAMAPURAM_DEPARTMENTS,
         },
         {
           id: "register_number",
@@ -242,15 +535,9 @@ export const STANDARD_INDIVIDUAL_TEMPLATE: RegistrationFormSchema = {
           id: "department",
           type: "select",
           label: "Department of Study",
+          description: "Select your active university major or academic program",
           required: true,
-          options: [
-            { label: "Computer Science & Engineering", value: "Computer Science" },
-            { label: "Visual Arts & Communication", value: "Visual Arts" },
-            { label: "Industrial & Product Design", value: "Product Design" },
-            { label: "Human-Computer Interaction (HCI)", value: "HCI" },
-            { label: "Information Technology", value: "Information Technology" },
-            { label: "Other Academic Department", value: "Other" },
-          ],
+          options: SRMIST_RAMAPURAM_DEPARTMENTS,
         },
         {
           id: "academic_year",
@@ -306,13 +593,9 @@ export const HACKATHON_TEAM_TEMPLATE: RegistrationFormSchema = {
         id: "member_dept",
         type: "select",
         label: "Department",
+        description: "Select academic department or program",
         required: true,
-        options: [
-          { label: "Computer Science", value: "Computer Science" },
-          { label: "Design / UI", value: "Design" },
-          { label: "Information Technology", value: "IT" },
-          { label: "Other", value: "Other" },
-        ],
+        options: SRMIST_RAMAPURAM_DEPARTMENTS,
       },
     ],
   },

@@ -316,9 +316,42 @@ export function DynamicFormRenderer({
                             <input
                               id={htmlId}
                               type="tel"
-                              placeholder={field.placeholder || "e.g., +91 98765 43210"}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={10}
+                              placeholder={field.placeholder || "10-digit mobile number"}
                               value={(value as string) || ""}
-                              onChange={(e) => onChange(fieldId, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (
+                                  [
+                                    "Backspace",
+                                    "Delete",
+                                    "Tab",
+                                    "Escape",
+                                    "Enter",
+                                    "ArrowLeft",
+                                    "ArrowRight",
+                                    "Home",
+                                    "End",
+                                  ].includes(e.key) ||
+                                  (e.ctrlKey || e.metaKey)
+                                ) {
+                                  return;
+                                }
+                                if (!/^\d$/.test(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onChange={(e) => {
+                                const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                onChange(fieldId, digits);
+                              }}
+                              onPaste={(e) => {
+                                e.preventDefault();
+                                const pastedText = e.clipboardData.getData("text");
+                                const digits = pastedText.replace(/\D/g, "").slice(0, 10);
+                                onChange(fieldId, digits);
+                              }}
                               disabled={disabled}
                               className={
                                 isRetro
@@ -386,24 +419,94 @@ export function DynamicFormRenderer({
                           )}
 
                           {field.type === "select" && (
-                            <CustomSelect
-                              options={
-                                field.options?.map((opt) => ({
-                                  value: opt.value,
-                                  label: opt.label,
-                                })) || []
-                              }
-                              value={(value as string) || ""}
-                              onChange={(val) => onChange(fieldId, val)}
-                              variant={isRetro ? "retro" : "default"}
-                              className={
-                                isRetro
-                                  ? error ? "ring-2 ring-red-500 rounded-xl" : ""
-                                  : error
-                                  ? "border-red-500"
-                                  : ""
-                              }
-                            />
+                            <div className="space-y-2">
+                              <CustomSelect
+                                options={
+                                  field.options?.map((opt) => ({
+                                    value: opt.value,
+                                    label: opt.label,
+                                    group: opt.group,
+                                    description: opt.description,
+                                  })) || []
+                                }
+                                value={(value as string) || ""}
+                                placeholder={field.placeholder || "Select department / academic program"}
+                                searchPlaceholder="Search department or academic program..."
+                                onChange={(val) => {
+                                  onChange(fieldId, val);
+                                  if (String(val).toLowerCase() !== "other") {
+                                    const customKey = `${fieldId}_custom`;
+                                    if (values[customKey]) {
+                                      onChange(customKey, "");
+                                    }
+                                  }
+                                }}
+                                variant={isRetro ? "retro" : "default"}
+                                className={
+                                  isRetro
+                                    ? error ? "ring-2 ring-red-500 rounded-xl" : ""
+                                    : error
+                                    ? "border-red-500"
+                                    : ""
+                                }
+                              />
+
+                              {/* Dynamic Custom Department Input when 'Other' is selected */}
+                              {String(value || "").toLowerCase() === "other" && (
+                                <div className="pt-2">
+                                  <div className="flex items-baseline justify-between mb-1">
+                                    <label
+                                      htmlFor={`${htmlId}-custom`}
+                                      className={
+                                        isRetro
+                                          ? "text-xs font-quicksand font-black uppercase tracking-wider text-ink"
+                                          : "text-xs font-semibold text-[#17191C] dark:text-[#F1F2F3]"
+                                      }
+                                    >
+                                      Specify Department Name
+                                      <span className={isRetro ? "text-retro-pink ml-1 font-black" : "text-red-500 ml-1 font-bold"}>
+                                        *
+                                      </span>
+                                    </label>
+                                    <span
+                                      className={
+                                        isRetro
+                                          ? "text-[10px] uppercase font-quicksand font-black text-retro-pink bg-retro-pink/15 px-2 py-0.5 rounded-full border border-retro-pink/30"
+                                          : "text-[10px] uppercase font-bold text-red-500/80"
+                                      }
+                                    >
+                                      Required
+                                    </span>
+                                  </div>
+                                  <input
+                                    id={`${htmlId}-custom`}
+                                    type="text"
+                                    placeholder="Enter your department name"
+                                    value={(values[`${fieldId}_custom`] as string) || ""}
+                                    onChange={(e) => onChange(`${fieldId}_custom`, e.target.value)}
+                                    disabled={disabled}
+                                    className={
+                                      isRetro
+                                        ? `retro-input w-full h-12 rounded-xl border-2 border-ink bg-[#FFFDF7] px-4 text-sm font-quicksand font-bold text-ink placeholder:text-ink/40 shadow-brutal-flat hover:bg-[#F8F4EA] focus:outline-none focus:ring-2 focus:ring-retro-pink focus:border-ink transition-all ${
+                                            errors[`${fieldId}_custom`] ? "border-red-600 bg-red-50 ring-2 ring-red-500" : ""
+                                          }`
+                                        : `w-full ${errors[`${fieldId}_custom`] ? "border-red-500 ring-1 ring-red-500" : ""}`
+                                    }
+                                  />
+                                  {errors[`${fieldId}_custom`] && (
+                                    <p
+                                      className={
+                                        isRetro
+                                          ? "mt-1.5 text-xs font-quicksand font-black text-red-700 bg-red-100/90 border border-red-400 rounded-lg px-3 py-1 inline-block"
+                                          : "mt-1 text-[11px] font-medium text-red-600 dark:text-red-400"
+                                      }
+                                    >
+                                      {errors[`${fieldId}_custom`]}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )}
 
                           {field.type === "radio" && (
