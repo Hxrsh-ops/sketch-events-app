@@ -33,7 +33,22 @@ export async function generateCertificateSvg(props: CertificateRenderProps): Pro
   const textColor = design.theme?.textColor || "#FFFFFF";
   const borderColor = design.theme?.borderColor || "#30363D";
 
-  const verifyUrl = `${props.verificationBaseUrl || ""}/certificates/verify/${encodeURIComponent(
+  // Resolve authentic public verification base URL for real-world QR code scanning
+  let resolvedBaseUrl = props.verificationBaseUrl?.replace(/\/+$/, "") || "";
+  if (!resolvedBaseUrl || resolvedBaseUrl.includes("localhost") || resolvedBaseUrl.includes("127.0.0.1")) {
+    const envAppUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
+    if (envAppUrl && !envAppUrl.includes("localhost") && !envAppUrl.includes("127.0.0.1")) {
+      resolvedBaseUrl = envAppUrl;
+    } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      resolvedBaseUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`.replace(/\/+$/, "");
+    } else if (process.env.VERCEL_URL) {
+      resolvedBaseUrl = `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "");
+    } else {
+      resolvedBaseUrl = "https://sketchhub-liard.vercel.app";
+    }
+  }
+
+  const verifyUrl = `${resolvedBaseUrl}/certificates/verify/${encodeURIComponent(
     certificate.certificateNumber
   )}`;
 

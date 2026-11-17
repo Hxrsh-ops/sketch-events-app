@@ -807,6 +807,12 @@ export function CertificateStudio({
           issuedAt: new Date().toISOString(),
           eventDate: sampleValues.eventDate,
         },
+        verificationBaseUrl:
+          typeof window !== "undefined" && !window.location.origin.includes("localhost")
+            ? window.location.origin
+            : (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")
+                ? process.env.NEXT_PUBLIC_APP_URL
+                : "https://sketchhub-liard.vercel.app"),
       });
 
       const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
