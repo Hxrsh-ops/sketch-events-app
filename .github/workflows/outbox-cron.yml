@@ -14,15 +14,17 @@ jobs:
     name: Trigger /api/cron/process-outbox
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Safely skip until production APP_URL variable and CRON_SECRET secret are configured
-    if: ${{ vars.APP_URL != '' && secrets.CRON_SECRET != '' }}
 
     steps:
       - name: Dispatch queued email outbox batch
         env:
-          APP_URL: ${{ vars.APP_URL }}
+          APP_URL: ${{ vars.APP_URL || 'https://sketchhub-liard.vercel.app' }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not configured in repository secrets. Skipping execution."
+            exit 0
+          fi
           TARGET_URL="${APP_URL%/}/api/cron/process-outbox"
           HTTP_STATUS=$(curl -sS -o /tmp/outbox-response.json -w "%{http_code}" \
             -X POST \

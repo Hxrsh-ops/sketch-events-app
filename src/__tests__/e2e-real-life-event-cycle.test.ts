@@ -33,13 +33,15 @@ if (fs.existsSync(envPath)) {
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://fvnkhzlbvxemwlkmwhbz.supabase.co";
+const DUMMY_FALLBACK_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const isLiveDb = Boolean(SERVICE_KEY && ANON_KEY && SUPABASE_URL);
 
 describe.runIf(isLiveDb)("Real-Life Sketch Event Lifecycle & Security Hardening E2E", () => {
-  const adminSupabase = createClient(SUPABASE_URL, SERVICE_KEY!, {
+  const adminSupabase = createClient(SUPABASE_URL, SERVICE_KEY || DUMMY_FALLBACK_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
