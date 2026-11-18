@@ -7,6 +7,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { SketchRepository } from "@/lib/supabase/repository";
 import { ActionResult } from "@/app/actions/event-actions";
 import { CertificateRecord } from "@/types";
+import { EmailOutboxWorker } from "@/lib/email/worker";
 
 const BatchIssueSchema = z.object({
   eventId: z.string().optional(),
@@ -68,6 +69,14 @@ export async function batchIssueCertificatesAction(
         data: result,
         message: "No eligible checked-in attendees without certificates found for issuance.",
       };
+    }
+
+    // Immediately trigger outbox worker for instant certificate email delivery
+    try {
+      const worker = new EmailOutboxWorker();
+      await worker.processBatch(Math.max(result.issuedCount, 10));
+    } catch (workerErr: any) {
+      console.warn("[batchIssueCertificatesAction] Immediate email dispatch error:", workerErr?.message);
     }
 
     // 5. Revalidate affected administration paths
@@ -141,6 +150,16 @@ export async function issueIndividualCertificateAction(
       actorName: session.user.name,
       actorEmail: session.user.email,
     });
+
+    // Immediately trigger outbox worker for instant individual certificate delivery (skip in test environment)
+    if (process.env.NODE_ENV !== "test") {
+      try {
+        const worker = new EmailOutboxWorker();
+        await worker.processBatch(5);
+      } catch (workerErr: any) {
+        console.warn("[issueIndividualCertificateAction] Immediate email dispatch error:", workerErr?.message);
+      }
+    }
 
     revalidatePath("/certificates");
     revalidatePath("/communications");

@@ -41,7 +41,7 @@ import { formatDate } from "@/lib/utils";
 import { Participant, EventItem, AdminRole, Round } from "@/types";
 import { updateEventAction, setEventLifecycleAction, deleteEventAction } from "@/app/actions/event-actions";
 import { toggleAttendanceAction } from "@/app/actions/participant-actions";
-import { batchRedispatchPassesAction } from "@/app/actions/communication-actions";
+import { batchRedispatchPassesAction, enqueueDispatchAction } from "@/app/actions/communication-actions";
 
 interface EventDetailClientProps {
   initialEvent: EventItem;
@@ -114,6 +114,7 @@ export default function EventDetailClient({
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastBody, setBroadcastBody] = useState("");
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Pass Re-dispatch state
@@ -162,6 +163,44 @@ export default function EventDetailClient({
       setIndividualNotice(`Failed: ${err?.message || "Error"}`);
     } finally {
       setIsResendingIndividual(false);
+    }
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastSubject.trim()) {
+      setRedispatchFeedback({ type: "error", message: "Subject line is required for broadcast." });
+      return;
+    }
+    setIsSendingBroadcast(true);
+    setRedispatchFeedback(null);
+    try {
+      const res = await enqueueDispatchAction({
+        eventId: event.id,
+        subject: broadcastSubject.trim(),
+        audience: "all",
+        bodyContent: broadcastBody.trim(),
+      });
+      if (res.success) {
+        setRedispatchFeedback({
+          type: "success",
+          message: res.message || `Broadcast successfully dispatched to ${res.data?.enqueuedCount || event.registeredCount} attendees!`,
+        });
+        setBroadcastSubject("");
+        setBroadcastBody("");
+        setIsDispatchModalOpen(false);
+      } else {
+        setRedispatchFeedback({
+          type: "error",
+          message: res.message || "Failed to dispatch broadcast to attendees.",
+        });
+      }
+    } catch (err: any) {
+      setRedispatchFeedback({
+        type: "error",
+        message: err?.message || "Unexpected failure during broadcast dispatch.",
+      });
+    } finally {
+      setIsSendingBroadcast(false);
     }
   };
 
@@ -1469,12 +1508,10 @@ export default function EventDetailClient({
                 variant="charcoal"
                 size="sm"
                 className="rounded-full text-xs font-semibold shadow-sm px-4"
-                onClick={() => {
-                  alert(`Broadcast simulated for ${event.registeredCount} attendees.`);
-                  setIsDispatchModalOpen(false);
-                }}
+                disabled={isSendingBroadcast || !broadcastSubject.trim()}
+                onClick={handleSendBroadcast}
               >
-                Send Broadcast
+                {isSendingBroadcast ? "Dispatching..." : "Send Broadcast"}
               </Button>
             </div>
           </div>

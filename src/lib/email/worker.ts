@@ -161,15 +161,36 @@ export class EmailOutboxWorker {
             qrPayload,
           });
 
-          const attachmentName = `${ticketNum}_pass.svg`;
-          attachments = [
+          const svgAttachmentName = `${ticketNum}_pass.svg`;
+          const baseAttachments: EmailAttachment[] = [
             {
-              filename: attachmentName,
-              name: attachmentName,
+              filename: svgAttachmentName,
+              name: svgAttachmentName,
               content: Buffer.from(ticketSvg, "utf-8").toString("base64"),
               contentType: "image/svg+xml",
             },
           ];
+
+          // Generate matching high-resolution PNG pass using sharp for universal client support
+          // (Brevo API strictly rejects .svg attachments, and Gmail natively previews .png attachments)
+          try {
+            const sharpModule = await import("sharp");
+            const sharp = sharpModule.default || sharpModule;
+            const pngBuffer = await sharp(Buffer.from(ticketSvg, "utf-8"), { density: 300 })
+              .png()
+              .toBuffer();
+            const pngAttachmentName = `${ticketNum}_pass.png`;
+            baseAttachments.unshift({
+              filename: pngAttachmentName,
+              name: pngAttachmentName,
+              content: pngBuffer.toString("base64"),
+              contentType: "image/png",
+            });
+          } catch {
+            // Non-critical fallback: continue with vector SVG if rasterizer unavailable
+          }
+
+          attachments = baseAttachments;
         } catch (svgErr) {
           console.error("[EmailOutboxWorker] Could not generate ticket pass attachment:", svgErr);
         }

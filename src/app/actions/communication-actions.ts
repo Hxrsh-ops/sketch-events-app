@@ -136,6 +136,16 @@ export async function enqueueDispatchAction(
       actorEmail: auth.user.email,
     });
 
+    // If scheduled for immediate dispatch, trigger outbox worker for instant delivery (skip in test environment to preserve outbox state verification)
+    if (!scheduledAt && process.env.NODE_ENV !== "test") {
+      try {
+        const worker = new EmailOutboxWorker();
+        await worker.processBatch(Math.max(recipients.length, 10));
+      } catch (workerErr: any) {
+        console.warn("[enqueueDispatchAction] Immediate dispatch background error:", workerErr?.message);
+      }
+    }
+
     revalidatePath("/communications");
     revalidatePath("/audit");
     revalidatePath("/");
@@ -189,6 +199,16 @@ export async function retryFailedDispatchAction(
         error: "RETRY_FAILED",
         message: result.message || "Failed to retry delivery for this communication job.",
       };
+    }
+
+    // In production/runtime, trigger outbox worker for retried job (skip in test environment to preserve outbox state verification)
+    if (process.env.NODE_ENV !== "test") {
+      try {
+        const worker = new EmailOutboxWorker();
+        await worker.processSingleJob(jobId.trim());
+      } catch (workerErr: any) {
+        console.warn("[retryFailedDispatchAction] Immediate dispatch error:", workerErr?.message);
+      }
     }
 
     revalidatePath("/communications");

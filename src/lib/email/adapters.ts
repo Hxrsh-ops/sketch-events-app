@@ -41,19 +41,43 @@ export class ResendEmailAdapter implements EmailProviderAdapter {
         : "";
       const toField = sanitizedToName ? `${sanitizedToName} <${options.to}>` : options.to;
 
+      let htmlContent = options.html;
+      const attachments: Array<{ filename: string; content: string }> = [];
+
+      if (options.attachments && options.attachments.length > 0) {
+        for (const att of options.attachments) {
+          attachments.push({
+            filename: att.filename || att.name || "attachment",
+            content: att.content,
+          });
+        }
+      }
+
+      // Gmail strips inline `data:image/...;base64,...` URLs. Convert embedded QR data URLs
+      // into a CID inline attachment so Gmail renders the QR code cleanly in all clients.
+      const dataUrlMatch = htmlContent.match(
+        /src="(data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+))"/i
+      );
+      if (dataUrlMatch) {
+        const ext = dataUrlMatch[2].toLowerCase() === "jpeg" ? "jpg" : dataUrlMatch[2].toLowerCase();
+        const fileName = `entry-qr.${ext}`;
+        attachments.push({
+          filename: fileName,
+          content: dataUrlMatch[3],
+        });
+        htmlContent = htmlContent.replace(dataUrlMatch[1], `cid:${fileName}`);
+      }
+
       const payload: Record<string, unknown> = {
         from: this.fromAddress,
         to: toField,
         subject: options.subject,
-        html: options.html,
+        html: htmlContent,
         text: options.text,
       };
 
-      if (options.attachments && options.attachments.length > 0) {
-        payload.attachments = options.attachments.map((att) => ({
-          filename: att.filename || att.name || "attachment",
-          content: att.content,
-        }));
+      if (attachments.length > 0) {
+        payload.attachments = attachments;
       }
 
       if (options.replyTo) {
