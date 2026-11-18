@@ -70,19 +70,13 @@ export const InteractiveSunFace: React.FC<{
       {/* Left Eye: Always clean solid dot */}
       <circle cx="2" cy="3" r="1.6" fill="#121212" />
 
-      {/* Authentic FlowFest Open Cheerful Smiling Mouth with Teeth */}
+      {/* Cheerful Normal Smile Arc (Clean retro smile, no teeth) */}
       <path
-        d="M11.8921 18C5.9557 19.2392 4.66149 14.9968 3.5863 11.9479C3.37455 11.3475 3.80655 10.6869 4.44285 10.6652C9.15161 10.5051 11.2843 10.3509 14.8793 8.66061C15.4922 8.37244 16.2307 8.80754 16.2719 9.48354C16.4616 12.6034 16.766 16.6483 11.8921 18Z"
-        fill="#FFFDF7"
+        d="M4 11C5.2 16.2 11.8 16.2 13 11"
         stroke="#121212"
+        strokeWidth="1.8"
         strokeLinecap="round"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M4.5 14C9.24535 14.5931 13.9652 13.5983 16 12"
-        stroke="#121212"
-        strokeLinecap="round"
-        strokeWidth="1.5"
+        fill="none"
       />
     </svg>
   );
@@ -185,175 +179,222 @@ export const ChatCloudPoint: React.FC<{ className?: string }> = ({
 );
 
 /**
- * Authentic FlowFest 2-Color Left Rainbow Stripe
- * Mirror-flipped on X axis (scaleX(-1)), placed along the left viewport edge,
- * curving OUTWARDS toward the bottom-left corner away from the central cards.
- * Clean, lightweight 2-stripe design (Gold Mango & Retro Tangerine).
+ * Continuous Flowing Retro Ribbon (From Reference Image)
+ * A continuous 2-color retro band (Retro Orange #F97028 & Gold Mango #F3A20F) that
+ * traverses the screen from far-left to far-right behind the central cards:
+ * 1. Starts off-screen left and runs horizontally along the upper tier, completely clear of the header.
+ * 2. Takes a smooth concentric S-bend downward around the upper card.
+ * 3. Bridges horizontally across the center between the upper and lower cards.
+ * 4. Takes a second smooth concentric S-bend downward around the lower card.
+ * 5. Runs horizontally all the way off-screen right.
+ *
+ * Flawless Geometry & Masking Architecture:
+ * - Centerline curve stroke mask guarantees that both stripes (Orange & Yellow) and all 3 border lines
+ *   flow naturally along the curved trajectory together.
+ * - Perfectly synchronized leading edge: zero whiskers, zero black blobs, zero desynchronization.
+ * - Dynamic 2px black end-cap seals the tip perpendicularly at every point along the curve.
+ * - Dynamically rolls out from left to right as the user scrolls through the form.
+ * - Zero shake, zero glitch, 100% rock-solid.
  */
-export const RainbowSideLeft: React.FC<{
+export const ContinuousRetroRibbon: React.FC<{
   className?: string;
-}> = ({ className = "w-72 xl:w-80 h-auto" }) => (
-  <div className={`${className} transform -scale-x-100`}>
-    <svg
-      className="rainbow-sides__left w-full h-auto"
-      fill="none"
-      viewBox="0 0 450 626"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* 2 Black Outline Strokes (width 52) */}
-      <path
-        data-stripe="0"
-        d="M40 0V400C40 510.457 129.543 600 240 600H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="1"
-        d="M96 0V400C96 465 155 524 240 524H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
+  maskId?: string;
+  maskPathRef?: React.RefObject<SVGPathElement | null>;
+  endCapRef?: React.RefObject<SVGLineElement | null>;
+}> = ({
+  className = "w-full h-full",
+  maskId = "retro-ribbon-flow-mask",
+  maskPathRef,
+  endCapRef,
+}) => {
+  // Centerline path that bisects the orange and yellow stripes (radius 100 on all concentric curves)
+  const midlinePath =
+    "M -100 80 H 240 A 100 100 0 0 1 340 180 A 100 100 0 0 0 440 280 H 1000 A 100 100 0 0 1 1100 380 A 100 100 0 0 0 1200 480 H 1540";
 
-      {/* 2 FlowFest Vibrant Color Fills (width 48) */}
-      <path
-        data-stripe="0"
-        d="M40 0V400C40 510.457 129.543 600 240 600H450"
-        stroke="#F3A20F"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="1"
-        d="M96 0V400C96 465 155 524 240 524H450"
-        stroke="#F97028"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-    </svg>
-  </div>
-);
+  // Concentric parallel paths for the two color fills and three border outlines
+  const orangePath =
+    "M -100 66 H 240 A 114 114 0 0 1 354 180 A 86 86 0 0 0 440 266 H 1000 A 114 114 0 0 1 1114 380 A 86 86 0 0 0 1200 466 H 1540";
+  const yellowPath =
+    "M -100 94 H 240 A 86 86 0 0 1 326 180 A 114 114 0 0 0 440 294 H 1000 A 86 86 0 0 1 1086 380 A 114 114 0 0 0 1200 494 H 1540";
+  const topBorderPath =
+    "M -100 52 H 240 A 128 128 0 0 1 368 180 A 72 72 0 0 0 440 252 H 1000 A 128 128 0 0 1 1128 380 A 72 72 0 0 0 1200 452 H 1540";
+  const midBorderPath = midlinePath;
+  const botBorderPath =
+    "M -100 108 H 240 A 72 72 0 0 1 312 180 A 128 128 0 0 0 440 308 H 1000 A 72 72 0 0 1 1072 380 A 128 128 0 0 0 1200 508 H 1540";
+
+  return (
+    <div className={className}>
+      <svg
+        className="continuous-ribbon w-full h-full"
+        viewBox="0 0 1440 700"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMin slice"
+      >
+        <defs>
+          <mask id={maskId} maskUnits="userSpaceOnUse">
+            {/* The white centerline stroke unrolls forward smoothly along the exact curves */}
+            <path
+              ref={maskPathRef}
+              d={midlinePath}
+              stroke="white"
+              strokeWidth="64"
+              strokeLinecap="butt"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </mask>
+        </defs>
+
+        {/* Masked Ribbon Band: all 5 tracks flow together along their curves with zero whiskers */}
+        <g mask={`url(#${maskId})`}>
+          {/* Retro Orange Upper Stripe (width 28) */}
+          <path
+            d={orangePath}
+            stroke="#F97028"
+            strokeWidth="28"
+            strokeLinecap="butt"
+            strokeLinejoin="round"
+            fill="none"
+          />
+
+          {/* Gold Mango Lower Stripe (width 28) */}
+          <path
+            d={yellowPath}
+            stroke="#F3A20F"
+            strokeWidth="28"
+            strokeLinecap="butt"
+            strokeLinejoin="round"
+            fill="none"
+          />
+
+          {/* Top Black Outer Border Line (2px) */}
+          <path
+            d={topBorderPath}
+            stroke="#121212"
+            strokeWidth="2"
+            strokeLinecap="butt"
+            strokeLinejoin="round"
+            fill="none"
+          />
+
+          {/* Middle Black Divider Line (2px) */}
+          <path
+            d={midBorderPath}
+            stroke="#121212"
+            strokeWidth="2"
+            strokeLinecap="butt"
+            strokeLinejoin="round"
+            fill="none"
+          />
+
+          {/* Bottom Black Outer Border Line (2px) */}
+          <path
+            d={botBorderPath}
+            stroke="#121212"
+            strokeWidth="2"
+            strokeLinecap="butt"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </g>
+
+        {/* Perpendicular 2px Black End-Cap that cleanly closes the ribbon tip as it unrolls */}
+        <line
+          ref={endCapRef}
+          x1="0"
+          y1="0"
+          x2="0"
+          y2="0"
+          stroke="#121212"
+          strokeWidth="2"
+          strokeLinecap="round"
+          style={{ display: "none" }}
+        />
+      </svg>
+    </div>
+  );
+};
+
+/** Compatibility aliases */
+export const RainbowSideLeft = ContinuousRetroRibbon;
+export const RainbowSideRight = ContinuousRetroRibbon;
 
 /**
- * Authentic FlowFest 2-Color Right Rainbow Stripe
- * Placed along the right viewport edge in natural orientation,
- * curving OUTWARDS toward the bottom-right corner away from the central cards.
- * Clean, lightweight 2-stripe design (Gold Mango & Retro Tangerine).
- */
-export const RainbowSideRight: React.FC<{
-  className?: string;
-}> = ({ className = "w-72 xl:w-80 h-auto" }) => (
-  <div className={className}>
-    <svg
-      className="rainbow-sides__right w-full h-auto"
-      fill="none"
-      viewBox="0 0 450 626"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* 2 Black Outline Strokes (width 52) */}
-      <path
-        data-stripe="0"
-        d="M40 0V400C40 510.457 129.543 600 240 600H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="1"
-        d="M96 0V400C96 465 155 524 240 524H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-
-      {/* 2 FlowFest Vibrant Color Fills (width 48) */}
-      <path
-        data-stripe="0"
-        d="M40 0V400C40 510.457 129.543 600 240 600H450"
-        stroke="#F3A20F"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="1"
-        d="M96 0V400C96 465 155 524 240 524H450"
-        stroke="#F97028"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-    </svg>
-  </div>
-);
-
-/**
- * Flowing Rainbow Side Stripes that frame the page
- * Fixed along the viewport outer margins, completely clear of the central cards.
- * Left stripes curve outwards to the bottom-left corner; right stripes curve outwards to the bottom-right corner.
- * - Dynamically unrolls/draws forward in real time matching the user's scroll across the FULL length of the form.
- * - Curvy flow animation glides along with user scroll from start to end.
+ * Flowing Rainbow Ribbon that frames the page
+ * Directly renders the continuous winding retro ribbon from the reference design.
+ * - Starts below the top header navigation row so it never overlaps or messes up the top bar.
+ * - Both stripes flow naturally along their curves as the user scrolls.
+ * - Perfectly integrated with document scroll without any shaking or glitching.
  * - Hardware-fluid 60fps/120fps direct DOM manipulation inside RAF (zero React re-renders, zero lag).
  */
 export const FlowingRainbowSides: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const leftRef = useRef<HTMLDivElement>(null);
-  const rightRef = useRef<HTMLDivElement>(null);
+  const maskPathRef = useRef<SVGPathElement>(null);
+  const endCapRef = useRef<SVGLineElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const maskPath = maskPathRef.current;
+    if (!maskPath) return;
 
-    // Cache the paths on mount for maximum performance
-    const paths = containerRef.current.querySelectorAll<SVGPathElement>("path[data-stripe]");
     let rafId: number;
     let lastScrollY = -1;
+
+    // Measure exact geometric path length directly from the SVG engine
+    const totalLength = maskPath.getTotalLength() || 1868;
+    maskPath.style.strokeDasharray = `${totalLength} ${totalLength}`;
+
+    // At scrollY = 0: initial runway from x = -100 through the top-left runway and the start of the first curve
+    const minLength = 320;
+    const maxLength = totalLength;
 
     const onFrame = () => {
       const scrollY = window.scrollY || window.pageYOffset || 0;
       if (scrollY !== lastScrollY) {
         lastScrollY = scrollY;
 
-        // Smooth scroll scrub: unrolls smoothly across the FULL height of the page
-        // At scrollY = 0: offset = 95 (only 5% peeks in at top)
-        // At bottom of page: offset = 0 (100% unrolled, touching corners completely)
         const docHeight = Math.max(
           (document.documentElement.scrollHeight || document.body.scrollHeight || 1200) - window.innerHeight,
-          600
+          400
         );
         const progress = Math.min(Math.max(scrollY / docHeight, 0), 1);
-        const remaining = 1 - progress;
+        const currentLength = minLength + (maxLength - minLength) * progress;
 
-        // Update stroke-dashoffset directly on cached DOM paths (takes ~0.02ms, zero lag)
-        paths.forEach((p) => {
-          const stripeIdx = Number(p.getAttribute("data-stripe") || 0);
-          const power = 1 + (1 - stripeIdx) * 0.15;
-          const offset = 95 * Math.pow(remaining, power);
-          p.style.strokeDashoffset = offset.toFixed(2);
-        });
+        // Reveal smoothly along the curved centerline path
+        const offset = Math.max(0, totalLength - currentLength);
+        maskPath.style.strokeDashoffset = offset.toFixed(1);
 
-        // Gentle fluid curvy glide along the full scroll of the form
-        const translateY = Math.min(scrollY * 0.08, 160);
-        const flowSway = Math.sin(progress * Math.PI) * 12;
-        if (leftRef.current) {
-          leftRef.current.style.transform = `translate3d(${-flowSway}px, ${translateY}px, 0)`;
-        }
-        if (rightRef.current) {
-          rightRef.current.style.transform = `translate3d(${flowSway}px, ${translateY}px, 0)`;
+        // Update the 2px perpendicular end cap
+        const endCap = endCapRef.current;
+        if (endCap) {
+          if (currentLength >= maxLength - 25) {
+            // Off screen right: hide cap
+            endCap.style.display = "none";
+          } else {
+            try {
+              const pt = maskPath.getPointAtLength(currentLength);
+              const nextLen = Math.min(currentLength + 2, totalLength);
+              const pt2 = maskPath.getPointAtLength(nextLen);
+              const dx = pt2.x - pt.x;
+              const dy = pt2.y - pt.y;
+              const len = Math.hypot(dx, dy) || 1;
+              // Unit normal vector perpendicular to curve tangent
+              const nx = -dy / len;
+              const ny = dx / len;
+              // Ribbon total half-width is 28px
+              const x1 = pt.x - 28 * nx;
+              const y1 = pt.y - 28 * ny;
+              const x2 = pt.x + 28 * nx;
+              const y2 = pt.y + 28 * ny;
+              endCap.setAttribute("x1", x1.toFixed(1));
+              endCap.setAttribute("y1", y1.toFixed(1));
+              endCap.setAttribute("x2", x2.toFixed(1));
+              endCap.setAttribute("y2", y2.toFixed(1));
+              endCap.style.display = "block";
+            } catch {
+              endCap.style.display = "none";
+            }
+          }
         }
       }
       rafId = requestAnimationFrame(onFrame);
@@ -366,26 +407,14 @@ export const FlowingRainbowSides: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="hidden xl:block fixed inset-0 pointer-events-none select-none z-0 overflow-hidden"
+      className="hidden xl:block fixed inset-x-0 top-16 bottom-0 pointer-events-none select-none z-0 overflow-hidden"
       aria-hidden="true"
     >
-      {/* Left Rainbow Ribbon - curves OUTWARDS to the bottom-left corner */}
-      <div
-        ref={leftRef}
-        className="absolute -left-16 2xl:-left-10 top-0 w-80 xl:w-96 2xl:w-[28rem] opacity-95"
-        style={{ willChange: "transform" }}
-      >
-        <RainbowSideLeft className="w-full h-auto" />
-      </div>
-
-      {/* Right Rainbow Ribbon - curves OUTWARDS to the bottom-right corner */}
-      <div
-        ref={rightRef}
-        className="absolute -right-16 2xl:-right-10 top-0 w-80 xl:w-96 2xl:w-[28rem] ml-auto opacity-95"
-        style={{ willChange: "transform" }}
-      >
-        <RainbowSideRight className="w-full h-auto" />
-      </div>
+      <ContinuousRetroRibbon
+        className="w-full h-full"
+        maskPathRef={maskPathRef}
+        endCapRef={endCapRef}
+      />
     </div>
   );
 };

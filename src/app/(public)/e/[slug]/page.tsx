@@ -89,10 +89,11 @@ export default async function PublicEventPage({ params }: PublicEventPageProps) 
                 This event could not be found or is not currently open to the public. If you believe this is an error, please verify the URL or contact the organizing team.
               </p>
             </div>
-            <div className="pt-2">
-              <Link href="/">
-                <button className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn">
-                  Explore Open Experiences
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <Link href={`/e/${slug}`}>
+                <button className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn flex items-center gap-2">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Refresh Event Page</span>
                 </button>
               </Link>
             </div>

@@ -1018,11 +1018,18 @@ export default function PublicEventClient({
               <p className="font-quicksand font-semibold text-xs text-ink/75 leading-relaxed">
                 Registrations for this experience are now officially closed. If you already hold a confirmed ticket pass, present your QR code at the desk on event day.
               </p>
-              <Link href="/">
-                <button className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn mt-2">
-                  Explore Other Events
-                </button>
-              </Link>
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href={`mailto:${event.contactEmail || "events@sketchhub.com"}?subject=${encodeURIComponent(`Inquiry for ${event.title}`)}`}
+                  className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs shadow-brutal-btn inline-flex items-center gap-2"
+                >
+                  <Mail className="h-4 w-4 stroke-[2.5]" />
+                  <span>Contact Organizing Team</span>
+                </a>
+              </div>
+              <p className="text-[11px] font-mono font-bold text-ink/60 uppercase tracking-wider">
+                Spot admissions will be evaluated at the desk on event day
+              </p>
             </div>
           ) : isRegistrationFull ? (
             /* State B: Full / Sold Out */
@@ -1036,11 +1043,15 @@ export default function PublicEventClient({
               <p className="font-quicksand font-semibold text-xs text-ink/75 leading-relaxed">
                 All {event.capacity} seats for {event.title} have been reserved. Registration is currently full.
               </p>
-              <Link href="/">
-                <button className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-pink text-white font-quicksand font-black text-xs shadow-brutal-btn mt-2">
-                  Discover Available Events
-                </button>
-              </Link>
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href={`mailto:${event.contactEmail || "events@sketchhub.com"}?subject=${encodeURIComponent(`Waitlist Request for ${event.title}`)}`}
+                  className="btn-brutal px-6 py-3 rounded-full border-2 border-ink bg-retro-pink text-ink font-quicksand font-black text-xs shadow-brutal-btn inline-flex items-center gap-2"
+                >
+                  <Mail className="h-4 w-4 stroke-[2.5]" />
+                  <span>Request Waitlist Admission</span>
+                </a>
+              </div>
             </div>
           ) : isRegistrationUpcoming ? (
             /* State C: Upcoming / Draft */

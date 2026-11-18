@@ -29,15 +29,15 @@ export function ThemeToggle() {
 
   const getThemeIcon = () => {
     if (!mounted) {
-      return <Sun className="h-4 w-4" />;
+      return <Sun className="h-4 w-4 stroke-[2.5] text-ink" />;
     }
     if (theme === "system") {
-      return <Laptop className="h-4 w-4" />;
+      return <Laptop className="h-4 w-4 stroke-[2.5] text-ink" />;
     }
     return resolvedTheme === "dark" ? (
-      <Moon className="h-4 w-4" />
+      <Moon className="h-4 w-4 stroke-[2.5] text-ink fill-ink/20" />
     ) : (
-      <Sun className="h-4 w-4" />
+      <Sun className="h-4 w-4 stroke-[2.5] text-ink fill-retro-orange/30" />
     );
   };
 
@@ -48,15 +48,17 @@ export function ThemeToggle() {
   ];
 
   return (
-    <div ref={containerRef} className="relative" suppressHydrationWarning>
+    <div ref={containerRef} className="relative select-none" data-theme-ignore="true" suppressHydrationWarning>
       <button
         type="button"
         suppressHydrationWarning
+        data-theme-ignore="true"
         onClick={() => setIsOpen(!isOpen)}
         aria-label={mounted ? `Theme: ${theme}. Click to change theme.` : "Toggle appearance theme"}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink bg-white text-ink shadow-brutal-flat transition-transform hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-none"
+        className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink !bg-retro-yellow !text-ink shadow-brutal-badge transition-all hover:!bg-[#F3A20F] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-none cursor-pointer"
+        title="Toggle appearance theme"
       >
         {getThemeIcon()}
       </button>
@@ -69,8 +71,9 @@ export function ThemeToggle() {
             exit={{ opacity: 0, y: 4, scale: 0.96 }}
             transition={{ duration: 0.12, ease: "easeOut" }}
             role="listbox"
+            data-theme-ignore="true"
             aria-label="Select appearance theme"
-            className="absolute right-0 top-[calc(100%+6px)] z-50 w-36 rounded-2xl border-2 border-ink bg-[#FFFDF7] p-1.5 shadow-brutal-card space-y-0.5 select-none font-quicksand font-bold text-xs"
+            className="absolute right-0 top-[calc(100%+6px)] z-50 w-36 rounded-2xl border-2 border-ink !bg-[#FFFDF7] p-1.5 shadow-brutal-card space-y-0.5 select-none font-quicksand font-bold text-xs"
           >
             {THEME_OPTIONS.map((opt) => {
               const Icon = opt.icon;

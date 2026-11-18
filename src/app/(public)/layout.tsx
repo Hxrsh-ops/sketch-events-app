@@ -10,7 +10,7 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-ink flex flex-col justify-between transition-colors">
+    <div className="min-h-screen bg-[#FDFBF7] text-ink flex flex-col justify-between transition-colors retro-theme" data-retro-page="true">
       <StealthGateTrigger />
       {/* Minimal FlowFest Retro Public Navigation */}
       <header className="border-b-2 border-ink bg-[#FFFDF7]/95 backdrop-blur-md sticky top-0 z-30 shadow-brutal-flat">
