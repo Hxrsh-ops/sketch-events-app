@@ -187,6 +187,7 @@ export function Sidebar({
             </div>
             <Link
               href="/events"
+              prefetch={true}
               onClick={onNavigate}
               className="text-[11px] font-medium text-[#6B7280] hover:text-[#111827] shrink-0 transition-colors"
             >
@@ -197,7 +198,7 @@ export function Sidebar({
 
         {/* Quick Action: Create Event */}
         <div className="px-0.5">
-          <Link href="/events/new" onClick={onNavigate} className="block">
+          <Link href="/events/new" prefetch={true} onClick={onNavigate} className="block">
             <Button
               variant="default"
               className="w-full h-11 rounded-lg font-semibold gap-2 text-[13px] justify-center bg-[#18181B] text-white hover:bg-[#27272A] active:bg-[#09090B] shadow-[0_1px_2px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.12)] active:scale-[0.99] transition-all duration-150 px-4"
@@ -221,6 +222,7 @@ export function Sidebar({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   onClick={onNavigate}
                   className={cn(
                     "group flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#18181B]/20",

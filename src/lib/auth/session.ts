@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getAppEnv } from "@/lib/env";
@@ -17,6 +18,7 @@ export interface SessionVerificationResult {
 
 /**
  * Server-side identity & admin verification.
+ * Wrapped in React.cache to deduplicate across layout, pages, and components in the same request.
  *
  * Rules:
  * - Production: Strictly verifies JWT via Supabase Auth server client, then queries admin_profiles.
@@ -24,7 +26,7 @@ export interface SessionVerificationResult {
  * - Preview Mode: Requires an explicit preview session cookie set via preview sign-in.
  *   If the preview session cookie is absent (e.g. after logout or fresh visit), returns unauthenticated.
  */
-export async function verifyAdminSession(): Promise<SessionVerificationResult> {
+export const verifyAdminSession = cache(async function verifyAdminSession(): Promise<SessionVerificationResult> {
   const env = getAppEnv();
 
   // 1. Isolated Preview Mode
@@ -214,4 +216,4 @@ export async function verifyAdminSession(): Promise<SessionVerificationResult> {
       error: "BACKEND_UNAVAILABLE",
     };
   }
-}
+});

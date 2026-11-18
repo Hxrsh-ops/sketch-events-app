@@ -3406,6 +3406,37 @@ export class SketchRepository {
   }
 
   /**
+   * Fetch custom ticket design for an event if assigned in Ticket Studio / Ticket Maker.
+   * Returns null if no custom ticket design has been assigned (prompting fallback to inbuilt theme).
+   */
+  static async getEventTicketDesign(eventId: string): Promise<any | null> {
+    if (this.isPreview()) {
+      const event = getStoredEvents().find((e) => e.id === eventId || e.slug === eventId);
+      return (event as any)?.ticketDesign || null;
+    }
+
+    const supabase = createAdminClient() || (await createClient());
+    if (!supabase) return null;
+
+    try {
+      const { data: eventRow, error } = await (supabase as any)
+        .from("events")
+        .select("ticket_template_version_id, ticket_template_versions:ticket_template_version_id(design_data)")
+        .eq("id", eventId)
+        .maybeSingle();
+
+      if (error || !eventRow) return null;
+      if (eventRow.ticket_template_versions?.design_data) {
+        return eventRow.ticket_template_versions.design_data;
+      }
+      return null;
+    } catch (err) {
+      console.warn("[SketchRepository.getEventTicketDesign] Failed to load ticket design:", err);
+      return null;
+    }
+  }
+
+  /**
    * Atomically issue or reconcile a ticket for a registration
    */
   static async issueOrReconcileTicket(params: {

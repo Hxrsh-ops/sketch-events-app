@@ -56,7 +56,7 @@ export function ThemeToggle() {
         aria-label={mounted ? `Theme: ${theme}. Click to change theme.` : "Toggle appearance theme"}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] text-[#656B73] dark:text-[#A6ADB5] shadow-sm transition-colors hover:bg-[#F0F1F2] dark:hover:bg-[#25292F] hover:text-[#17191C] dark:hover:text-[#F1F2F3] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#25292F] dark:focus-visible:ring-[#E8EAED]"
+        className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink bg-white text-ink shadow-brutal-flat transition-transform hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-none"
       >
         {getThemeIcon()}
       </button>
@@ -70,7 +70,7 @@ export function ThemeToggle() {
             transition={{ duration: 0.12, ease: "easeOut" }}
             role="listbox"
             aria-label="Select appearance theme"
-            className="absolute right-0 top-[calc(100%+6px)] z-50 w-36 rounded-2xl border border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#1B1E21] p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.14)] space-y-0.5 select-none"
+            className="absolute right-0 top-[calc(100%+6px)] z-50 w-36 rounded-2xl border-2 border-ink bg-[#FFFDF7] p-1.5 shadow-brutal-card space-y-0.5 select-none font-quicksand font-bold text-xs"
           >
             {THEME_OPTIONS.map((opt) => {
               const Icon = opt.icon;
@@ -86,10 +86,10 @@ export function ThemeToggle() {
                     setTheme(opt.value);
                     setIsOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-bold transition-colors ${
                     isSelected
-                      ? "bg-[#25292F] dark:bg-[#E8EAED] text-white dark:text-[#111315] font-semibold"
-                      : "text-[#17191C] dark:text-[#F1F2F3] hover:bg-[#F4F5F6] dark:hover:bg-[#25292F]"
+                      ? "bg-retro-yellow text-ink border border-ink shadow-brutal-flat"
+                      : "text-ink hover:bg-[#F3EEDC]"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export function ThemeToggle() {
                     <span>{opt.label}</span>
                   </div>
                   {isSelected && (
-                    <Check className="h-3.5 w-3.5 text-white dark:text-[#111315]" />
+                    <Check className="h-3.5 w-3.5 text-ink stroke-[2.5]" />
                   )}
                 </button>
               );

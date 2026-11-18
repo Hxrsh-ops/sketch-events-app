@@ -15,12 +15,16 @@ export default async function PublicEventPage({ params }: PublicEventPageProps) 
 
   let event = null;
   let rounds = null;
+  let customTicketDesign = null;
   let fetchError: string | null = null;
 
   try {
     event = await SketchRepository.getEventBySlug(slug);
-    if (event && event.hasRounds) {
-      rounds = await SketchRepository.listRounds(event.id);
+    if (event) {
+      if (event.hasRounds) {
+        rounds = await SketchRepository.listRounds(event.id);
+      }
+      customTicketDesign = await SketchRepository.getEventTicketDesign(event.id);
     }
   } catch (err: any) {
     fetchError = err.message || "Failed to load event.";
@@ -98,5 +102,12 @@ export default async function PublicEventPage({ params }: PublicEventPageProps) 
     );
   }
 
-  return <PublicEventClient event={event} rounds={rounds || undefined} isPreview={isPreview} />;
+  return (
+    <PublicEventClient
+      event={event}
+      rounds={rounds || undefined}
+      isPreview={isPreview}
+      customTicketDesign={customTicketDesign || undefined}
+    />
+  );
 }

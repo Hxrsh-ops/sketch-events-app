@@ -185,10 +185,10 @@ export const ChatCloudPoint: React.FC<{ className?: string }> = ({
 );
 
 /**
- * Authentic FlowFest 4-Color Left Rainbow Stripe
+ * Authentic FlowFest 2-Color Left Rainbow Stripe
  * Mirror-flipped on X axis (scaleX(-1)), placed along the left viewport edge,
  * curving OUTWARDS toward the bottom-left corner away from the central cards.
- * Geometry: M26 0V400C26 510.457 115.543 600 226 600H321
+ * Clean, lightweight 2-stripe design (Gold Mango & Retro Tangerine).
  */
 export const RainbowSideLeft: React.FC<{
   className?: string;
@@ -200,10 +200,10 @@ export const RainbowSideLeft: React.FC<{
       viewBox="0 0 450 626"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* 4 Black Outline Strokes (width 52) */}
+      {/* 2 Black Outline Strokes (width 52) */}
       <path
         data-stripe="0"
-        d="M26 0V400C26 510.457 115.543 600 226 600H450"
+        d="M40 0V400C40 510.457 129.543 600 240 600H450"
         stroke="#121212"
         strokeWidth="52"
         pathLength="100"
@@ -212,25 +212,7 @@ export const RainbowSideLeft: React.FC<{
       />
       <path
         data-stripe="1"
-        d="M76 0V400C76 482.843 143.157 550 226 550H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="2"
-        d="M126 0V400C126 455.228 170.772 500 226 500H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="3"
-        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        d="M96 0V400C96 465 155 524 240 524H450"
         stroke="#121212"
         strokeWidth="52"
         pathLength="100"
@@ -238,28 +220,10 @@ export const RainbowSideLeft: React.FC<{
         strokeDashoffset="95"
       />
 
-      {/* 4 Color Fills (width 48) matching FlowFest */}
+      {/* 2 FlowFest Vibrant Color Fills (width 48) */}
       <path
         data-stripe="0"
-        d="M26 0V400C26 510.457 115.543 600 226 600H450"
-        stroke="#F489A3"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="1"
-        d="M76 0V400C76 482.843 143.157 550 226 550H450"
-        stroke="#F0BB0D"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="2"
-        d="M126 0V400C126 455.228 170.772 500 226 500H450"
+        d="M40 0V400C40 510.457 129.543 600 240 600H450"
         stroke="#F3A20F"
         strokeWidth="48"
         pathLength="100"
@@ -267,8 +231,8 @@ export const RainbowSideLeft: React.FC<{
         strokeDashoffset="95"
       />
       <path
-        data-stripe="3"
-        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        data-stripe="1"
+        d="M96 0V400C96 465 155 524 240 524H450"
         stroke="#F97028"
         strokeWidth="48"
         pathLength="100"
@@ -280,10 +244,10 @@ export const RainbowSideLeft: React.FC<{
 );
 
 /**
- * Authentic FlowFest 4-Color Right Rainbow Stripe
+ * Authentic FlowFest 2-Color Right Rainbow Stripe
  * Placed along the right viewport edge in natural orientation,
  * curving OUTWARDS toward the bottom-right corner away from the central cards.
- * Geometry: M26 0V400C26 510.457 115.543 600 226 600H450
+ * Clean, lightweight 2-stripe design (Gold Mango & Retro Tangerine).
  */
 export const RainbowSideRight: React.FC<{
   className?: string;
@@ -295,10 +259,10 @@ export const RainbowSideRight: React.FC<{
       viewBox="0 0 450 626"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* 4 Black Outline Strokes (width 52) */}
+      {/* 2 Black Outline Strokes (width 52) */}
       <path
         data-stripe="0"
-        d="M26 0V400C26 510.457 115.543 600 226 600H450"
+        d="M40 0V400C40 510.457 129.543 600 240 600H450"
         stroke="#121212"
         strokeWidth="52"
         pathLength="100"
@@ -307,25 +271,7 @@ export const RainbowSideRight: React.FC<{
       />
       <path
         data-stripe="1"
-        d="M76 0V400C76 482.843 143.157 550 226 550H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="2"
-        d="M126 0V400C126 455.228 170.772 500 226 500H450"
-        stroke="#121212"
-        strokeWidth="52"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="3"
-        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        d="M96 0V400C96 465 155 524 240 524H450"
         stroke="#121212"
         strokeWidth="52"
         pathLength="100"
@@ -333,28 +279,10 @@ export const RainbowSideRight: React.FC<{
         strokeDashoffset="95"
       />
 
-      {/* 4 Color Fills (width 48) matching FlowFest */}
+      {/* 2 FlowFest Vibrant Color Fills (width 48) */}
       <path
         data-stripe="0"
-        d="M26 0V400C26 510.457 115.543 600 226 600H450"
-        stroke="#F489A3"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="1"
-        d="M76 0V400C76 482.843 143.157 550 226 550H450"
-        stroke="#F0BB0D"
-        strokeWidth="48"
-        pathLength="100"
-        strokeDasharray="100"
-        strokeDashoffset="95"
-      />
-      <path
-        data-stripe="2"
-        d="M126 0V400C126 455.228 170.772 500 226 500H450"
+        d="M40 0V400C40 510.457 129.543 600 240 600H450"
         stroke="#F3A20F"
         strokeWidth="48"
         pathLength="100"
@@ -362,8 +290,8 @@ export const RainbowSideRight: React.FC<{
         strokeDashoffset="95"
       />
       <path
-        data-stripe="3"
-        d="M176 0V400C176 427.614 198.386 450 226 450H450"
+        data-stripe="1"
+        d="M96 0V400C96 465 155 524 240 524H450"
         stroke="#F97028"
         strokeWidth="48"
         pathLength="100"
@@ -378,7 +306,8 @@ export const RainbowSideRight: React.FC<{
  * Flowing Rainbow Side Stripes that frame the page
  * Fixed along the viewport outer margins, completely clear of the central cards.
  * Left stripes curve outwards to the bottom-left corner; right stripes curve outwards to the bottom-right corner.
- * - Dynamically unrolls/draws forward in real time WITH the user's scroll.
+ * - Dynamically unrolls/draws forward in real time matching the user's scroll across the FULL length of the form.
+ * - Curvy flow animation glides along with user scroll from start to end.
  * - Hardware-fluid 60fps/120fps direct DOM manipulation inside RAF (zero React re-renders, zero lag).
  */
 export const FlowingRainbowSides: React.FC = () => {
@@ -399,29 +328,32 @@ export const FlowingRainbowSides: React.FC = () => {
       if (scrollY !== lastScrollY) {
         lastScrollY = scrollY;
 
-        // Smooth scroll scrub: unrolls smoothly with user's scroll
+        // Smooth scroll scrub: unrolls smoothly across the FULL height of the page
         // At scrollY = 0: offset = 95 (only 5% peeks in at top)
-        // At scrollY >= 500: offset = 0 for ALL 4 stripes (100% drawn, ALL 4 touch the corner completely!)
-        const progress = Math.min(Math.max(scrollY / 500, 0), 1);
+        // At bottom of page: offset = 0 (100% unrolled, touching corners completely)
+        const docHeight = Math.max(
+          (document.documentElement.scrollHeight || document.body.scrollHeight || 1200) - window.innerHeight,
+          600
+        );
+        const progress = Math.min(Math.max(scrollY / docHeight, 0), 1);
         const remaining = 1 - progress;
 
         // Update stroke-dashoffset directly on cached DOM paths (takes ~0.02ms, zero lag)
         paths.forEach((p) => {
           const stripeIdx = Number(p.getAttribute("data-stripe") || 0);
-          // When remaining = 1 (top): offset = 95 for all
-          // When remaining = 0 (bottom): offset = 0 for all
-          const power = 1 + (3 - stripeIdx) * 0.08;
+          const power = 1 + (1 - stripeIdx) * 0.15;
           const offset = 95 * Math.pow(remaining, power);
           p.style.strokeDashoffset = offset.toFixed(2);
         });
 
-        // Gentle GPU compositor parallax glide
-        const translateY = Math.min(scrollY * 0.05, 40);
+        // Gentle fluid curvy glide along the full scroll of the form
+        const translateY = Math.min(scrollY * 0.08, 160);
+        const flowSway = Math.sin(progress * Math.PI) * 12;
         if (leftRef.current) {
-          leftRef.current.style.transform = `translate3d(0, ${translateY}px, 0)`;
+          leftRef.current.style.transform = `translate3d(${-flowSway}px, ${translateY}px, 0)`;
         }
         if (rightRef.current) {
-          rightRef.current.style.transform = `translate3d(0, ${translateY}px, 0)`;
+          rightRef.current.style.transform = `translate3d(${flowSway}px, ${translateY}px, 0)`;
         }
       }
       rafId = requestAnimationFrame(onFrame);

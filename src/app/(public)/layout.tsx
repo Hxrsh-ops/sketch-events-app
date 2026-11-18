@@ -10,15 +10,15 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#F4F5F6] dark:bg-[#111315] text-[#17191C] dark:text-[#F1F2F3] flex flex-col justify-between transition-colors">
+    <div className="min-h-screen bg-[#FDFBF7] text-ink flex flex-col justify-between transition-colors">
       <StealthGateTrigger />
-      {/* Minimal Public Navigation */}
-      <header className="border-b border-[#E5E7EA] dark:border-[#30353A] bg-white/80 dark:bg-[#151719]/80 backdrop-blur-md sticky top-0 z-30">
+      {/* Minimal FlowFest Retro Public Navigation */}
+      <header className="border-b-2 border-ink bg-[#FFFDF7]/95 backdrop-blur-md sticky top-0 z-30 shadow-brutal-flat">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <PublicHeaderLogo />
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-xs text-[#8A9098] font-medium">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 border-ink bg-retro-yellow text-ink font-quicksand font-black text-xs uppercase tracking-wider shadow-brutal-badge">
               Official Event Portal
             </span>
             <ThemeToggle />
@@ -31,11 +31,11 @@ export default function PublicLayout({
         {children}
       </main>
 
-      {/* Public Footer */}
-      <footer className="border-t border-[#E5E7EA] dark:border-[#30353A] bg-white dark:bg-[#151719] py-6 text-center text-xs text-[#8A9098]">
-        <div className="max-w-4xl mx-auto px-6">
-          <p>© {new Date().getFullYear()} SketchHUB Events. Organized for students, creators, and technologists.</p>
-          <p className="mt-1 text-[11px] text-[#AEB3BA] dark:text-[#656B73]">
+      {/* Retro Public Footer */}
+      <footer className="border-t-2 border-ink bg-[#FFFDF7] py-6 text-center text-xs text-ink/80 font-quicksand font-bold">
+        <div className="max-w-4xl mx-auto px-6 space-y-1">
+          <p>© {new Date().getFullYear()} SketchHUB Events. Organized for campus creators, innovators, and technologists.</p>
+          <p className="text-[11px] text-ink/60">
             Tickets and credentials are sent directly via email. No student account required.
           </p>
         </div>

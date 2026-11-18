@@ -61,6 +61,7 @@ import {
   getRegistrationDraft,
   clearRegistrationDraft,
 } from "@/lib/registration-draft";
+import { UnifiedTicketCard } from "@/components/ticket/unified-ticket-card";
 import styles from "./ambient-bg.module.css";
 
 interface PublicEventClientProps {
@@ -68,6 +69,7 @@ interface PublicEventClientProps {
   rounds?: Round[];
   isPreview?: boolean;
   bgOverlayOpacity?: number;
+  customTicketDesign?: any;
 }
 
 export default function PublicEventClient({
@@ -75,6 +77,7 @@ export default function PublicEventClient({
   rounds,
   isPreview = false,
   bgOverlayOpacity,
+  customTicketDesign,
 }: PublicEventClientProps) {
   // Event cover image
   const coverImageUrl = event.heroImage || event.posterUrl;
@@ -1075,85 +1078,117 @@ export default function PublicEventClient({
                 </div>
               </div>
 
-              {/* Neo-brutalist Tactile Pass Card */}
-              <div className="max-w-md mx-auto rounded-3xl border-2 border-ink bg-cream-plus shadow-brutal-card overflow-hidden relative">
-                {/* Top Ticket Header */}
-                <div className="p-6 bg-retro-yellow border-b-2 border-ink">
-                  <div className="flex items-center justify-between">
-                    <span className="font-peachy font-black text-xl text-ink tracking-tight">
-                      SKETCH PASS
-                    </span>
-                    <span className="px-3 py-1 rounded-full border-2 border-ink bg-cream-plus font-mono font-bold text-xs text-ink shadow-brutal-badge">
-                      {registrationResult.ticketNumber || registrationResult.registrationId}
-                    </span>
-                  </div>
-                  <h4 className="mt-3 font-peachy font-black text-2xl text-ink leading-tight">
-                    {event.title}
-                  </h4>
-                  <div className="mt-1 flex items-center gap-3 text-xs font-quicksand font-bold text-ink/75">
-                    <span>{formatDate(event.startDate)}</span>
-                    <span>•</span>
-                    <span>{event.venue}</span>
-                  </div>
+              {/* Admission Pass: Custom Design from Ticket Studio if assigned, otherwise Inbuilt Retro Fallback */}
+              {customTicketDesign ? (
+                <div className="max-w-2xl mx-auto flex justify-center py-2 px-2 overflow-x-auto">
+                  <UnifiedTicketCard
+                    responsive={true}
+                    design={customTicketDesign}
+                    event={{
+                      title: event.title,
+                      category: event.category,
+                      venue: event.venue,
+                      venueMode: event.venueMode,
+                      startDate: event.startDate,
+                      endDate: event.endDate,
+                      organizerName: "SKETCH",
+                    }}
+                    attendee={{
+                      name: registrationResult.attendeeName,
+                      email: registrationResult.email,
+                      ticketNumber: registrationResult.ticketNumber || registrationResult.registrationId,
+                      teamName: registrationResult.teamName || null,
+                      ticketStatus: "active",
+                      attendanceStatus: "not_checked_in",
+                    }}
+                    qr={{
+                      type: "static",
+                      qrDataUrl: confirmationQrDataUrl,
+                      isLoading: !confirmationQrDataUrl,
+                    }}
+                  />
                 </div>
+              ) : (
+                /* Fallback: Inbuilt Neo-brutalist Tactile Pass Card */
+                <div className="max-w-md mx-auto rounded-3xl border-2 border-ink bg-cream-plus shadow-brutal-card overflow-hidden relative">
+                  {/* Top Ticket Header */}
+                  <div className="p-6 bg-retro-yellow border-b-2 border-ink">
+                    <div className="flex items-center justify-between">
+                      <span className="font-peachy font-black text-xl text-ink tracking-tight">
+                        SKETCH PASS
+                      </span>
+                      <span className="px-3 py-1 rounded-full border-2 border-ink bg-cream-plus font-mono font-bold text-xs text-ink shadow-brutal-badge">
+                        {registrationResult.ticketNumber || registrationResult.registrationId}
+                      </span>
+                    </div>
+                    <h4 className="mt-3 font-peachy font-black text-2xl text-ink leading-tight">
+                      {event.title}
+                    </h4>
+                    <div className="mt-1 flex items-center gap-3 text-xs font-quicksand font-bold text-ink/75">
+                      <span>{formatDate(event.startDate)}</span>
+                      <span>•</span>
+                      <span>{event.venue}</span>
+                    </div>
+                  </div>
 
-                {/* QR Display Area */}
-                <div className="p-8 flex flex-col items-center justify-center bg-[#FFFDF7]">
-                  <div className="p-4 rounded-2xl border-2 border-ink bg-white shadow-brutal-flat">
-                    {confirmationQrDataUrl ? (
-                      <img
-                        src={confirmationQrDataUrl}
-                        alt="QR Code"
-                        className="w-44 h-44 object-contain"
-                      />
+                  {/* QR Display Area */}
+                  <div className="p-8 flex flex-col items-center justify-center bg-[#FFFDF7]">
+                    <div className="p-4 rounded-2xl border-2 border-ink bg-white shadow-brutal-flat">
+                      {confirmationQrDataUrl ? (
+                        <img
+                          src={confirmationQrDataUrl}
+                          alt="QR Code"
+                          className="w-44 h-44 object-contain"
+                        />
+                      ) : (
+                        <div className="w-44 h-44 flex items-center justify-center font-quicksand font-bold text-xs text-ink/60">
+                          Loading QR...
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-3 font-mono font-bold text-xs text-ink/60 uppercase tracking-widest">
+                      Present at Check-in Desk
+                    </p>
+                  </div>
+
+                  {/* Perforated Tear Line */}
+                  <div className="relative flex items-center justify-between border-t-2 border-dashed border-ink bg-[#FFFDF7] px-0">
+                    <div className="w-5 h-5 -ml-2.5 rounded-full bg-cream border-2 border-ink" />
+                    <div className="w-5 h-5 -mr-2.5 rounded-full bg-cream border-2 border-ink" />
+                  </div>
+
+                  {/* Bottom Stub */}
+                  <div className="p-5 bg-cream border-t-2 border-ink flex items-center justify-between">
+                    <div>
+                      <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
+                        Holder
+                      </span>
+                      <span className="font-quicksand font-black text-sm text-ink">
+                        {registrationResult.attendeeName}
+                      </span>
+                    </div>
+                    {registrationResult.teamName ? (
+                      <div className="text-right">
+                        <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
+                          Team
+                        </span>
+                        <span className="font-quicksand font-black text-xs text-retro-orange">
+                          {registrationResult.teamName}
+                        </span>
+                      </div>
                     ) : (
-                      <div className="w-44 h-44 flex items-center justify-center font-quicksand font-bold text-xs text-ink/60">
-                        Loading QR...
+                      <div className="text-right">
+                        <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
+                          Status
+                        </span>
+                        <span className="font-quicksand font-black text-xs text-emerald-700">
+                          Confirmed
+                        </span>
                       </div>
                     )}
                   </div>
-                  <p className="mt-3 font-mono font-bold text-xs text-ink/60 uppercase tracking-widest">
-                    Present at Check-in Desk
-                  </p>
                 </div>
-
-                {/* Perforated Tear Line */}
-                <div className="relative flex items-center justify-between border-t-2 border-dashed border-ink bg-[#FFFDF7] px-0">
-                  <div className="w-5 h-5 -ml-2.5 rounded-full bg-cream border-2 border-ink" />
-                  <div className="w-5 h-5 -mr-2.5 rounded-full bg-cream border-2 border-ink" />
-                </div>
-
-                {/* Bottom Stub */}
-                <div className="p-5 bg-cream border-t-2 border-ink flex items-center justify-between">
-                  <div>
-                    <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
-                      Holder
-                    </span>
-                    <span className="font-quicksand font-black text-sm text-ink">
-                      {registrationResult.attendeeName}
-                    </span>
-                  </div>
-                  {registrationResult.teamName ? (
-                    <div className="text-right">
-                      <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
-                        Team
-                      </span>
-                      <span className="font-quicksand font-black text-xs text-retro-orange">
-                        {registrationResult.teamName}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-right">
-                      <span className="block font-quicksand font-bold text-[10px] uppercase text-ink/60">
-                        Status
-                      </span>
-                      <span className="font-quicksand font-black text-xs text-emerald-700">
-                        Confirmed
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
 
               {/* Multiple Students Registration Banner in exact FlowFest Retro Neo-Brutalist Theme */}
               <div className="max-w-md mx-auto rounded-3xl border-2 border-ink bg-[#FFFDF7] p-5 text-center space-y-2.5 shadow-brutal-card">
@@ -1244,8 +1279,13 @@ export default function PublicEventClient({
 
               <div className="space-y-4">
                 <div className="rounded-2xl border-2 border-ink bg-[#FFFDF7] p-4 flex items-center justify-between text-xs font-quicksand shadow-brutal-flat">
-                  <span className="font-bold text-ink/60">Experience:</span>
-                  <span className="font-black text-ink">{event.title}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black uppercase tracking-wider text-ink/75">Selected Event</span>
+                    <span className="px-2.5 py-0.5 rounded-full border-2 border-ink bg-retro-yellow text-[10px] font-black uppercase text-ink shadow-xs">
+                      {event.category || "Event"}
+                    </span>
+                  </div>
+                  <span className="font-peachy font-black text-base text-ink tracking-tight">{event.title}</span>
                 </div>
 
                 {formSchema.sections.map((section) => {

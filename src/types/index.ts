@@ -125,6 +125,7 @@ export interface EventItem {
   heroImageFocalPoint?: string;
   heroCardConfig?: HeroCardConfig;
   registrationForm?: RegistrationFormSchema;
+  ticketDesign?: any;
 }
 
 export interface Participant {
